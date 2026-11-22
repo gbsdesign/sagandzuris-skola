@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, BookOpen, CalendarCheck, ChevronDown, EyeOff, Loader2, MessageCircle, Search, X } from 'lucide-react';
+import { ArrowLeft, BookOpen, ChevronDown, EyeOff, ListChecks, Loader2, MessageCircle, Search, X } from 'lucide-react';
 import { Waiting } from '../../../components/shell/PageSkeleton';
 import { useAuth, useNavigation } from '../../../context';
 import { useMyClasses, useTeachingClasses, useAllClasses } from '../../../hooks/useClasses';
@@ -26,7 +26,7 @@ import {
 } from '../../../components/ui2';
 import { DmChat } from './DmChat';
 import { BirthdaysSoon } from '../../../components/home/BirthdaysSoon';
-import { ChatMenu, ChatRow, ClassChatTools, ClassPick, ClassTimes, hideSide, LastLine, NameMark, readSide, Tick } from './parts';
+import { ChatMenu, ChatRow, ClassPick, ClassTimes, hideSide, LastLine, NameMark, readSide, Tick } from './parts';
 import { ClassMoreSheet } from '../klasi/teacher/More';
 import { keepClassTab, type ClassTab } from '../klasi/nav';
 import { AssistantButton } from '../damkhmare/AssistantButton';
@@ -34,7 +34,6 @@ import { useLongPress } from '../../../hooks/useLongPress';
 import { TimetableSheet } from '../klasi/teacher/Timetable';
 import { usePearlTotals } from './usePearlTotals';
 
-const AttendanceSheet = React.lazy(() => import('../daswreba/AttendanceSheet').then(m => ({ default: m.AttendanceSheet })));
 // the psalter group, unfolded under the list's head (its „📖 ფს.ჯ.“ button) — loaded only when it opens
 const PsalterFold = React.lazy(() => import('../psalmuni/PsalterScreen').then(m => ({ default: m.PsalterFold })));
 
@@ -131,9 +130,6 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
   const { groups: psalterGroups } = useMyPsalterGroups(uid);
   const psalterOn = psalterGroups.length > 0 && access.section('medavitneoba') === 'open';
   const [psalterOpen, setPsalterOpen] = useState(false);
-  // „დასწრება“ in the head for the classes one leads (2026-11-22, the user: „დასწრების ღილაკი მიამაგრე“)
-  const leading = isAdmin ? known : known.filter(c => c.teacherIds.includes(uid));
-  const [attOpen, setAttOpen] = useState(false);
   const nameHold = useLongPress(() => { if (moreFor) setMoreOf(moreFor); });
   const classUnread = (c: SchoolClass) => isClassUnread(lasts[c.id], seen[c.id], uid) && open !== CLASS_PREFIX + c.id;
   const dmUnread = (t: DirectThread) => isUnread(t, uid) && open !== t.id;
@@ -251,7 +247,12 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
       const id = CLASS_PREFIX + c.id;
       const unread = classUnread(c);
       const lastMs = last?.at?.getTime() ?? 0;
-      const pinned = prefs.pins.includes(id);
+      // no pinning for a class's chat (2026-11-22, the user: „მიმაგრება დარჩეს მხოლოდ ინდივიდუალურ წევრებზე“) — they stand on top
+      // anyway; a long press opens the class's „მეტი“ for its teachers and admins
+      const pinned = false;
+      const leads = isAdmin || c.teacherIds.includes(uid);
+      const editTimes = leads ? () => setTimesOf(c.id) : undefined;
+      const times = c.schedule.length > 0 || !!editTimes;
       // a class's chat is never hidden: one hidden before comes back
       const hidden = false;
       items.push({
@@ -260,14 +261,18 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
         node: (
           <ChatRow
             key={id}
-            face={<ClassLogo name={c.name} logo={c.logo} className="size-12 text-title" />}
+            face={<ClassLogo name={c.name} logo={c.logo} className="size-10 text-head" />}
             name={c.name}
             group
-            last={last ? <LastLine who={last.uid === uid ? 'შენ:' : undefined} text={last.text} /> : `კლასის ჩათი · ${c.members.length} წევრი`}
+            // compact (2026-11-22, the user: „უფრო კომპაქტური გახადო“): a class nobody wrote in yet shows its times in the
+            // second line in place of „კლასის ჩათი · N წევრი“ (that line stays only when there is nothing to show)
+            last={last
+              ? <LastLine who={last.uid === uid ? 'შენ:' : undefined} text={last.text} />
+              : (times ? <ClassTimes slots={c.schedule} onEdit={editTimes} inline /> : `კლასის ჩათი · ${c.members.length} წევრი`)}
             time={when(last?.at ?? null)}
-            extra={<ClassTimes slots={c.schedule}
-              onEdit={isAdmin || c.teacherIds.includes(uid) ? () => setTimesOf(c.id) : undefined} />}
+            extra={last && times ? <ClassTimes slots={c.schedule} onEdit={editTimes} /> : undefined}
             {...rowProps(id, lastMs, pinned, hidden, unread, true)}
+            onMenu={leads ? () => setMoreOf(c.id) : undefined}
           />
         ),
       });
@@ -447,12 +452,9 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
         timetable={false}
         under={(
           <>
-            <ClassChatTools
-              end={moreFor ? <AssistantButton classId={openCls.id} /> : undefined}
-              program={() => setProgramIn(programIn === openCls.id ? '' : openCls.id)}
-              programOpen={programIn === openCls.id}
-              members={moreFor ? () => classOn(openCls.id, 'people') : undefined}
-            />
+            {/* „წევრები“ left (the user: „ეს მოხსენი“) and „პროგრამა“ is a round sign before the phone (`headTools`; the user:
+                „პროგრამა სიტყვა მოაცილე და ლოგო დატოვე და აიტანე ყურმილის წინ“) — this row keeps only the program's cog */}
+            {moreFor && <div className="flex justify-end"><AssistantButton classId={openCls.id} /></div>}
             {/* the program unfolds here, under the head, and scrolls inside (the chat stays below it) */}
             {programIn === openCls.id && (
               <div className="mt-1.5 flex max-h-[60dvh] flex-col gap-2.5 overflow-x-hidden overflow-y-auto overscroll-contain pb-1">
@@ -462,6 +464,14 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
               </div>
             )}
           </>
+        )}
+        headTools={(
+          <RoundButton label={programIn === openCls.id ? 'სასწავლო პროგრამის დაკეცვა' : 'სასწავლო პროგრამა'}
+            tone={programIn === openCls.id ? 'wine' : 'surf'} aria-expanded={programIn === openCls.id}
+            className={programIn === openCls.id ? undefined : '[&_svg]:text-wine'}
+            onClick={() => setProgramIn(programIn === openCls.id ? '' : openCls.id)}>
+            <ListChecks aria-hidden="true" strokeWidth={2} />
+          </RoundButton>
         )}
         title={
           <div className="flex min-w-0 flex-1 items-center gap-2.5">
@@ -502,11 +512,8 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
         )}
         right={(
           <>
-            {leading.length > 0 && !overview && (
-              <RoundButton label="დასწრება" onClick={() => setAttOpen(true)}><CalendarCheck aria-hidden="true" /></RoundButton>
-            )}
             {/* the 👁 and ✎ went; the psalter group's 📖 has „ფს.ჯ.“ beside it (2026-11-22, the user: „ეს ღილაკები მოხსენი ხოლო
-                იმას ფს.ჯ. დაუწერე გვერდთან“) */}
+                იმას ფს.ჯ. დაუწერე გვერდთან“); „დასწრება“ moved to each class chat's „მეტი“ the same evening */}
             {psalterOn && !overview && (
               <Press
                 aria-label={psalterOpen ? 'ფსალმუნთა ჯგუფის დაკეცვა' : 'ფსალმუნთა ჯგუფი'}
@@ -604,11 +611,6 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
         const c = timesOf ? known.find(x => x.id === timesOf) : null;
         return c ? <TimetableSheet cls={c} open edit onClose={() => setTimesOf(null)} /> : null;
       })()}
-      {attOpen && (
-        <React.Suspense fallback={null}>
-          <AttendanceSheet classes={leading} open onClose={() => setAttOpen(false)} />
-        </React.Suspense>
-      )}
       <Sheet open={writing} onClose={() => setWriting(false)} title="ახალი წერილი">
         <NewLetter render={contacts} />
       </Sheet>

@@ -4,6 +4,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { APP_NEWS } from '../data/appNews';
+import { newsDays } from '../utils/newsDigest';
 import type { SchoolClass } from './useClasses';
 import { ChatMessage, toChatMessage } from './useClassChat';
 import { ADMIN_NAME, DirectThread, isStaffSide, otherOf } from './useDirectChat';
@@ -11,7 +12,8 @@ import { ADMIN_NAME, DirectThread, isStaffSide, otherOf } from './useDirectChat'
 // The header's 🔔 (2026-11-06, the user: „შეტყობინება აპის განახლებაზე ან სხვა ფუნქციებზე ყველა მანდ მოდიოდეს ასევე
 // მასწავლებელი ან ადმინი თუ მწერს, კლასს ან ყველას წერს რამეს — მანდ მოდიოდეს, ჩამოსაშლელი იყოს“; answers: all four
 // kinds). One list, newest first, of:
-//  - news: what a new version of the app brings (data/appNews.ts, written with each release);
+//  - news: what a new version of the app brings (data/appNews.ts, written with each release) — since 2026-11-22 one summary a
+//    day, from that day's evening (utils/newsDigest.ts);
 //  - all: an admin's notice for everyone (announcements/{id} { text, by, byName, at }; rules: admins write, the signed-in read);
 //  - dm: a private message to me — a teacher's, the administration's or (since the same day, the user: „მოსწავლე მოსწავლეს თუ
 //    მისწერს, ანუ პირადი მიმოწერები“) anybody's: my dms (and an admin's the administration's), the last message by the other side;
@@ -47,7 +49,6 @@ const DAYS = 30;
 const SHOWN = 40;
 const DAY_MS = 86_400_000;
 
-const newsAt = (date: string) => new Date(`${date}T12:00:00+04:00`).getTime();
 
 /** A chat message as one line. */
 const lineOf = (m: ChatMessage) => {
@@ -191,7 +192,8 @@ export const useNotices = (opts: {
 
   return useMemo(() => {
     const since = Date.now() - DAYS * DAY_MS;
-    const list: Notice[] = APP_NEWS.map(n => ({ id: `n:${n.id}`, kind: 'news' as const, at: newsAt(n.date), who: n.title, text: n.text }));
+    // the app's news: one summary a day, shown from that day's evening (utils/newsDigest.ts)
+    const list: Notice[] = newsDays(APP_NEWS, Date.now()).map(n => ({ id: `n:${n.id}`, kind: 'news' as const, at: n.at, who: n.title, text: n.text }));
     for (const a of all) list.push({ id: `a:${a.id}`, kind: 'all', at: a.at, who: ADMIN_NAME, text: a.text });
     if (uid && chats) {
       for (const t of threads) {

@@ -19,7 +19,8 @@ const ask = (uid: string) => {
         const path = (s.data()?.selectedChantVariants || {}) as Parameters<typeof pearlCounts>[0];
         kept.set(uid, { n: pearlCounts(path, null).polished, at: Date.now() });
       },
-      () => { kept.set(uid, { n: 0, at: Date.now() }); },
+      // not readable (not this teacher's student): no number rather than a wrong 0
+      () => { kept.set(uid, { n: -1, at: Date.now() }); },
     ).finally(() => { asking.delete(uid); });
     asking.set(uid, p);
   }
@@ -42,7 +43,7 @@ export const usePearlTotals = (uids: string[]) => {
   const out: Record<string, number> = {};
   for (const uid of uids) {
     const k = kept.get(uid);
-    if (k) out[uid] = k.n;
+    if (k && k.n >= 0) out[uid] = k.n;
   }
   return out;
 };

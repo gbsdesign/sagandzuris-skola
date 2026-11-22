@@ -1,6 +1,8 @@
 // „აპის სიახლეები“ in the header's 🔔 (components/layout/Bell.tsx): a short line for what a new version brings, newest
 // first. Add one whenever something the members will notice reaches the site — plain words, what changes for them, no
-// technical terms; `id` never changes (the bell keys on it).
+// technical terms; `id` never changes. Since 2026-11-22 the bell shows no line on its own: a day's lines come together at
+// 21:00 as one summary, each `title` a line of it (utils/newsDigest.ts; the user: „წარამარა კი არ გაიგზავნოს … ყოველ საღამოს
+// დაჯამდეს … მოკლედ და ლაკონურად“) — so the title alone must say what changed, in a few words.
 
 export interface AppNews {
   id: string;
@@ -11,6 +13,18 @@ export interface AppNews {
 }
 
 export const APP_NEWS: AppNews[] = [
+  {
+    id: 'news-evening-2026-11-22',
+    date: '2026-11-22',
+    title: 'სიახლეები — დღეში ერთხელ, საღამოს',
+    text: 'დღის ცვლილებები ახლა ერთად, მოკლედ მოდის საღამოს 9 საათზე.',
+  },
+  {
+    id: 'class-rows-compact-2026-11-22',
+    date: '2026-11-22',
+    title: 'კლასის ჩათები — უფრო კომპაქტურად; დასწრება კლასის „მეტში“',
+    text: 'კლასების ბარათები სიაში პატარაა. მასწავლებელს დასწრება კლასის სახელზე დიდხანს დაჭერით, „მეტიდან“ გაეხსნება.',
+  },
   {
     id: 'chat-media-2026-11-22',
     date: '2026-11-22',

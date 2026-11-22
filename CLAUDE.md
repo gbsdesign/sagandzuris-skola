@@ -179,7 +179,9 @@
   step; with several classes one „კლასი ▾“ drops `ClassesPanel` — a chip a class overflowed phones and pushed the page sideways,
   2026-11-07; the three chips need ~362 px at 380 px wide, so keep any new chip as narrow); 📚 and 🔍 move beside the chips from sm up. 📋 and 🔔 drop their list under the header (one at a time, a dim backdrop
   closes it, going anywhere closes it). **🔔** (`layout/Bell.tsx`, `hooks/useNotices.ts`): app news (`data/appNews.ts` — **add a
-  plain line there whenever members will notice a change**), an admin's notice for everyone (`announcements/{id}`, written from
+  plain line there whenever members will notice a change**; since 2026-11-22 the bell gathers a day's lines into ONE summary at
+  21:00 Tbilisi, each line's `title` a bullet — `utils/newsDigest.ts`; the user: „წარამარა კი არ გაიგზავნოს … ყოველ საღამოს
+  დაჯამდეს … მოკლედ და ლაკონურად“ — so keep titles short and self-explaining), an admin's notice for everyone (`announcements/{id}`, written from
   the list's „ყველას მიწერა“, taken back with 🗑; rules: admins create/delete, the signed-in read), a teacher's / the
   administration's private message to me — since the same day every private message to me, a classmate's too —, a teacher's
   or admin's message in my class chats (the newest 25 of each, ≤ 3 shown) and a teacher's card for me (`pins`, `to == me`); last
@@ -2273,7 +2275,8 @@ Pending small tasks the user mentioned: remove the old Drive `ნოტები
   every class) has its chat on top, never hidden (no swipe, no „დამალვა“ — `ChatMenu keep`); a student's row on a teacher's / the
   administration's side shows their pearls (`usePearlTotals`: items with a voice marked, each student's record read once in 3 min;
   a softly shining `PearlIcon` + the number, under the date). The private chat's head: the name and its small line on one line each;
-  „ავტ.პროგ.“ is only its sign now — a round 👩‍🏫 button (the user picked that emoji), no words.
+  „ავტ.პროგ.“ is only its sign now — a round 👩‍🏫 button (the user picked that emoji), no words. Since the evening every member's
+  row shows the pearl and its number, 0 too (a matte pearl), unless their record can't be read (the user: „ვის რამდენი მარგალიტი აქვთ ჯამში“).
 - **Photos, files and the quick button in the chats (2026-11-22**, the user: „გაგზავნის ისარი ჩასვი … დიდხანს დაჭერისას ფანჯარა და
   სმაილის შეცვლა … თავდაპირველად ისარი ყველგან … ფოტოს ატვირთვა, გადაღება, ვოისი და ფაილი“ as Messenger's; answers „10 მბ-მდე ·
   ბარათი „+“-ში“): `ChatPanel`'s row = + (a file; with `onAttach` a sheet: ფაილი · ბარათი მოსწავლეს) · 📷 (`capture`) · 🖼 (≤ 10) ·
@@ -2286,8 +2289,9 @@ Pending small tasks the user mentioned: remove the old Drive `ნოტები
 - **„დასწრება“ (2026-11-22**, the user: „გაუგებარია … მარტივად კლასების მიხედვით ვნიშნავდე … სტატისტიკასაც ვხედავდე … დასწრების
   ღილაკი მიამაგრე“): `pages/v2/daswreba/AttendanceSheet.tsx` — class chips · „მონიშვნა“ (lesson day ‹ ›, „ყველა მოვიდა“, a tap on a
   name) · „სტატისტიკა“ (`utils/attendanceStats.ts` + test: the class's share, each member's share and the newest lessons missed in a
-  row, the lessons — a tap marks that day). Opened from the „სწავლა“ head (📅, the classes one leads; admins all) and the class's
-  „წევრები“ row (the old card and the ✓ on every name are gone). On every class row the calendar sign is a button for its leaders —
+  row, the lessons — a tap marks that day). Opened from the class's „მეტი“ (its first row — `ClassMoreSheet`, so the class chat's
+  name held long; only that class's members; the „სწავლა“ head's 📅 went the same evening — the user: „დასწრება გადაუტანე მეტში …
+  ყველა კლასს თავისი დასწრება“) and the class's „წევრები“ row (the old card and the ✓ on every name are gone). On every class row the calendar sign is a button for its leaders —
   a tap opens the timetable, a class with none says „გაკვეთილის დანიშვნა“.
 - **The psalter group on the „სწავლა“ list (2026-11-22**, the user: „ამას მინდა დაბლა შლიდეს მათთვის ვინც ფსალმუნთა ჯგუფშია სწავლის
   გვერდით“): a round 📖 before the 👁 (anyone in a group — `useMyPsalterGroups` —, while section `medavitneoba` is open) unfolds
@@ -2301,7 +2305,12 @@ Pending small tasks the user mentioned: remove the old Drive `ნოტები
   card's „წაიკითხე“ is a round 📖 only.
 - **The „სწავლა“ list's head (2026-11-22**, the user: „ეს ღილაკები მოხსენი ხოლო იმას ფს.ჯ. დაუწერე გვერდთან“): the 👁 (all chats,
   only to look) and ✎ (new letter) are gone; the psalter group's 📖 is a pill with „ფს.ჯ.“ written beside it (the teacher's
-  „დასწრება“ stays).
+  „დასწრება“ stays; that evening it moved to the class's „მეტი“). The open class chat's tool row lost „წევრები“ (the user: „ეს
+  მოხსენი“) and „პროგრამა“ became a round sign before the phone (`ClassChat headTools`; „სიტყვა მოაცილე … ყურმილის წინ“) — the row
+  keeps only the cog. A class row's long press opens the class's „მეტი“ (its leaders) and class chats can't be pinned — pins only
+  for people (the user: „მიმაგრება დარჩეს მხოლოდ ინდივიდუალურ წევრებზე“); „მეტი“ got „სასწავლო პროგრამა“ (the class page on its
+  program tab, `askClassTab`) and the old row is „პროგრამის დალაგება“. And the class rows on the list are tighter (`ChatRow group`: 40px logo, less padding, 20px
+  time pills; a class nobody wrote in yet shows its times in the second line — the user: „უფრო კომპაქტური … ბევრი არაფერი არ ჩაერიო“).
 - **The whole path in the chat's fold (2026-11-21 night**, the user: „გზას რომ ჩახსნიდი … ჩამოსაშლელად პირდაპირ ჩათში“, answer „მთელი
   გზა, როგორც გზის გვერდზე“): `ChatPath` — the student's own side unfolds the whole „საგანძური“ page (`SagandzuriPage bare`, lazy: no
   bar, the ✎ by „ჩემი საგალობლები“; numbers, assignments, chips, flights, ოსტატობა); the teacher's side keeps its ჩათვლა / დამატება /
