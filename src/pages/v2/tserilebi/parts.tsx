@@ -1,6 +1,5 @@
 import React from 'react';
 import { CalendarClock, Check, CheckCheck, Eye, EyeOff, GraduationCap, ListChecks, Mic, Pin, PinOff, ShieldCheck, Users } from 'lucide-react';
-import { GearSpark } from '../damkhmare/GearSpark';
 import { Badge, Button, cx, Dot, Press, Sheet, Small } from '../../../components/ui2';
 import { useLongPress } from '../../../hooks/useLongPress';
 import { SwipeRow, type SwipeSide } from '../../../components/ui/SwipeRow';
@@ -138,11 +137,11 @@ const ToolPill: React.FC<{ icon: React.ReactNode; label: string; onClick: () => 
   </Press>
 );
 
+// the program's cog stands before the phone in the chat's head (the user: „ყურმილის წინ მხოლოდ ლოგო“)
 export const ClassChatTools: React.FC<{
-  auto?: () => void; program: () => void; members?: () => void;
-}> = ({ auto, program, members }) => (
+  program: () => void; members?: () => void;
+}> = ({ program, members }) => (
   <div role="group" aria-label="კლასის ღილაკები" className="flex flex-wrap items-center gap-x-1.5">
-    {auto && <ToolPill icon={<GearSpark />} label="ავტ. პროგრამა" onClick={auto} />}
     <ToolPill icon={<ListChecks strokeWidth={2} />} label="პროგრამა" onClick={program} />
     {members && <ToolPill icon={<Users strokeWidth={2} />} label="წევრები" onClick={members} />}
   </div>

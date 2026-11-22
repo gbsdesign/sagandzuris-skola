@@ -27,7 +27,7 @@ import { BirthdaysSoon } from '../../../components/home/BirthdaysSoon';
 import { ChatMenu, ChatRow, ClassChatTools, ClassPick, ClassTimes, hideSide, LastLine, NameMark, readSide, Tick } from './parts';
 import { ClassMoreSheet } from '../klasi/teacher/More';
 import { keepClassTab, type ClassTab } from '../klasi/nav';
-import { openAssistant, useAssistantAllowed } from '../damkhmare/open';
+import { AssistantButton } from '../damkhmare/AssistantButton';
 import { useLongPress } from '../../../hooks/useLongPress';
 import { TimetableSheet } from '../klasi/teacher/Timetable';
 
@@ -111,7 +111,6 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
   const [timesOf, setTimesOf] = useState<string | null>(null);
   // the open class chat: its „მეტი“ (the name held long) and the program's cog
   const [moreOf, setMoreOf] = useState<string | null>(null);
-  const autoAllowed = useAssistantAllowed();
   const nameHold = useLongPress(() => { if (moreFor) setMoreOf(moreFor); });
   const classUnread = (c: SchoolClass) => isClassUnread(lasts[c.id], seen[c.id], uid) && open !== CLASS_PREFIX + c.id;
   const dmUnread = (t: DirectThread) => isUnread(t, uid) && open !== t.id;
@@ -423,9 +422,9 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
         cls={openCls}
         fill
         timetable={false}
+        beforeCall={moreFor ? <AssistantButton classId={openCls.id} /> : undefined}
         under={(
           <ClassChatTools
-            auto={moreFor && autoAllowed ? () => openAssistant({ classId: openCls.id, page: 'class' }) : undefined}
             program={() => classOn(openCls.id, 'program')}
             members={moreFor ? () => classOn(openCls.id, 'people') : undefined}
           />
