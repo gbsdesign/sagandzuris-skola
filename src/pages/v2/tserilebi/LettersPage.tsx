@@ -28,7 +28,7 @@ import { DmChat } from './DmChat';
 import { BirthdaysSoon } from '../../../components/home/BirthdaysSoon';
 import { ChatMenu, ChatRow, ClassTimes, hideSide, LastLine, NameMark, readSide, Tick } from './parts';
 import { ClassMoreSheet } from '../klasi/teacher/More';
-import { keepClassTab, type ClassTab } from '../klasi/nav';
+import { keepClassTab, studentItem, type ClassTab } from '../klasi/nav';
 import { GearSpark } from '../damkhmare/GearSpark';
 import { openAssistant, useAssistantAllowed } from '../damkhmare/open';
 import { useLongPress } from '../../../hooks/useLongPress';
@@ -77,7 +77,7 @@ const SearchLine: React.FC<{ value: string; onChange: (v: string) => void }> = (
  *  chat takes the page, on a computer it stands beside the list. */
 export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
   const { user, isAdmin, isSuperAdmin, isTeacher } = useAuth();
-  const { currentPage, selectedDmId, openDm, handleGoBack, openClass, openMapItem } = useNavigation();
+  const { currentPage, selectedDmId, openDm, handleGoBack, openClass, openMapItem, openStudent } = useNavigation();
   const wide = useWide();
   const uid = user?.uid || '';
   const open = currentPage === 'dm' ? selectedDmId : null;
@@ -264,16 +264,14 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
         node: (
           <ChatRow
             key={id}
-            face={<ClassLogo name={c.name} logo={c.logo} className="size-10 text-head" />}
+            face={<ClassLogo name={c.name} logo={c.logo} className="size-12 text-title" />}
             name={c.name}
             group
-            // compact (2026-11-22, the user: „უფრო კომპაქტური გახადო“): a class nobody wrote in yet shows its times in the
-            // second line in place of „კლასის ჩათი · N წევრი“ (that line stays only when there is nothing to show)
-            last={last
-              ? <LastLine who={last.uid === uid ? 'შენ:' : undefined} text={last.text} />
-              : (times ? <ClassTimes slots={c.schedule} onEdit={editTimes} inline /> : `კლასის ჩათი · ${c.members.length} წევრი`)}
+            // the first size again (2026-11-22 evening, the user: „ჩათები ისევ ამ ზომის გახადო“): the last message or „კლასის ჩათი ·
+            // N წევრი“, the lesson times under it
+            last={last ? <LastLine who={last.uid === uid ? 'შენ:' : undefined} text={last.text} /> : `კლასის ჩათი · ${c.members.length} წევრი`}
             time={when(last?.at ?? null)}
-            extra={last && times ? <ClassTimes slots={c.schedule} onEdit={editTimes} /> : undefined}
+            extra={times ? <ClassTimes slots={c.schedule} onEdit={editTimes} /> : undefined}
             {...rowProps(id, lastMs, pinned, hidden, unread, true)}
             onMenu={leads ? () => setMoreOf(c.id) : undefined}
             fold={{ open: chip === c.id, onToggle: () => setChip(chip === c.id ? 'all' : c.id) }}
@@ -308,6 +306,13 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
             time={when(t.lastAt)}
             tick={t.lastText && lastIsMine(t, uid) ? <Tick seen={!!seenAt && !!t.lastAt && seenAt >= t.lastAt} /> : null}
             pearls={(() => { const s = studentOf(t); return s ? pearls[s] : undefined; })()}
+            onPearls={(() => {
+              const s = studentOf(t);
+              if (!s) return undefined;
+              // the student's own path page — in their class (a teacher's chat names it, else the first class they are in)
+              const cid = t.classId || known.find(c => c.memberIds.includes(s))?.id || '';
+              return () => { openStudent(s, cid); openMapItem(studentItem(s, cid, 'gza')); };
+            })()}
             {...rowProps(t.id, lastMs, pinned, hidden, unread)}
           />
         ),

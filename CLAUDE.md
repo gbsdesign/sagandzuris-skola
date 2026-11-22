@@ -2317,8 +2317,14 @@ Pending small tasks the user mentioned: remove the old Drive `ნოტები
   გადამრთველები მოხსენი“); the lesson's window (`klasi/teacher/Timetable.tsx`) = seven round days in one row, the times and the
   place in boxes, „მზადაა“ then a quiet red „წაშლა“ (the user: „ეს პანელი ძალიან უაზროდ არის დახვეწე“); the home bar's 🔔 stands
   right by the logo, before the name (`HomeBar`, the user's mark); the open class chat's head no longer opens the class page (only
-  its long press → „მეტი“ for leaders; the small line is „N წევრი“ — the user: „ჩათის სათაურზე დაჭერისას … გვერდი … არ მინდა“). And the class rows on the list are tighter (`ChatRow group`: 40px logo, less padding, 20px
-  time pills; a class nobody wrote in yet shows its times in the second line — the user: „უფრო კომპაქტური … ბევრი არაფერი არ ჩაერიო“).
+  its long press → „მეტი“ for leaders; the small line is „N წევრი“ — the user: „ჩათის სათაურზე დაჭერისას … გვერდი … არ მინდა“). The class rows were made tighter that evening, then given their first size back (48px logo, the times
+  under „კლასის ჩათი · N წევრი“ — the user: „ჩათები ისევ ამ ზომის გახადო“); their ▾ stays. A class row shows only its lesson hours, and nothing
+  when none are set (no calendar sign, no „გაკვეთილის დანიშვნა“ — the timetable opens from „მეტი“ or a long press on the hours).
+  The pearls on a member's row are live (`usePearlTotals`: one shared listener a student, counted again on every change), 25 %
+  bigger (22 px, `text-body`), and a tap on them opens that student's path page (`ChatRow onPearls` → `openStudent` + `studentItem
+  …'gza'`). The field's signs (`ToolSign`) never take the focus on the way down — the keyboard closing under the finger used to
+  lose the tap (the cog „did nothing“); the field lets go only once the tap has landed. The psalter card's 📖 and „წავიკითხე“
+  stand up beside the title before the ✎ (`Hero aside`, `HeroButton small`), the ✎ 20 % smaller (29 px).
 - **The whole path in the chat's fold (2026-11-21 night**, the user: „გზას რომ ჩახსნიდი … ჩამოსაშლელად პირდაპირ ჩათში“, answer „მთელი
   გზა, როგორც გზის გვერდზე“): `ChatPath` — the student's own side unfolds the whole „საგანძური“ page (`SagandzuriPage bare`, lazy: no
   bar, the ✎ by „ჩემი საგალობლები“; numbers, assignments, chips, flights, ოსტატობა); the teacher's side keeps its ჩათვლა / დამატება /
