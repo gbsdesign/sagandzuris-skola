@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { BookOpen, Bell, CalendarDays, Check, LifeBuoy, LogOut, MoreHorizontal, PenLine, Users } from 'lucide-react';
+import { BookOpen, Bell, CalendarDays, Check, LifeBuoy, LogOut, MoreHorizontal, PenLine, Pencil, Undo2, Users } from 'lucide-react';
+import { useLongPress } from '../../../hooks/useLongPress';
 import { Waiting } from '../../../components/shell/PageSkeleton';
 import { useNavigation } from '../../../context';
 import { Button, Card, Chips, Dot, FOCUS, Helper, Hero, Note, Press, RoundButton, Row, Rows, TopBar, ToggleRow, cx } from '../../../components/ui2';
@@ -142,6 +143,7 @@ export const Body: React.FC<{ group: PsalterGroup; uid: string; canLead: boolean
   const [tile, setTile] = useState<number | null>(null);
   const [pick, setPick] = useState<number | null | false>(false); // false = closed, null = open with nothing chosen
   const [leaving, setLeaving] = useState(false);
+  const [more, setMore] = useState(false);
   const isMember = group.memberIds.includes(uid);
   const read = readCount(slots);
   const othersHelp = helpWanted.filter(h => h.by !== uid);
@@ -168,6 +170,18 @@ export const Body: React.FC<{ group: PsalterGroup; uid: string; canLead: boolean
     return { s, done, canToggle };
   };
 
+  // the card's small ✎ (2026-11-22, the user: „ეს მოხაზული ფუნქციები პატარა ფანქარით ჩასვი მაღლა მარჯვნივ“): who reads which,
+  // this cycle, „ვერ ვკითხულობ“ and the reminder open in a window instead of standing under the numbers
+  const pencil = (
+    <Press onClick={() => setMore(true)} aria-label="ჯგუფი და შეხსენება"
+      className="flex size-9 cursor-pointer items-center justify-center rounded-full bg-white/15 text-white transition active:scale-95 active:bg-white/25 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/80 [&_svg]:size-[17px]">
+      <Pencil />
+    </Press>
+  );
+  const rowDist = <Row lead={<Dot icon={<Users />} />} title="ვინ რომელ კანონს კითხულობს" onClick={() => { setMore(false); onDist(); }} />;
+  const rowCycle = <Row lead={<Dot icon={<CalendarDays />} />} title="ეს წრე" sub={formatRange(cycle!)} onClick={() => { setMore(false); onHistory(); }} />;
+  const tookBack = mine.filter(k => slots[k]?.takenBy === uid && !slots[k]?.readBy);
+
   return (
     <>
       {isMember && <NameNotice group={group} />}
@@ -180,15 +194,17 @@ export const Body: React.FC<{ group: PsalterGroup; uid: string; canLead: boolean
           title="კანონი ჯერ არ გაქვს"
           sub={canPick ? 'აირჩიე თავისუფალი კანონი — მერე გააგრძელებ.' : 'მარაგში ხარ — თუ ვინმე დახმარებას ითხოვს, შეგიძლია მისი კანონი აიღო.'}
           action={canPick ? { label: 'აირჩიე კანონი', icon: <Check />, onClick: () => setPick(null) } : undefined}
+          corner={pencil}
         />
       ) : (
         <Hero
           kicker="შენი კანონი დღეს"
           title={kanonName(focus)}
           sub={`ფსალმუნი ${KATHISMA_PSALMS[focus - 1]}${mineTools(focus).done ? ' · წაკითხულია' : ` · დარჩა ${formatLeft(msLeft(cycle!, now.now))}`}`}
+          corner={pencil}
         >
           <div className="mt-2.5 flex flex-wrap gap-2">
-            <HeroButton filled icon={<BookOpen />} onClick={() => openPrayer(`kathisma-${focus}`)}>წაიკითხე</HeroButton>
+            <HeroButton filled icon={<BookOpen />} label="წაიკითხე" onClick={() => openPrayer(`kathisma-${focus}`)} />
             <HeroButton
               icon={<Check />}
               disabled={!mineTools(focus).canToggle || actions.busy === focus}
@@ -245,20 +261,17 @@ export const Body: React.FC<{ group: PsalterGroup; uid: string; canLead: boolean
             const state = slotState(s, own, false);
             const mineK = responsible(s, own).includes(uid);
             const help = !!s?.help && !done;
+            // a long press marks it read (or takes the mark back) where the window's own buttons would; elsewhere it opens the window
+            const onLong = () => {
+              if (actions.busy === k) return;
+              if (!done && (mineK || canLead)) void actions.read(k);
+              else if (done && (s?.readBy === uid || canLead)) void actions.unread(k);
+              else setTile(k);
+            };
             return (
               <li key={k}>
-                <button
-                  type="button"
-                  onClick={() => setTile(k)}
-                  aria-label={`კანონი ${k}${done ? ', წაკითხულია' : help ? ', დახმარებას ითხოვს' : ''}`}
-                  className={cx(
-                    // a tap target of 36px with the kanon's number, so the tile says which kanon it is
-                    'flex h-9 w-full cursor-pointer items-center justify-center rounded-chip text-meta font-semibold tabular-nums transition active:scale-95',
-                    done ? 'bg-wine text-white' : state === 'taken' || help ? 'bg-gold-tint text-gold-ink' : 'bg-track text-mut',
-                    mineK && !done && 'ring-2 ring-wine',
-                    FOCUS,
-                  )}
-                >{k}</button>
+                <KanonTile k={k} done={done} help={help} taken={state === 'taken'} mine={mineK}
+                  onTap={() => openPrayer(`kathisma-${k}`)} onLong={onLong} />
               </li>
             );
           })}
@@ -266,21 +279,31 @@ export const Body: React.FC<{ group: PsalterGroup; uid: string; canLead: boolean
         {read === KATHISMA_COUNT && <Note className="px-0">მთელი ფსალმუნი წაკითხულია — დიდება ღმერთს!</Note>}
       </Card>
 
-      <Rows>
-        <Row lead={<Dot icon={<Users />} />} title="ვინ რომელ კანონს კითხულობს" onClick={onDist} />
-        <Row lead={<Dot icon={<CalendarDays />} />} title="ეს წრე" sub={formatRange(cycle!)} onClick={onHistory} />
-        {isMember && helpable && focus !== undefined && (
-          <ToggleRow lead={<Dot icon={<LifeBuoy />} />} title="ვერ ვკითხულობ" sub="ჯგუფს დახმარებას სთხოვ"
-            on={!!slots[focus]?.help} disabled={actions.busy === focus}
-            onChange={on => void (on ? actions.askHelp(focus) : actions.cancelHelp(focus))} />
-        )}
-        {isMember && pushSupported() && (
-          <ToggleRow lead={<Dot icon={<Bell />} />} title={group.remindDaily ? `შეხსენება ${group.remindDaily}-ზე` : 'შეხსენებები'}
-            on={settings.psalter} disabled={pushBusy} onChange={() => void togglePush()} />
-        )}
-      </Rows>
-      {isMember && !pushSupported() && <Note>ეს ბრაუზერი შეტყობინებებს ვერ მიიღებს. iPhone-ზე ჯერ დაამატე საიტი მთავარ ეკრანზე.</Note>}
+      {/* a leader who doesn't read has no card for the ✎ — the two rows stay here for them */}
+      {!isMember && <Rows>{rowDist}{rowCycle}</Rows>}
       <Msg msg={msg.msg} onClose={msg.clear} />
+
+      <Sheet open={more} onClose={() => setMore(false)} title="ფსალმუნთა ჯგუფი">
+        <Rows>
+          {rowDist}
+          {rowCycle}
+          {isMember && helpable && focus !== undefined && (
+            <ToggleRow lead={<Dot icon={<LifeBuoy />} />} title="ვერ ვკითხულობ" sub="ჯგუფს დახმარებას სთხოვ"
+              on={!!slots[focus]?.help} disabled={actions.busy === focus}
+              onChange={on => void (on ? actions.askHelp(focus) : actions.cancelHelp(focus))} />
+          )}
+          {/* a kanon I took for someone: its „დაბრუნება“ lived in the number's window, which a tap no longer opens */}
+          {tookBack.map(k => (
+            <Row key={k} lead={<Dot icon={<Undo2 />} />} title={`კანონი ${k} — დაბრუნება`} sub="აღებულს ჯგუფს დაუბრუნებ"
+              onClick={() => { setMore(false); void actions.giveBack(k); }} />
+          ))}
+          {isMember && pushSupported() && (
+            <ToggleRow lead={<Dot icon={<Bell />} />} title={group.remindDaily ? `შეხსენება ${group.remindDaily}-ზე` : 'შეხსენებები'}
+              on={settings.psalter} disabled={pushBusy} onChange={() => void togglePush()} />
+          )}
+        </Rows>
+        {isMember && !pushSupported() && <Note>ეს ბრაუზერი შეტყობინებებს ვერ მიიღებს. iPhone-ზე ჯერ დაამატე საიტი მთავარ ეკრანზე.</Note>}
+      </Sheet>
 
       {isMember && !canLead && (
         <Press disabled={leaving} onClick={async () => {
@@ -300,19 +323,44 @@ export const Body: React.FC<{ group: PsalterGroup; uid: string; canLead: boolean
   );
 };
 
-/** The two buttons on the wine card: the white „წაიკითხე“ and the glass „წავიკითხე“. */
-const HeroButton: React.FC<{ children: React.ReactNode; icon: React.ReactNode; onClick: () => void; filled?: boolean; pressed?: boolean; disabled?: boolean }> = ({
-  children, icon, onClick, filled, pressed, disabled,
+/** The two buttons on the wine card: the white round 📖 (only the sign — 2026-11-22, the user: „სიტყვა წაიკითხე … მოხსენი მარტო
+ *  ნიშანი დარჩეს“; `label` is its spoken name) and the glass „წავიკითხე“. */
+const HeroButton: React.FC<{ children?: React.ReactNode; label?: string; icon: React.ReactNode; onClick: () => void; filled?: boolean; pressed?: boolean; disabled?: boolean }> = ({
+  children, label, icon, onClick, filled, pressed, disabled,
 }) => (
-  <Press onClick={onClick} disabled={disabled} aria-pressed={pressed}
+  <Press onClick={onClick} disabled={disabled} aria-pressed={pressed} aria-label={children ? undefined : label}
     className={cx(
-      'inline-flex h-tap min-w-0 cursor-pointer items-center gap-2 rounded-full pr-5 pl-4 text-body font-bold whitespace-nowrap transition active:scale-[0.97] disabled:cursor-default disabled:opacity-60 [&_svg]:size-[18px] [&_svg]:shrink-0',
+      'inline-flex h-tap min-w-0 cursor-pointer items-center gap-2 rounded-full text-body font-bold whitespace-nowrap transition active:scale-[0.97] disabled:cursor-default disabled:opacity-60 [&_svg]:size-[18px] [&_svg]:shrink-0',
+      children ? 'pr-5 pl-4' : 'w-tap justify-center [&_svg]:size-5',
       filled ? 'bg-white text-wine' : pressed ? 'bg-white/30 text-white' : 'bg-white/15 text-white active:bg-white/25',
       'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/80',
     )}>
-    {icon}<span className="min-w-0 truncate">{children}</span>
+    {icon}{children && <span className="min-w-0 truncate">{children}</span>}
   </Press>
 );
+
+/** One of the 20 numbers: a tap opens the kanon to read, a long press marks it read (2026-11-22, the user: „ციფრზე დაჭერისას
+ *  პირდაპირ ფსალმუნს ხსნიდეს, დიდხანს დაჭერისას კი პირდაპირ ინიშნებოდეს წაკითხულად“). */
+const KanonTile: React.FC<{ k: number; done: boolean; help: boolean; taken: boolean; mine: boolean; onTap: () => void; onLong: () => void }> = ({
+  k, done, help, taken, mine, onTap, onLong,
+}) => {
+  const press = useLongPress(onLong);
+  return (
+    <button
+      type="button"
+      {...press}
+      onClick={onTap}
+      aria-label={`კანონი ${k}${done ? ', წაკითხულია' : help ? ', დახმარებას ითხოვს' : ''} — დააჭირე წასაკითხად, დიდხანს დააჭირე წაკითხულად მოსანიშნად`}
+      className={cx(
+        // a tap target of 36px with the kanon's number, so the tile says which kanon it is
+        'flex h-9 w-full cursor-pointer touch-manipulation items-center justify-center rounded-chip text-meta font-semibold tabular-nums transition select-none [-webkit-touch-callout:none] active:scale-95',
+        done ? 'bg-wine text-white' : taken || help ? 'bg-gold-tint text-gold-ink' : 'bg-track text-mut',
+        mine && !done && 'ring-2 ring-wine',
+        FOCUS,
+      )}
+    >{k}</button>
+  );
+};
 
 type Actions = ReturnType<typeof useKathismaActions>;
 
