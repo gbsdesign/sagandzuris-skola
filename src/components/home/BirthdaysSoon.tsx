@@ -14,7 +14,7 @@ import { triggerHaptic } from '../../utils/haptics';
 const STAFF_DAYS = 5;
 const NOTIFY_AT = [5, 3, 1];
 
-export const BirthdaysSoon: React.FC<{ className?: string; compact?: boolean; row?: boolean }> = ({ className, compact, row }) => {
+export const BirthdaysSoon: React.FC<{ className?: string; compact?: boolean; row?: boolean; only?: string[] }> = ({ className, compact, row, only }) => {
   const { user, isTeacher } = useAuth();
   const { isMember } = useMembership();
   const { navigateTo } = useNavigation();
@@ -28,6 +28,8 @@ export const BirthdaysSoon: React.FC<{ className?: string; compact?: boolean; ro
   ]
     .map(x => ({ ...x, days: nextBirthday(x.b, now).days }))
     .filter(x => (isTeacher ? x.days <= STAFF_DAYS : x.days === 0))
+    // one class's members only (the letters' class chat row, 2026-11-22)
+    .filter(x => !only || only.includes(x.b.uid))
     .sort((a, z) => a.days - z.days);
 
   // staff: a notification 5, 3 and 1 days before, once per person and day on this device

@@ -23,6 +23,7 @@ import {
   Avatar, cx, Dot, Helper, PageHead, Press, RoundButton, Row, Rows, SectionLabel, Sheet,
 } from '../../../components/ui2';
 import { DmChat } from './DmChat';
+import { BirthdaysSoon } from '../../../components/home/BirthdaysSoon';
 import { ChatMenu, ChatRow, ClassPick, hideSide, LastLine, NameMark, readSide, Tick } from './parts';
 
 const MONTHS = ['იან', 'თებ', 'მარ', 'აპრ', 'მაი', 'ივნ', 'ივლ', 'აგვ', 'სექ', 'ოქტ', 'ნოე', 'დეკ'];
@@ -61,7 +62,7 @@ const SearchLine: React.FC<{ value: string; onChange: (v: string) => void }> = (
  *  chat takes the page, on a computer it stands beside the list. */
 export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
   const { user, isAdmin, isSuperAdmin, isTeacher } = useAuth();
-  const { currentPage, selectedDmId, openDm, handleGoBack } = useNavigation();
+  const { currentPage, selectedDmId, openDm, handleGoBack, openClass } = useNavigation();
   const wide = useWide();
   const uid = user?.uid || '';
   const open = currentPage === 'dm' ? selectedDmId : null;
@@ -186,6 +187,8 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
   type Item = {
     key: string; name: string; at: number; lastMs: number; empty: boolean;
     pinned: boolean; hidden: boolean; unread: boolean; teacher: boolean; node: React.ReactNode;
+    /** a class's chat: its members (for the birthdays row over it) */
+    cls?: string[];
   };
   const items: Item[] = [];
   const rowProps = (key: string, lastMs: number, pinned: boolean, hidden: boolean, unread: boolean) => ({
@@ -210,6 +213,7 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
       const hidden = isHidden(prefs, id, lastMs);
       items.push({
         key: id, name: c.name, at: lastMs, lastMs, empty: !last, pinned, hidden, unread, teacher: false,
+        cls: [...c.memberIds, ...c.teacherIds],
         node: (
           <ChatRow
             key={id}
@@ -278,9 +282,10 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
         }
       }
     }
-    // pinned first (the newest pin on top), then a student's teachers, then the chats with messages, newest first, then the empty ones
+    // the classes' chats first (2026-11-22, the user: „თითოეული კლასის ჩათი … სიის თავში … იმ წევრების თავზე“), then pinned
+    // (the newest pin on top), then a student's teachers, then the chats with messages, newest first, then the empty ones
     const pinRank = (i: Item) => (i.pinned ? prefs.pins.indexOf(i.key) : PIN_MAX);
-    items.sort((a, b) => pinRank(a) - pinRank(b) || Number(b.teacher) - Number(a.teacher) || Number(a.empty) - Number(b.empty) || b.at - a.at);
+    items.sort((a, b) => Number(!!b.cls) - Number(!!a.cls) || pinRank(a) - pinRank(b) || Number(b.teacher) - Number(a.teacher) || Number(a.empty) - Number(b.empty) || b.at - a.at);
   }
   const shownItems = items.filter(i => !i.hidden || needle);
   const hiddenItems = needle ? [] : items.filter(i => i.hidden);
@@ -394,11 +399,15 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
         title={
           <div className="flex min-w-0 flex-1 items-center gap-2.5">
             {!wide && <RoundButton label="უკან" onClick={handleGoBack}><ArrowLeft aria-hidden="true" strokeWidth={1.75} /></RoundButton>}
-            <ClassLogo name={openCls.name} logo={openCls.logo} className="size-10 shrink-0 text-lead" />
-            <span className="flex min-w-0 flex-col">
-              <span className="truncate text-title leading-tight font-bold">{openCls.name}</span>
-              <span className="truncate text-meta text-mut">{`კლასის ჩათი · ${openCls.members.length} წევრი`}</span>
-            </span>
+            {/* the class page (program, members) opens from the chat's head — the home lost its classes (2026-11-22) */}
+            <Press onClick={() => openClass(openCls.id)} aria-label={`${openCls.name} — კლასის გვერდი`}
+              className="flex min-w-0 flex-1 cursor-pointer items-center gap-2.5 rounded-field text-left">
+              <ClassLogo name={openCls.name} logo={openCls.logo} className="size-10 shrink-0 text-lead" />
+              <span className="flex min-w-0 flex-col">
+                <span className="truncate text-title leading-tight font-bold">{openCls.name}</span>
+                <span className="truncate text-meta text-mut">{`კლასის ჩათი · ${openCls.members.length} წევრი · გვერდი ›`}</span>
+              </span>
+            </Press>
           </div>
         }
       />
@@ -469,7 +478,10 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
           {shownItems.length > 0 && (
             <>
               <SectionLabel label="ჩათები" />
-              <Rows>{shownItems.map(i => i.node)}</Rows>
+              {/* over each class's chat: its own members' coming birthdays (the teachers' look; none → nothing) */}
+              <Rows>{shownItems.map(i => (i.cls
+                ? <React.Fragment key={i.key}><BirthdaysSoon row only={i.cls} />{i.node}</React.Fragment>
+                : i.node))}</Rows>
             </>
           )}
           {hiddenItems.length > 0 && (

@@ -6,7 +6,6 @@ import { HOME_MAIN_SECTIONS, useSections } from '../../../components/shell/Secti
 import { Toast } from '../../../components/ui/Toast';
 import { useNextStep } from './useNextStep';
 import { useSayingSlot } from './useSayingSlot';
-import { HomeClasses } from './HomeClasses';
 import { useNavPlaces } from '../../../components/shell/BottomNav';
 
 // The home page in the new look (redesign stage 4, boards x-mtavari + x-ultra-gaagrdzele): the app draws the home bar above
@@ -39,9 +38,8 @@ export const HomeV2: React.FC = () => {
         main={tiles.filter(t => t.main)}
         more={tiles.filter(t => !t.main)}
       >
-        {/* my class (a member) or the classes I lead (teachers, admins) — compact; staff see the coming birthdays as the
-            classes card's first row (BirthdaysSoon row) */}
-        <HomeClasses />
+        {/* the classes left the home (2026-11-22, the user: „აქედან მოხსენი … თითოეული კლასის ჩათი … სიის თავში“): each class's
+            chat stands first in „წერილები“, its members' coming birthdays over it */}
         {/* the kanon of a psalter-group member, „ჩვევები“ (a window) and the member's own buttons — no heading */}
         <ShortcutShelf habits />
       </HomeV2View>

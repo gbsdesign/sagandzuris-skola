@@ -2239,6 +2239,11 @@ Pending small tasks the user mentioned: remove the old Drive `ნოტები
   `useNavPlaces`). The library's front (`v2/library/Front.tsx`) has no „საპატრიარქოს ბიბლიოთეკა“ cover: „წიგნები თემებით“ = a row a
   `P_CATEGORIES` entry (reordered) → `patriarq:<category>`; a bare `patriarq` shows the front. The app says „ავტომატური სასწავლო პროგრამა“
   (declined: -ს / -მა / -ის / -თან) wherever it said „AI მასწავლებელი“ — never write the old name again.
+- **Classes left the home; class chats head „წერილები“ (2026-11-22**, the user: „აქედან მოხსენი … თითოეული კლასის ჩათი … სიის თავში
+  … დაბადების დღეები კლასის თავზე … მარტო იმ კლასის წევრები“): `HomeV2` no longer draws `HomeClasses` (file kept, unused). In
+  `LettersPage` class chat items (`Item.cls` = the class's members + teachers) sort before every other chat; over each one
+  `BirthdaysSoon row only={cls}` shows that class's coming birthdays (still teachers/admins only). The open class chat's head
+  (logo + name) opens the class page (`openClass`) — the class page's way in now.
 - **The whole path in the chat's fold (2026-11-21 night**, the user: „გზას რომ ჩახსნიდი … ჩამოსაშლელად პირდაპირ ჩათში“, answer „მთელი
   გზა, როგორც გზის გვერდზე“): `ChatPath` — the student's own side unfolds the whole „საგანძური“ page (`SagandzuriPage bare`, lazy: no
   bar, the ✎ by „ჩემი საგალობლები“; numbers, assignments, chips, flights, ოსტატობა); the teacher's side keeps its ჩათვლა / დამატება /
