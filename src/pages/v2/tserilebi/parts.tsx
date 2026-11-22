@@ -1,10 +1,11 @@
 import React from 'react';
-import { Check, CheckCheck, Eye, EyeOff, GraduationCap, Mic, Pin, PinOff, ShieldCheck, Users } from 'lucide-react';
+import { CalendarClock, Check, CheckCheck, Eye, EyeOff, GraduationCap, Mic, Pin, PinOff, ShieldCheck, Users } from 'lucide-react';
 import { Badge, Button, cx, Dot, Press, Sheet, Small } from '../../../components/ui2';
 import { useLongPress } from '../../../hooks/useLongPress';
 import { SwipeRow, type SwipeSide } from '../../../components/ui/SwipeRow';
 import { ClassLogo } from '../../../components/classes/ClassLogo';
-import type { SchoolClass } from '../../../hooks/useClasses';
+import type { LessonSlot, SchoolClass } from '../../../hooks/useClasses';
+import { nextLesson, sortSlots } from '../../../components/teacher/Schedule';
 import { triggerHaptic } from '../../../utils/haptics';
 
 // ---- small marks -------------------------------------------------------------------------------------------------
@@ -44,9 +45,11 @@ export const ChatRow: React.FC<{
   /** how many wait (0 / none while not counted = a dot) */
   count?: number;
   tick?: React.ReactNode;
+  /** a third line under the last message (a class's lesson times) */
+  extra?: React.ReactNode;
   onClick: () => void; onMenu?: () => void;
   left?: SwipeSide; right?: SwipeSide;
-}> = ({ face, name, last, time, unread, active, busy, pinned, group, count, tick, onClick, onMenu, left, right }) => {
+}> = ({ face, name, last, time, unread, active, busy, pinned, group, count, tick, extra, onClick, onMenu, left, right }) => {
   const press = useLongPress(() => onMenu?.());
   const button = (
     <Press
@@ -76,10 +79,45 @@ export const ChatRow: React.FC<{
             {pinned && <Pin aria-label="მიმაგრებული" className="size-4 rotate-45 text-mut" />}
           </span>
         </span>
+        {extra}
       </span>
     </Press>
   );
   return left || right ? <SwipeRow left={left} right={right} faceBg={group ? 'bg-tint' : 'bg-surf'} className="rounded-none">{button}</SwipeRow> : button;
+};
+
+// ---- a class's lesson times on its chat row (2026-11-22, the user: „შიგნით რომაა ეგენი გარეთ გამოიტანე ლამაზად და კომპაქტურად …
+// მარტო დაწყების საათი … დიდხანს დაჭერისას რედაქტირება … ფანქარი არ უნდა“): small pills „სამ 18:00“, the next lesson filled in,
+// no „N დღეში“; a long press on them opens the timetable's window for the class's teachers and admins (no ✎) -------------------
+
+const DAY_SHORT = ['კვ', 'ორშ', 'სამ', 'ოთხ', 'ხუთ', 'პარ', 'შაბ'];
+
+export const ClassTimes: React.FC<{ slots: LessonSlot[]; onEdit?: () => void }> = ({ slots, onEdit }) => {
+  const lp = useLongPress(() => onEdit?.());
+  if (!slots.length) return null;
+  const next = nextLesson(slots)?.slot;
+  // the row's own long press (its menu) and swipe stay off while the finger is on the times
+  const own = onEdit ? {
+    onPointerDown: (e: React.PointerEvent) => { e.stopPropagation(); lp.onPointerDown(e); },
+    onPointerMove: (e: React.PointerEvent) => { e.stopPropagation(); lp.onPointerMove(e); },
+    onPointerUp: (e: React.PointerEvent) => { e.stopPropagation(); lp.onPointerUp(); },
+    onPointerCancel: (e: React.PointerEvent) => { e.stopPropagation(); lp.onPointerCancel(); },
+    onPointerLeave: lp.onPointerLeave,
+    onContextMenu: (e: React.MouseEvent) => { e.stopPropagation(); lp.onContextMenu(e); },
+    onClickCapture: lp.onClickCapture,
+    title: 'შესაცვლელად დიდხანს დააჭირე',
+  } : {};
+  return (
+    <span {...own} aria-label="გაკვეთილები" className="mt-1 flex flex-wrap items-center gap-1 select-none [-webkit-touch-callout:none]">
+      <CalendarClock aria-hidden="true" className="size-4 shrink-0 text-wine" strokeWidth={2} />
+      {sortSlots(slots).map((s, i) => (
+        <span key={i} className={cx(
+          'inline-flex h-6 items-center rounded-full px-2 text-[12px] leading-none font-bold whitespace-nowrap tabular-nums',
+          s === next ? 'bg-wine text-white' : 'bg-surf text-ink ring-1 ring-wine/15',
+        )}>{DAY_SHORT[s.day]} {s.start}</span>
+      ))}
+    </span>
+  );
 };
 
 // swipe sides

@@ -107,7 +107,7 @@ export const HomeV2View: React.FC<HomeV2ViewProps> = ({ saying, lesson, main, mo
     {lesson && (
       <Press
         onClick={lesson.onOpen}
-        aria-label={lesson.unread ? `გაკვეთილი, ${lesson.unread} ახალი წერილი` : 'გაკვეთილი'}
+        aria-label={lesson.unread ? `სწავლა, ${lesson.unread} ახალი წერილი` : 'სწავლა'}
         style={rise(1)}
         className={cx(
           'sg-up group relative isolate flex min-h-[76px] w-full cursor-pointer items-center gap-3.5 overflow-hidden rounded-card',
@@ -122,7 +122,7 @@ export const HomeV2View: React.FC<HomeV2ViewProps> = ({ saying, lesson, main, mo
           <NotebookPen strokeWidth={2} />
         </span>
         <span className="flex min-w-0 flex-1 flex-col">
-          <span className="text-title leading-tight font-bold tracking-[-0.01em]">გაკვეთილი</span>
+          <span className="text-title leading-tight font-bold tracking-[-0.01em]">სწავლა</span>
           {lesson.unread > 0 && (
             <span className="flex items-center gap-1.5 text-cap leading-tight font-semibold text-white/85">
               <span aria-hidden="true" className="size-2 shrink-0 rounded-full bg-blush" />

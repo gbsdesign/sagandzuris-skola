@@ -24,7 +24,8 @@ import {
 } from '../../../components/ui2';
 import { DmChat } from './DmChat';
 import { BirthdaysSoon } from '../../../components/home/BirthdaysSoon';
-import { ChatMenu, ChatRow, ClassPick, hideSide, LastLine, NameMark, readSide, Tick } from './parts';
+import { ChatMenu, ChatRow, ClassPick, ClassTimes, hideSide, LastLine, NameMark, readSide, Tick } from './parts';
+import { ScheduleSheet } from '../../../components/teacher/Schedule';
 
 const MONTHS = ['იან', 'თებ', 'მარ', 'აპრ', 'მაი', 'ივნ', 'ივლ', 'აგვ', 'სექ', 'ოქტ', 'ნოე', 'დეკ'];
 // today: the time; earlier: the day and a short month („10 ნოე“) — one short line at a row's end
@@ -100,6 +101,7 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
   const { prefs, pin, unpin, hide, unhide } = useChatListPrefs(uid);
   const [menuKey, setMenuKey] = useState<string | null>(null);
   const [showHidden, setShowHidden] = useState(false);
+  const [timesOf, setTimesOf] = useState<string | null>(null);
   const classUnread = (c: SchoolClass) => isClassUnread(lasts[c.id], seen[c.id], uid) && open !== CLASS_PREFIX + c.id;
   const dmUnread = (t: DirectThread) => isUnread(t, uid) && open !== t.id;
   const asks: CountAsk[] = overview ? [] : [
@@ -227,6 +229,8 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
             group
             last={last ? <LastLine who={last.uid === uid ? 'შენ:' : undefined} text={last.text} /> : `კლასის ჩათი · ${c.members.length} წევრი`}
             time={when(last?.at ?? null)}
+            extra={<ClassTimes slots={c.schedule}
+              onEdit={isAdmin || c.teacherIds.includes(uid) ? () => setTimesOf(c.id) : undefined} />}
             {...rowProps(id, lastMs, pinned, hidden, unread)}
           />
         ),
@@ -405,16 +409,19 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
         key={openCls.id}
         cls={openCls}
         fill
+        timetable={false}
         title={
           <div className="flex min-w-0 flex-1 items-center gap-2.5">
             {!wide && <RoundButton label="უკან" onClick={handleGoBack}><ArrowLeft aria-hidden="true" strokeWidth={1.75} /></RoundButton>}
             {/* the class page (program, members) opens from the chat's head — the home lost its classes (2026-11-22) */}
             <Press onClick={() => openClass(openCls.id)} aria-label={`${openCls.name} — კლასის გვერდი`}
               className="flex min-w-0 flex-1 cursor-pointer items-center gap-2.5 rounded-field text-left">
-              <ClassLogo name={openCls.name} logo={openCls.logo} className="size-10 shrink-0 text-lead" />
+              {/* a compact head, the whole name in view (2026-11-22, the user: „სახელი უფრო კომპაქტური … მთლიანად ეტეოდეს …
+                  დააპატარავე 50%“); the lesson times moved out to the list's row */}
+              <ClassLogo name={openCls.name} logo={openCls.logo} className="size-8 shrink-0 text-meta" />
               <span className="flex min-w-0 flex-col">
-                <span className="truncate text-title leading-tight font-bold">{openCls.name}</span>
-                <span className="truncate text-meta text-mut">{`კლასის ჩათი · ${openCls.members.length} წევრი · გვერდი ›`}</span>
+                <span className="line-clamp-2 text-body leading-tight font-bold break-words">{openCls.name}</span>
+                <span className="truncate text-[12px] leading-tight text-mut">{`${openCls.members.length} წევრი · გვერდი ›`}</span>
               </span>
             </Press>
           </div>
@@ -441,11 +448,12 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
   const list = (
     <div className="flex min-w-0 flex-col gap-3 pb-4 lg:min-h-0 lg:overflow-y-auto">
       {/* since 2026-11-21 the list has its „უკან“ (the phone's bottom menu is gone); a computer keeps its top bar */}
+      {/* the page's name is „სწავლა“, as on the home's main button that opens it (2026-11-22, the user: „სწავლა დააწერე აქაც და შიგნითაც“) */}
       <PageHead
-        title={wide ? 'წერილები' : (
+        title={wide ? 'სწავლა' : (
           <span className="flex items-center gap-2.5">
             <RoundButton label="უკან" onClick={handleGoBack}><ArrowLeft aria-hidden="true" strokeWidth={1.75} /></RoundButton>
-            წერილები
+            სწავლა
           </span>
         )}
         right={(
@@ -523,6 +531,10 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
       <div className={cx(open ? 'hidden lg:block' : 'block', 'lg:min-h-0 lg:flex lg:flex-col')}>{list}</div>
       <div className={cx(open ? 'block' : 'hidden lg:block', 'min-w-0 h-[calc(100dvh-1rem)] lg:h-full')}>{pane}</div>
 
+      {(() => {
+        const c = timesOf ? known.find(x => x.id === timesOf) : null;
+        return c ? <ScheduleSheet cls={c} open onClose={() => setTimesOf(null)} /> : null;
+      })()}
       <Sheet open={writing} onClose={() => setWriting(false)} title="ახალი წერილი">
         <NewLetter render={contacts} />
       </Sheet>
