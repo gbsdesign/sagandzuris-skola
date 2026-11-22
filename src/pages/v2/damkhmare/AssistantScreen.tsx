@@ -29,6 +29,10 @@ type Item =
   | { id: number; kind: 'note'; text: string; tone: 'mut' | 'danger' | 'leaf'; classId?: string }
   | { id: number; kind: 'plan'; say: string; plan: CheckedPlan; state: PlanState | 'dropped' };
 
+// Asks still on their way, by `uid:chatId` (the user, 2026-11-22: „ჩათიდან გასვლის მერე წყვეტს მუშაობას … არ მინდა“): closing
+// the window does not stop one — its answer is written into the kept talk, and a window opened on that talk waits for it.
+const running = new Map<string, Promise<void>>();
+
 type Gate = null | 'kids' | 'budget';
 // Omit over each member of the union
 type NewItem = Item extends unknown ? (Item extends infer T ? (T extends Item ? Omit<T, 'id'> : never) : never) : never;
@@ -113,6 +117,11 @@ export const AssistantPanel: React.FC<{
   const [listOpen, setListOpen] = useState(false);
   const [heads, setHeads] = useState<ChatHead[] | null>(null);
   const started = useRef(false);
+  const mounted = useRef(true);
+  const chatRef = useRef('');
+  const itemsRef = useRef<Item[]>([]);
+  chatRef.current = chatId;
+  itemsRef.current = items;
   const fromSaved = (list: Saved[]): Item[] => list.map(i => (i.k === 'note'
     ? { id: nextId.current++, kind: 'note' as const, text: i.t, tone: 'mut' as const }
     : { id: nextId.current++, kind: i.k, text: i.t }));
@@ -126,7 +135,20 @@ export const AssistantPanel: React.FC<{
     setLastChatId(me.uid, id);
     setItems([]);
     setEditing(false);
-    loadChat(me.uid, id).then(saved => setItems(cur => (cur.length ? cur : fromSaved(saved))), () => undefined);
+    const load = () => loadChat(me.uid, id).then(saved => {
+      if (mounted.current && chatRef.current === id) setItems(cur => (cur.length ? cur : fromSaved(saved)));
+    }, () => undefined);
+    const task = running.get(`${me.uid}:${id}`);
+    if (task) {
+      // an ask of this talk is still on its way (sent before the window closed): wait for it, then show the talk with its answer
+      setBusy(true);
+      void task.finally(() => {
+        if (!mounted.current || chatRef.current !== id) return;
+        setBusy(false);
+        setItems([]);
+        void load();
+      });
+    } else { setBusy(false); void load(); }
   };
   const newChat = () => {
     if (busy) return;
@@ -137,6 +159,18 @@ export const AssistantPanel: React.FC<{
     setEditing(false);
     setText('');
   };
+  // closing the window saves the talk at once (the 0.8 s wait below would be lost)
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      const id = chatRef.current;
+      if (keep && me.uid && id && itemsRef.current.length) {
+        saveChat(me.uid, id, toSaved(itemsRef.current)).catch(e => console.warn('assistant history:', e));
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   useEffect(() => {
     if (!keep || !me.uid || started.current) return;
     started.current = true;
@@ -188,30 +222,51 @@ export const AssistantPanel: React.FC<{
     const t = words.trim();
     if (!t || busy || !ready || !me.uid || gate) return;
     const before = history();
-    add({ kind: 'me', text: t });
+    const uid = me.uid;
+    const cid = chatRef.current;
+    const sent: Item = { id: nextId.current++, kind: 'me', text: t };
+    const snapshot = [...itemsRef.current, sent];
+    setItems(list => [...list, sent]);
     setText('');
     setBusy(true);
+    // what came back: shown here while the window is open on this talk, else written into the kept talk
+    const deliver = (out: NewItem[]) => {
+      if (mounted.current && chatRef.current === cid) { out.forEach(add); return; }
+      if (!keep || !cid) return;
+      const later = out.map(it => ({ ...it, id: nextId.current++ }) as Item);
+      return saveChat(uid, cid, toSaved([...snapshot, ...later])).catch(e => console.warn('assistant history:', e));
+    };
+    const task = (async () => {
+      try {
+        const answer = await deps.ask(uid, scope, before, t);
+        const draft = answer.plan ? planFromAi(answer.plan, scope) : null;
+        const checked = draft ? checkPlan(draft, scope) : null;
+        const out: NewItem[] = [];
+        if (checked?.ok) {
+          if (mounted.current) setEditing(false);
+          out.push({ kind: 'plan', say: answer.say, plan: checked.plan, state: 'open' });
+        } else {
+          if (answer.say) out.push({ kind: 'ai', text: answer.say });
+          if (checked && !checked.ok) out.push({ kind: 'note', text: `ამას ვერ გავაკეთებ: ${checked.why}`, tone: 'danger' });
+          else if (answer.plan && !draft) out.push({ kind: 'note', text: 'გეგმა ვერ შევადგინე — სცადე სხვა სიტყვებით.', tone: 'danger' });
+        }
+        await deliver(out);
+      } catch (e) {
+        const kind = e instanceof AiTeacherError ? e.kind : 'failed';
+        if (kind === 'kids' || kind === 'budget') { if (mounted.current) setGate(kind); }
+        else {
+          const why = whyOf(e);
+          await deliver([{ kind: 'note', text: why ? `${ASSISTANT_PROBLEM_TEXT[kind]}\n(${why})` : ASSISTANT_PROBLEM_TEXT[kind], tone: 'danger' }]);
+        }
+      }
+    })();
+    const key = `${uid}:${cid}`;
+    running.set(key, task);
     try {
-      const answer = await deps.ask(me.uid, scope, before, t);
-      const draft = answer.plan ? planFromAi(answer.plan, scope) : null;
-      const checked = draft ? checkPlan(draft, scope) : null;
-      if (checked?.ok) {
-        setEditing(false);
-        add({ kind: 'plan', say: answer.say, plan: checked.plan, state: 'open' });
-      } else {
-        if (answer.say) add({ kind: 'ai', text: answer.say });
-        if (checked && !checked.ok) add({ kind: 'note', text: `ამას ვერ გავაკეთებ: ${checked.why}`, tone: 'danger' });
-        else if (answer.plan && !draft) add({ kind: 'note', text: 'გეგმა ვერ შევადგინე — სცადე სხვა სიტყვებით.', tone: 'danger' });
-      }
-    } catch (e) {
-      const kind = e instanceof AiTeacherError ? e.kind : 'failed';
-      if (kind === 'kids' || kind === 'budget') setGate(kind);
-      else {
-        const why = whyOf(e);
-        add({ kind: 'note', text: why ? `${ASSISTANT_PROBLEM_TEXT[kind]}\n(${why})` : ASSISTANT_PROBLEM_TEXT[kind], tone: 'danger' });
-      }
+      await task;
     } finally {
-      setBusy(false);
+      if (running.get(key) === task) running.delete(key);
+      if (mounted.current && chatRef.current === cid) setBusy(false);
     }
   };
 
