@@ -9,6 +9,7 @@ import { openAssistant, useAssistantAllowed } from '../damkhmare/open';
 import { CHIPS, type Filter, type UserRecord } from '../../../components/admin/UsersTab';
 import { SearchBox } from '../klasi/teacher/SearchBox';
 import { useAdmin, useKeptText } from './ctx';
+import { useChantListEdits } from '../../../utils/chantListEdits';
 import { peopleItem, personItem, schoolItem } from './nav';
 import { PersonRow, Screen } from './parts';
 import { usePersonLine } from './People';
@@ -24,6 +25,8 @@ export const AdminHome: React.FC = () => {
   const { isOwner, isSuperAdmin } = useAuth();
   const { d, test, go, back } = useAdmin();
   const deletedN = Object.values(d.access).filter(a => a.status === 'deleted').length;
+  const chantEdits = useChantListEdits();
+  const deletedChantsN = Object.values(chantEdits).reduce((n, e) => n + (e.deleted?.length ?? 0), 0);
   const [q, setQ] = useKeptText('home');
   const [filters, setFilters] = useState(false);
   const line = usePersonLine();
@@ -107,6 +110,12 @@ export const AdminHome: React.FC = () => {
       {isSuperAdmin && deletedN > 0 && (
         <Rows>
           <Row lead={<Dot icon={<Trash2 />} />} title={`წაშლილები · ${deletedN}`} sub="აღდგენა ან სამუდამოდ წაშლა" onClick={() => go('deleted')} />
+        </Rows>
+      )}
+
+      {deletedChantsN > 0 && (
+        <Rows>
+          <Row lead={<Dot icon={<Trash2 />} />} title={`წაშლილი საგალობლები · ${deletedChantsN}`} sub="სიაში დაბრუნება" onClick={() => go('chants')} />
         </Rows>
       )}
 

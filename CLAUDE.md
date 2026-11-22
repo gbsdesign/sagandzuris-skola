@@ -2349,3 +2349,10 @@ Pending small tasks the user mentioned: remove the old Drive `ნოტები
   bar, the ✎ by „ჩემი საგალობლები“; numbers, assignments, chips, flights, ოსტატობა); the teacher's side keeps its ჩათვლა / დამატება /
   დავალებად მიცემა and gets the two numbers, the bar and the service chips (`gza/chips.ts` `chipsOf`, shared with the page). The fold
   scrolls inside up to 72dvh.
+- **Arranging a service's chant list (2026-11-22**, the user: „დიდხანს დაჭერისას … არქივში გადატანა ან წაშლა ან რიგის შეცვლა“; answers
+  „ყველასთვის, მხოლოდ ადმინი ცვლის · არქივი სიის ბოლოს ჩამოსაშლელში, წაშლა სულ ქრება — აღდგენა ადმინის პანელიდან · ▲ ▼“): an admin's long
+  press on a row of `v2/galoba/ChantListScreen` opens a sheet — place N / M with „მაღლა“ / „დაბლა“, „არქივში გადატანა“ (the fold „არქივი ·
+  N“ under the list, everyone sees it; „არქივიდან დაბრუნება“ there) and „წაშლა“ (asks; gone for everyone). Stored in
+  `settings/chantListEdits.services[service] {order, archived, deleted, deletedAt}` (`utils/chantListEdits.ts`, `arrange`; no rules
+  change). The admin panel's row „წაშლილი საგალობლები · N“ → mapItem `chants` (`admini/DeletedChants.tsx`, „აღდგენა“). Only this list —
+  the search and the books still find a deleted chant.
