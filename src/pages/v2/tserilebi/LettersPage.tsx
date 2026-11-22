@@ -471,7 +471,7 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
             {programIn === openCls.id && (
               <div className="mt-1.5 flex max-h-[60dvh] flex-col gap-2.5 overflow-x-hidden overflow-y-auto overscroll-contain pb-1">
                 <React.Suspense fallback={<Waiting field={false} rows={3} quiet />}>
-                  <ClassProgramFold cls={openCls} canEdit={!!moreFor} />
+                  <ClassProgramFold cls={openCls} canEdit={!!moreFor} compact />
                 </React.Suspense>
               </div>
             )}

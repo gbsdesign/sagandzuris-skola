@@ -41,7 +41,9 @@ const Mark: React.FC<{ n: string; on: boolean; ok: boolean }> = ({ n, on, ok }) 
 );
 
 /** x-klasi — the class's „პროგრამა“ tab: the program card, then the psalter group's row. */
-export const ProgramTab: React.FC<{ cls: SchoolClass; canEdit: boolean }> = ({ cls, canEdit }) => {
+/** `compact`: the class chat's fold (2026-11-22, the user: „კომპაქტური გახადე უფრო“) — one header line with the count, the
+ *  bar thin under it, „+“ beside the ☁, the rows tighter and no psalter row (the list's „ფს.ჯ.“ has it) */
+export const ProgramTab: React.FC<{ cls: SchoolClass; canEdit: boolean; compact?: boolean }> = ({ cls, canEdit, compact }) => {
   const { user } = useAuth();
   const { selectedChantVariants = {} } = useChants();
   // the member's own marks, as on „საგანძურის გზა“ (a program item not on the path yet joins it when marked)
@@ -117,7 +119,8 @@ export const ProgramTab: React.FC<{ cls: SchoolClass; canEdit: boolean }> = ({ c
         : <span className="shrink-0 text-meta text-mut">იწერება…</span>;
     }
     return (
-      <Row key={p.key} title={lines.title} sub={[lines.sub, p.note].filter(Boolean).join(' · ') || undefined} right={right} onClick={() => setShown(p.key)} aria-haspopup="dialog" />
+      <Row key={p.key} title={lines.title} sub={[lines.sub, p.note].filter(Boolean).join(' · ') || undefined} right={right} onClick={() => setShown(p.key)} aria-haspopup="dialog"
+        className={compact ? 'min-h-0! py-1.5!' : undefined} />
     );
   };
   const open = listed.find(p => p.key === shown);
@@ -125,10 +128,16 @@ export const ProgramTab: React.FC<{ cls: SchoolClass; canEdit: boolean }> = ({ c
   return (
     <div className="flex flex-col gap-2.5">
       <Card pad="none">
-        <div className="flex flex-col gap-2 px-4 pt-4 pb-3">
+        <div className={cx('flex flex-col', compact ? 'gap-1.5 px-3.5 pt-2.5 pb-2' : 'gap-2 px-4 pt-4 pb-3')}>
           <div className="flex items-center justify-between gap-2">
-            <h2 className="min-w-0 truncate text-head font-bold">სასწავლო პროგრამა</h2>
-            <div className="flex shrink-0 items-center gap-2">
+            <h2 className={cx('min-w-0 truncate font-bold', compact ? 'text-lead' : 'text-head')}>
+              სასწავლო პროგრამა
+              {compact && iAmMember && total > 0 && <span className="ml-1.5 text-meta font-semibold text-mut tabular-nums">{learned} / {total}</span>}
+            </h2>
+            <div className="flex shrink-0 items-center gap-1">
+              {compact && canEdit && (
+                <RoundButton label="დამატება" size={36} tone="plain" onClick={() => setAdding(true)}><Plus /></RoundButton>
+              )}
               {!iAmMember && cls.program.length > 0 && <Small>{cls.program.length}</Small>}
               {offline.shown && (
                 <RoundButton label={offline.label} size={36} tone="plain" onClick={() => setOfflineOpen(true)} aria-haspopup="dialog">
@@ -143,7 +152,8 @@ export const ProgramTab: React.FC<{ cls: SchoolClass; canEdit: boolean }> = ({ c
               <Bar value={offline.savedCount / offline.count} label="ჩამოწერა" />
             </>
           )}
-          {iAmMember && total > 0 && (
+          {iAmMember && total > 0 && compact && <Bar value={learned / total} label="ნასწავლი" />}
+          {iAmMember && total > 0 && !compact && (
             <>
               <div className="text-meta text-mut">
                 შენ იცი {learned} / {total} {word}{voiceSlots ? ` · ${voices} / ${voiceSlots} ხმა` : ''}
@@ -171,7 +181,7 @@ export const ProgramTab: React.FC<{ cls: SchoolClass; canEdit: boolean }> = ({ c
             )}
           </div>
         )}
-        {canEdit && (
+        {canEdit && !compact && (
           <div className="flex items-center justify-between gap-2 border-t border-line px-2 py-1">
             <Button kind="quiet" size="md" icon={<Plus />} onClick={() => setAdding(true)}>დამატება</Button>
           </div>
@@ -183,7 +193,7 @@ export const ProgramTab: React.FC<{ cls: SchoolClass; canEdit: boolean }> = ({ c
       )}
       {done && <Note>{done}</Note>}
 
-      <PsalterRow cls={cls} canLead={canEdit} />
+      {!compact && <PsalterRow cls={cls} canLead={canEdit} />}
       {iAmMember && !canEdit && <AiNoteRow cls={cls} uid={user?.uid} />}
 
       {canEdit && <ProgramAddSheet cls={cls} open={adding} onClose={() => setAdding(false)} />}
