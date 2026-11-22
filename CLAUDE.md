@@ -2254,7 +2254,9 @@ Pending small tasks the user mentioned: remove the old Drive `ნოტები
   გვერდი ›“). The list's page name and the home's main button say **„სწავლა“** (was „წერილები“ / „გაკვეთილი“; the user: „სწავლა
   დააწერე აქაც და შიგნითაც“). The times' long press opens the class page's own `TimetableSheet` (`klasi/teacher/Timetable.tsx`, edit).
   Under the open class chat's name (`ClassChat under`) one row of pills (`ClassChatTools` in `parts.tsx`): „პროგრამა“ · „წევრები“ —
-  they open the class page on that tab (`keepClassTab` + `openClass`); „წევრები“ only for the class's teachers/admins. The program's
+  „პროგრამა“ unfolds the class page's `ProgramTab` right there under the head (lazy, scrolls inside up to 60dvh; the user: „შიგნით
+  კი არ შედიოდეს … იქვე ჩამოიშალოს“), „წევრები“ opens the class page on that tab (`keepClassTab` + `openClass`), only for the
+  class's teachers/admins. The program's
   cog is only its sign (no words), a round button at that row's right end, under the phone (`ClassChatTools end` = `AssistantButton`;
   the user: „წარწერა მოაცილე … ყურმილის დაბლა ჩასვი“), for the class's teachers/admins while `useAssistantAllowed`. The name held long opens the class
   page's „მეტი“ (`ClassMoreSheet openItem` — its program / report / AI-note rows open the class page first, then the item).

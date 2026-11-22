@@ -139,11 +139,12 @@ export const ClassTimes: React.FC<{ slots: LessonSlot[]; onEdit?: () => void }> 
 // ---- the open class chat's buttons under its name (2026-11-22, the user: „ავტო პროგრამის, პროგრამის და წევრები ღილაკები
 // გადმოიტანე ჩათის სახელის ქვეშ“): small pills in one row; „წევრები“ and the program's cog only for its teachers and admins ----
 
-const ToolPill: React.FC<{ icon: React.ReactNode; label: string; onClick: () => void }> = ({ icon, label, onClick }) => (
-  <Press onClick={() => { triggerHaptic(8); onClick(); }}
+const ToolPill: React.FC<{ icon: React.ReactNode; label: string; onClick: () => void; open?: boolean }> = ({ icon, label, onClick, open }) => (
+  <Press onClick={() => { triggerHaptic(8); onClick(); }} aria-expanded={open}
     className="group flex h-tap min-w-0 cursor-pointer items-center rounded-full focus-visible:outline-none">
     <span className={cx(
-      'flex h-9 min-w-0 items-center gap-1.5 rounded-full bg-surf py-1 pr-3.5 pl-2.5 text-meta font-bold text-ink transition',
+      'flex h-9 min-w-0 items-center gap-1.5 rounded-full py-1 pr-3.5 pl-2.5 text-meta font-bold text-ink transition',
+      open ? 'bg-tint text-wine' : 'bg-surf',
       'group-active:scale-[0.97] group-active:bg-soft group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-wine/60',
       '[&_svg]:size-[18px] [&_svg]:shrink-0 [&_svg]:text-wine',
     )}>
@@ -154,11 +155,12 @@ const ToolPill: React.FC<{ icon: React.ReactNode; label: string; onClick: () => 
 );
 
 // `end`: the program's round cog, alone at the row's right — under the phone (the user: „წარწერა მოაცილე … ყურმილის დაბლა ჩასვი“)
+// `programOpen`: „პროგრამა“ unfolds the class's program right under the head (the user: „შიგნით კი არ შედიოდეს … იქვე ჩამოიშალოს“)
 export const ClassChatTools: React.FC<{
-  program: () => void; members?: () => void; end?: React.ReactNode;
-}> = ({ program, members, end }) => (
+  program: () => void; programOpen?: boolean; members?: () => void; end?: React.ReactNode;
+}> = ({ program, programOpen, members, end }) => (
   <div role="group" aria-label="კლასის ღილაკები" className="flex flex-wrap items-center gap-x-1.5">
-    <ToolPill icon={<ListChecks strokeWidth={2} />} label="პროგრამა" onClick={program} />
+    <ToolPill icon={<ListChecks strokeWidth={2} />} label="პროგრამა" onClick={program} open={programOpen} />
     {members && <ToolPill icon={<Users strokeWidth={2} />} label="წევრები" onClick={members} />}
     {end && <span className="ml-auto flex shrink-0">{end}</span>}
   </div>
