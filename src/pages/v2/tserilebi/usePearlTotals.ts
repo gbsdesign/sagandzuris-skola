@@ -1,30 +1,40 @@
 import { useEffect, useState } from 'react';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../../../firebase';
 import { pearlCounts } from '../../../utils/pathPearls';
 
 // How many pearls each student of the letters' list has gathered (2026-11-22, the user: „ვის რამდენი მარგალიტი აქვს შეგროვებილი …
 // თუნდაც 1 ხმა იცოდეს მაინც … მარტო საერთო ციფრი“): every item of the path with at least one voice marked (a poem or an
-// instrument learned) counts — `pearlCounts(…).polished`. Each student's record is read once, again only after a few minutes.
+// instrument learned) counts — `pearlCounts(…).polished`. Live since the same evening (the user: „განახლებას აგვიანებს … სანამ არ
+// დარეფრეშდება გვერდი ციფრი არ იცვლება“): one listener a student while the list is open, shared by every row that shows them.
 
-const FRESH = 3 * 60_000;
-const kept = new Map<string, { n: number; at: number }>();
-const asking = new Map<string, Promise<void>>();
+type Kept = { n: number };
+const kept = new Map<string, Kept>();
+const live = new Map<string, { users: number; stop: () => void }>();
+const redraws = new Set<() => void>();
 
-const ask = (uid: string) => {
-  let p = asking.get(uid);
-  if (!p) {
-    p = getDoc(doc(db, 'students', uid)).then(
-      s => {
-        const path = (s.data()?.selectedChantVariants || {}) as Parameters<typeof pearlCounts>[0];
-        kept.set(uid, { n: pearlCounts(path, null).polished, at: Date.now() });
-      },
-      // not readable (not this teacher's student): no number rather than a wrong 0
-      () => { kept.set(uid, { n: -1, at: Date.now() }); },
-    ).finally(() => { asking.delete(uid); });
-    asking.set(uid, p);
-  }
-  return p;
+const listen = (uid: string) => {
+  const now = live.get(uid);
+  if (now) { now.users++; return; }
+  const stop = onSnapshot(
+    doc(db, 'students', uid),
+    s => {
+      const path = (s.data()?.selectedChantVariants || {}) as Parameters<typeof pearlCounts>[0];
+      kept.set(uid, { n: pearlCounts(path, null).polished });
+      redraws.forEach(r => r());
+    },
+    // not readable (not this teacher's student): no number rather than a wrong 0
+    () => { kept.set(uid, { n: -1 }); redraws.forEach(r => r()); },
+  );
+  live.set(uid, { users: 1, stop });
+};
+
+const leave = (uid: string) => {
+  const now = live.get(uid);
+  if (!now) return;
+  if (--now.users > 0) return;
+  now.stop();
+  live.delete(uid);
 };
 
 /** uid → pearls (only the students already read). */
@@ -32,13 +42,11 @@ export const usePearlTotals = (uids: string[]) => {
   const [, redraw] = useState(0);
   const key = [...new Set(uids.filter(Boolean))].sort().join(',');
   useEffect(() => {
-    let live = true;
-    for (const uid of key ? key.split(',') : []) {
-      const k = kept.get(uid);
-      if (k && Date.now() - k.at < FRESH) continue;
-      void ask(uid).then(() => { if (live) redraw(x => x + 1); });
-    }
-    return () => { live = false; };
+    const again = () => redraw(x => x + 1);
+    redraws.add(again);
+    const list = key ? key.split(',') : [];
+    list.forEach(listen);
+    return () => { redraws.delete(again); list.forEach(leave); };
   }, [key]);
   const out: Record<string, number> = {};
   for (const uid of uids) {

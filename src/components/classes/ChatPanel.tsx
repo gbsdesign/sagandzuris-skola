@@ -294,10 +294,17 @@ const HoverDelete: React.FC<{ onClick: () => void }> = ({ onClick }) => (
 );
 
 /** a small sign of the field's row: 32px, its finger area 36×44 (2026-11-22, the user: „უფრო კომპაქტური და დახვეწილი“) */
+// The finger never takes the focus from the field on the way down (2026-11-22 evening, the user: „კბილანაზე დაჭერისას არაფერი
+// ხდება“): with the keyboard up, a press used to close it at once, the row slid down under the finger and the tap was lost. Now
+// the press keeps the field (and the keyboard) until the tap has landed; then the field lets go — all but the ›, which keeps it.
 const ToolSign: React.FC<{ label: string; onClick: () => void; children: React.ReactNode; keepFocus?: boolean }> = ({ label, onClick, children, keepFocus }) => (
-  <button type="button" aria-label={label} title={label} onClick={() => { triggerHaptic(8); onClick(); }}
-    // the › leaves the finger in the field, so the row does not jump under the tap
-    onPointerDown={keepFocus ? e => e.preventDefault() : undefined}
+  <button type="button" aria-label={label} title={label}
+    onClick={() => {
+      triggerHaptic(8);
+      if (!keepFocus) (document.activeElement as HTMLElement | null)?.blur?.();
+      onClick();
+    }}
+    onPointerDown={e => e.preventDefault()}
     className="relative flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-wine transition before:absolute before:-inset-x-0.5 before:-inset-y-1.5 active:scale-95 active:bg-ink/5 focus-visible:outline-2 focus-visible:outline-wine/60 [&_svg]:size-[21px]">
     {children}
   </button>

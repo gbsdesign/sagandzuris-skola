@@ -174,7 +174,8 @@ export const Body: React.FC<{ group: PsalterGroup; uid: string; canLead: boolean
   // this cycle, „ვერ ვკითხულობ“ and the reminder open in a window instead of standing under the numbers
   const pencil = (
     <Press onClick={() => setMore(true)} aria-label="ჯგუფი და შეხსენება"
-      className="flex size-9 cursor-pointer items-center justify-center rounded-full bg-white/15 text-white transition active:scale-95 active:bg-white/25 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/80 [&_svg]:size-[17px]">
+      // 20 % smaller (2026-11-22 evening, the user: „ფანქარი 20% დააპატარავე“); a finger still finds 44px round it
+      className="relative flex size-[29px] shrink-0 cursor-pointer items-center justify-center rounded-full bg-white/15 text-white transition before:absolute before:-inset-2 active:scale-95 active:bg-white/25 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/80 [&_svg]:size-[14px]">
       <Pencil />
     </Press>
   );
@@ -201,20 +202,24 @@ export const Body: React.FC<{ group: PsalterGroup; uid: string; canLead: boolean
           kicker="შენი კანონი დღეს"
           title={kanonName(focus)}
           sub={`ფსალმუნი ${KATHISMA_PSALMS[focus - 1]}${mineTools(focus).done ? ' · წაკითხულია' : ` · დარჩა ${formatLeft(msLeft(cycle!, now.now))}`}`}
-          corner={pencil}
-        >
-          <div className="mt-2.5 flex flex-wrap gap-2">
-            <HeroButton filled icon={<BookOpen />} label="წაიკითხე" onClick={() => openPrayer(`kathisma-${focus}`)} />
-            <HeroButton
-              icon={<Check />}
-              disabled={!mineTools(focus).canToggle || actions.busy === focus}
-              pressed={mineTools(focus).done}
-              onClick={() => void (mineTools(focus).done ? actions.unread(focus) : actions.read(focus))}
-            >
-              {mineTools(focus).done ? 'წაკითხულია' : 'წავიკითხე'}
-            </HeroButton>
-          </div>
-        </Hero>
+          // the 📖 and „წავიკითხე“ stand up beside the title, before the ✎ (2026-11-22 evening, the user: „ეს ღილაკები ზემოთ აიტანე
+          // ფანქრის წინ“)
+          aside={(
+            <>
+              <HeroButton small filled icon={<BookOpen />} label="წაიკითხე" onClick={() => openPrayer(`kathisma-${focus}`)} />
+              <HeroButton
+                small
+                icon={<Check />}
+                disabled={!mineTools(focus).canToggle || actions.busy === focus}
+                pressed={mineTools(focus).done}
+                onClick={() => void (mineTools(focus).done ? actions.unread(focus) : actions.read(focus))}
+              >
+                {mineTools(focus).done ? 'წაკითხულია' : 'წავიკითხე'}
+              </HeroButton>
+              {pencil}
+            </>
+          )}
+        />
       )}
 
       {rest.length > 0 && (
@@ -325,13 +330,15 @@ export const Body: React.FC<{ group: PsalterGroup; uid: string; canLead: boolean
 
 /** The two buttons on the wine card: the white round 📖 (only the sign — 2026-11-22, the user: „სიტყვა წაიკითხე … მოხსენი მარტო
  *  ნიშანი დარჩეს“; `label` is its spoken name) and the glass „წავიკითხე“. */
-const HeroButton: React.FC<{ children?: React.ReactNode; label?: string; icon: React.ReactNode; onClick: () => void; filled?: boolean; pressed?: boolean; disabled?: boolean }> = ({
-  children, label, icon, onClick, filled, pressed, disabled,
+const HeroButton: React.FC<{ children?: React.ReactNode; label?: string; icon: React.ReactNode; onClick: () => void; filled?: boolean; pressed?: boolean; disabled?: boolean; small?: boolean }> = ({
+  children, label, icon, onClick, filled, pressed, disabled, small,
 }) => (
   <Press onClick={onClick} disabled={disabled} aria-pressed={pressed} aria-label={children ? undefined : label}
     className={cx(
-      'inline-flex h-tap min-w-0 cursor-pointer items-center gap-2 rounded-full text-body font-bold whitespace-nowrap transition active:scale-[0.97] disabled:cursor-default disabled:opacity-60 [&_svg]:size-[18px] [&_svg]:shrink-0',
-      children ? 'pr-5 pl-4' : 'w-tap justify-center [&_svg]:size-5',
+      'relative inline-flex min-w-0 shrink-0 cursor-pointer items-center rounded-full font-bold whitespace-nowrap transition active:scale-[0.97] disabled:cursor-default disabled:opacity-60 [&_svg]:shrink-0',
+      // `small`: beside the title — 36px, its finger area 44px
+      small ? 'h-9 gap-1.5 text-meta before:absolute before:-inset-y-1 [&_svg]:size-4' : 'h-tap gap-2 text-body [&_svg]:size-[18px]',
+      children ? (small ? 'pr-3 pl-2.5' : 'pr-5 pl-4') : (small ? 'w-9 justify-center [&_svg]:size-[18px]' : 'w-tap justify-center [&_svg]:size-5'),
       filled ? 'bg-white text-wine' : pressed ? 'bg-white/30 text-white' : 'bg-white/15 text-white active:bg-white/25',
       'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/80',
     )}>

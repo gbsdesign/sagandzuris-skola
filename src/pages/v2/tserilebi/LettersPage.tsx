@@ -28,7 +28,7 @@ import { DmChat } from './DmChat';
 import { BirthdaysSoon } from '../../../components/home/BirthdaysSoon';
 import { ChatMenu, ChatRow, ClassTimes, hideSide, LastLine, NameMark, readSide, Tick } from './parts';
 import { ClassMoreSheet } from '../klasi/teacher/More';
-import { keepClassTab, type ClassTab } from '../klasi/nav';
+import { keepClassTab, studentItem, type ClassTab } from '../klasi/nav';
 import { GearSpark } from '../damkhmare/GearSpark';
 import { openAssistant, useAssistantAllowed } from '../damkhmare/open';
 import { useLongPress } from '../../../hooks/useLongPress';
@@ -77,7 +77,7 @@ const SearchLine: React.FC<{ value: string; onChange: (v: string) => void }> = (
  *  chat takes the page, on a computer it stands beside the list. */
 export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
   const { user, isAdmin, isSuperAdmin, isTeacher } = useAuth();
-  const { currentPage, selectedDmId, openDm, handleGoBack, openClass, openMapItem } = useNavigation();
+  const { currentPage, selectedDmId, openDm, handleGoBack, openClass, openMapItem, openStudent } = useNavigation();
   const wide = useWide();
   const uid = user?.uid || '';
   const open = currentPage === 'dm' ? selectedDmId : null;
@@ -264,16 +264,14 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
         node: (
           <ChatRow
             key={id}
-            face={<ClassLogo name={c.name} logo={c.logo} className="size-10 text-head" />}
+            face={<ClassLogo name={c.name} logo={c.logo} className="size-12 text-title" />}
             name={c.name}
             group
-            // compact (2026-11-22, the user: „უფრო კომპაქტური გახადო“): a class nobody wrote in yet shows its times in the
-            // second line in place of „კლასის ჩათი · N წევრი“ (that line stays only when there is nothing to show)
-            last={last
-              ? <LastLine who={last.uid === uid ? 'შენ:' : undefined} text={last.text} />
-              : (times ? <ClassTimes slots={c.schedule} onEdit={editTimes} inline /> : `კლასის ჩათი · ${c.members.length} წევრი`)}
+            // the first size again (2026-11-22 evening, the user: „ჩათები ისევ ამ ზომის გახადო“): the last message or „კლასის ჩათი ·
+            // N წევრი“, the lesson times under it
+            last={last ? <LastLine who={last.uid === uid ? 'შენ:' : undefined} text={last.text} /> : `კლასის ჩათი · ${c.members.length} წევრი`}
             time={when(last?.at ?? null)}
-            extra={last && times ? <ClassTimes slots={c.schedule} onEdit={editTimes} /> : undefined}
+            extra={times ? <ClassTimes slots={c.schedule} onEdit={editTimes} /> : undefined}
             {...rowProps(id, lastMs, pinned, hidden, unread, true)}
             onMenu={leads ? () => setMoreOf(c.id) : undefined}
             fold={{ open: chip === c.id, onToggle: () => setChip(chip === c.id ? 'all' : c.id) }}
@@ -308,6 +306,13 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
             time={when(t.lastAt)}
             tick={t.lastText && lastIsMine(t, uid) ? <Tick seen={!!seenAt && !!t.lastAt && seenAt >= t.lastAt} /> : null}
             pearls={(() => { const s = studentOf(t); return s ? pearls[s] : undefined; })()}
+            onPearls={(() => {
+              const s = studentOf(t);
+              if (!s) return undefined;
+              // the student's own path page — in their class (a teacher's chat names it, else the first class they are in)
+              const cid = t.classId || known.find(c => c.memberIds.includes(s))?.id || '';
+              return () => { openStudent(s, cid); openMapItem(studentItem(s, cid, 'gza')); };
+            })()}
             {...rowProps(t.id, lastMs, pinned, hidden, unread)}
           />
         ),
@@ -481,19 +486,26 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
         title={
           <div className="flex min-w-0 flex-1 items-center gap-2.5">
             {!wide && <RoundButton label="უკან" onClick={handleGoBack}><ArrowLeft aria-hidden="true" strokeWidth={1.75} /></RoundButton>}
-            {/* the class page (program, members) opens from the chat's head — the home lost its classes (2026-11-22) */}
-            {/* held long: the class page's „მეტი“ (the user: „მეტი ფუნქციები სახელზე დიდხანს დაჭერისას იხსნებოდეს“) */}
-            <Press {...(moreFor ? nameHold : {})} onClick={() => openClass(openCls.id)} aria-label={`${openCls.name} — კლასის გვერდი`}
-              title={moreFor ? 'დიდხანს დააჭირე — მეტი' : undefined}
-              className="flex min-w-0 flex-1 cursor-pointer items-center gap-2.5 rounded-field text-left select-none [-webkit-touch-callout:none]">
-              {/* a compact head, the whole name in view (2026-11-22, the user: „სახელი უფრო კომპაქტური … მთლიანად ეტეოდეს …
-                  დააპატარავე 50%“); the lesson times moved out to the list's row */}
-              <ClassLogo name={openCls.name} logo={openCls.logo} className="size-8 shrink-0 text-meta" />
-              <span className="flex min-w-0 flex-col">
-                <span className="line-clamp-2 text-body leading-tight font-bold break-words">{openCls.name}</span>
-                <span className="truncate text-cap leading-tight text-mut">{`${openCls.members.length} წევრი · გვერდი ›`}</span>
-              </span>
-            </Press>
+            {/* the head no longer opens the class page (2026-11-22 evening, the user: „ჩათის სათაურზე დაჭერისას იხსნება შიგნით
+                გვერდი … არ მინდა“); held long it still opens the class's „მეტი“ for its teachers and admins */}
+            {(() => {
+              const face = (
+                <>
+                  {/* a compact head, the whole name in view (the user: „სახელი უფრო კომპაქტური … მთლიანად ეტეოდეს“) */}
+                  <ClassLogo name={openCls.name} logo={openCls.logo} className="size-8 shrink-0 text-meta" />
+                  <span className="flex min-w-0 flex-col">
+                    <span className="line-clamp-2 text-body leading-tight font-bold break-words">{openCls.name}</span>
+                    <span className="truncate text-cap leading-tight text-mut">{`${openCls.members.length} წევრი`}</span>
+                  </span>
+                </>
+              );
+              const box = 'flex min-w-0 flex-1 items-center gap-2.5 rounded-field text-left select-none [-webkit-touch-callout:none]';
+              return moreFor ? (
+                <Press {...nameHold} aria-label={`${openCls.name} — დიდხანს დააჭირე, მეტი`} title="დიდხანს დააჭირე — მეტი" className={box}>
+                  {face}
+                </Press>
+              ) : <div className={box}>{face}</div>;
+            })()}
           </div>
         }
       />
