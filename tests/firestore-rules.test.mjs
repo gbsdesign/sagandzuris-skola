@@ -358,7 +358,8 @@ await t('a proof has only its fields', assertFails(setDoc(doc(stu, 'samosiProof'
 await t("the member's teacher sees the photo", assertSucceeds(getDoc(doc(tch, 'samosiProof', 'stu', 'parts', 'khanjali'))));
 await t('another teacher does not', assertFails(getDoc(doc(tch2, 'samosiProof', 'stu', 'parts', 'khanjali'))));
 await t('another member does not', assertFails(getDoc(doc(stu2, 'samosiProof', 'stu', 'parts', 'khanjali'))));
-await t('a teacher cannot put a photo for the member', assertFails(setDoc(doc(tch, 'samosiProof', 'stu', 'parts', 'kamari'), proof())));
+await t("the member's teacher puts a photo for the member", assertSucceeds(setDoc(doc(tch, 'samosiProof', 'stu', 'parts', 'kamari'), proof())));
+await t('another teacher cannot put a photo for the member', assertFails(setDoc(doc(tch2, 'samosiProof', 'stu', 'parts', 'kamari'), proof())));
 await t("the member's teacher takes a wrong photo away", assertSucceeds(deleteDoc(doc(tch, 'samosiProof', 'stu', 'parts', 'khanjali'))));
 
 // ---- „ანგელოზის დღე“

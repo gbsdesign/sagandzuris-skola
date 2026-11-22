@@ -2327,7 +2327,7 @@ Pending small tasks the user mentioned: remove the old Drive `ნოტები
   stand up beside the title before the ✎ (`Hero aside`, `HeroButton small`), the ✎ 20 % smaller (29 px). The private chat (`DmChat`) has the same cog after
   the microphone for teachers and admins (`extraTool`, `openAssistant({ classId, page: 'dm' })`); its 👩‍🏫 up top stays the day lesson. A member's row on the staff side: the pearl (24 px) then the
   outfit's chokha the same size (`ChatRow outfit` from `usePearlTotals().outfits`: the chosen outfit's proved parts — pale with none,
-  coloured with one, `.sg-outfit-shine` when whole); a tap opens `StudentOutfit.tsx` (the figure + its parts, only to look). No
+  coloured with one, `.sg-outfit-shine` when whole); a tap opens `StudentOutfit.tsx` (the figure + its parts; since 2026-11-22 a part's tap opens the profile's `PartSheet forUid` — the teacher / admin photographs the student's real part, the AI checks it, it is kept in the student's outfit; rules let the student's teacher or an admin write `samosiProof`). No
   „ჩათები“ heading over the list; the „ფს.ჯ.“ pill is 36 px with the book in a small wine round. The home's „სწავლა“ card has a round ⛪ before its arrow
   for teachers and admins (`lesson.onProgram` = `openProgram`, „დღევანდელი წირვა“). The psalter page has no ⋯: the group's settings (`ParamsSheet`)
   open from the ✎ sheet's row „ჯგუფის პარამეტრები“ (leaders), on the page and in the „სწავლა“ fold alike.

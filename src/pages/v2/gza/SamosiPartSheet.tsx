@@ -20,10 +20,12 @@ export const PartSheet: React.FC<{
   onProved: (id: string) => void;
   /** a real part taken back: it stays tried on */
   onRemoved: (id: string) => void;
-}> = ({ outfit, part, pic, real, onClose, onProved, onRemoved }) => {
+  /** a teacher's or an admin's photo of a student's part, from the letters' list (2026-11-22): theirs, with the camera */
+  forUid?: string;
+}> = ({ outfit, part, pic, real, onClose, onProved, onRemoved, forUid }) => {
   const { user, isOwner } = useAuth();
-  const viewing = !!useViewing();
-  const uid = user?.uid;
+  const viewing = !!useViewing() && !forUid;
+  const uid = forUid ?? user?.uid;
   const input = useRef<HTMLInputElement>(null);
   const [step, setStep] = useState<ProofStep>({ kind: 'idle' });
   const [saved, setSaved] = useState(0);
@@ -48,7 +50,7 @@ export const PartSheet: React.FC<{
     show(preview);
     setStep({ kind: 'checking', preview });
     try {
-      const v = await checkRealPart(uid, part, file, isOwner);
+      const v = await checkRealPart(uid, part, file, isOwner || !!forUid);
       if (!v.ok) {
         triggerHaptic(20);
         setStep({ kind: 'no', preview, why: v.why || `ფოტოზე ${part.label} ვერ დავინახე — გადაიღე ახლოდან, მთლიანად და კარგ სინათლეზე.` });
