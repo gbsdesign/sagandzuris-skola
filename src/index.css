@@ -533,3 +533,11 @@ html.sg-new .sg-lib-auto > span > button[aria-haspopup] svg { width: 20px; heigh
 @media (prefers-reduced-motion: reduce) {
   .sg-help-lit { animation: none; }
 }
+
+/* a student's whole outfit on the letters' row: a breathing gold glow (2026-11-22, „ვინც შეავსო სრულად სამოსი ბრწყინავდეს“) */
+.sg-outfit-shine { filter: drop-shadow(0 0 2px rgba(212, 160, 23, 0.9)); animation: sg-outfit-glow 2.4s ease-in-out infinite; }
+@keyframes sg-outfit-glow {
+  0%, 100% { filter: drop-shadow(0 0 1.5px rgba(212, 160, 23, 0.75)); }
+  50% { filter: drop-shadow(0 0 5px rgba(240, 196, 64, 1)) brightness(1.08); }
+}
+@media (prefers-reduced-motion: reduce) { .sg-outfit-shine { animation: none; } }

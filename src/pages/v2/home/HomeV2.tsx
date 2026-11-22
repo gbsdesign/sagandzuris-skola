@@ -7,6 +7,8 @@ import { Toast } from '../../../components/ui/Toast';
 import { useNextStep } from './useNextStep';
 import { useSayingSlot } from './useSayingSlot';
 import { useNavPlaces } from '../../../components/shell/BottomNav';
+import { useAuth } from '../../../context';
+import { useNotes } from '../../../context/NotesContext';
 
 // The home page in the new look (redesign stage 4, boards x-mtavari + x-ultra-gaagrdzele): the app draws the home bar above
 // it (with 👤 and 🔍 since 2026-11-21 — phones have no bottom menu any more). Since 2026-11-22 the vine and its grapes are gone
@@ -22,6 +24,8 @@ export const HomeV2: React.FC = () => {
   // „მიმდინარე გაკვეთილი“ = the vine's old „გაკვეთილი“ bunch: the same tap as the old bottom menu's „წერილები“ (a student with one
   // teacher — the teacher's chat, everyone else the list)
   const places = useNavPlaces();
+  const { isTeacher } = useAuth();
+  const { openProgram } = useNotes();
   const lettersItem = places.shown.find(it => it.id === 'messages');
   const [soon, setSoon] = useState<string | null>(null);
   const sections = useSections(setSoon);
@@ -34,7 +38,7 @@ export const HomeV2: React.FC = () => {
     <>
       <HomeV2View
         saying={saying}
-        lesson={lettersItem ? { unread: places.unread, onOpen: () => places.go(lettersItem) } : undefined}
+        lesson={lettersItem ? { unread: places.unread, onOpen: () => places.go(lettersItem), onProgram: isTeacher ? openProgram : undefined } : undefined}
         main={tiles.filter(t => t.main)}
         more={tiles.filter(t => !t.main)}
       >
