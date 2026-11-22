@@ -14,7 +14,7 @@ import { useAssistantScope } from './useScope';
 import { GearSpark } from './GearSpark';
 import { setFabShown } from './fabPref';
 import { setEngine, useEngine, type Engine } from './enginePref';
-import { chatTime, lastChatId, listChats, loadChat, newChatId, removeChat, saveChat, setLastChatId, type ChatHead, type Saved } from './history';
+import { chatTime, lastChatId, listChats, loadChatFull, newChatId, removeChat, saveChat, setLastChatId, watchChat, type ChatHead, type Saved } from './history';
 import { offerUndo } from '../../../components/ui/kit';
 import { nextSteps, noticedIn, offersFor, pageName } from '../../../utils/programOffers';
 
@@ -53,7 +53,7 @@ const AiBubble: React.FC<{ children: React.ReactNode; busy?: boolean }> = ({ chi
 /** What the panel does in the world — the real ones below; the preview gives its own. */
 export interface AssistantDeps {
   gate: (uid: string) => Promise<Gate>;
-  ask: (uid: string, scope: AssistantScope, history: Turn[], text: string) => Promise<Answer>;
+  ask: (uid: string, scope: AssistantScope, history: Turn[], text: string, keep?: { chat: string; items: Saved[] }) => Promise<Answer>;
   letters: (me: Me, to: PlanPerson[], text: string) => Promise<{ sent: number; failed: number }>;
   toClass: (me: Me, classId: string, text: string) => Promise<unknown>;
   makeClass: (me: Me, plan: Extract<CheckedPlan, { kind: 'createClass' }>) => Promise<{ id: string; lost: number }>;
@@ -76,7 +76,7 @@ export const AssistantScreen: React.FC<{
     return page ? { ...seen, page: pageName(page, cls) } : seen;
   }, [seen, page]);
   const deps = useMemo<AssistantDeps>(() => ({
-    gate: aiGate, ask: (uid, sc, h, t) => askAssistant(uid, sc, h, t, engine), letters: sendLetters, toClass: sendToClass, makeClass, openClass,
+    gate: aiGate, ask: (uid, sc, h, t, k) => askAssistant(uid, sc, h, t, engine, k), letters: sendLetters, toClass: sendToClass, makeClass, openClass,
   }), [openClass, engine]);
   return <AssistantPanel scope={scope} me={me} ready={ready} deps={deps} pageId={page} mini={mini} onClose={onClose}
     engine={isSuperAdmin ? engine : undefined} keep />;
@@ -120,6 +120,7 @@ export const AssistantPanel: React.FC<{
   const mounted = useRef(true);
   const chatRef = useRef('');
   const itemsRef = useRef<Item[]>([]);
+  const stopWatch = useRef<null | (() => void)>(null);
   chatRef.current = chatId;
   itemsRef.current = items;
   const fromSaved = (list: Saved[]): Item[] => list.map(i => (i.k === 'note'
@@ -135,8 +136,26 @@ export const AssistantPanel: React.FC<{
     setLastChatId(me.uid, id);
     setItems([]);
     setEditing(false);
-    const load = () => loadChat(me.uid, id).then(saved => {
-      if (mounted.current && chatRef.current === id) setItems(cur => (cur.length ? cur : fromSaved(saved)));
+    stopWatch.current?.();
+    stopWatch.current = null;
+    const load = () => loadChatFull(me.uid, id).then(({ items: saved, at }) => {
+      if (!mounted.current || chatRef.current !== id) return;
+      setItems(cur => (cur.length ? cur : fromSaved(saved)));
+      // a question asked a moment ago (maybe on another page or before the app went to the background) is still answered by
+      // the server, which writes the answer into this talk: wait for it here
+      const last = saved[saved.length - 1];
+      if (last?.k !== 'me' || Date.now() - at > 120_000) return;
+      setBusy(true);
+      const giveUp = window.setTimeout(() => { stopWatch.current?.(); stopWatch.current = null; if (mounted.current) setBusy(false); }, 120_000);
+      const stop = watchChat(me.uid, id, now => {
+        if (now.length <= saved.length || !mounted.current || chatRef.current !== id) return;
+        window.clearTimeout(giveUp);
+        stop();
+        stopWatch.current = null;
+        setItems(fromSaved(now));
+        setBusy(false);
+      });
+      stopWatch.current = () => { window.clearTimeout(giveUp); stop(); };
     }, () => undefined);
     const task = running.get(`${me.uid}:${id}`);
     if (task) {
@@ -164,6 +183,7 @@ export const AssistantPanel: React.FC<{
     mounted.current = true;
     return () => {
       mounted.current = false;
+      stopWatch.current?.();
       const id = chatRef.current;
       if (keep && me.uid && id && itemsRef.current.length) {
         saveChat(me.uid, id, toSaved(itemsRef.current)).catch(e => console.warn('assistant history:', e));
@@ -238,7 +258,7 @@ export const AssistantPanel: React.FC<{
     };
     const task = (async () => {
       try {
-        const answer = await deps.ask(uid, scope, before, t);
+        const answer = await deps.ask(uid, scope, before, t, keep && cid ? { chat: cid, items: toSaved(snapshot) } : undefined);
         const draft = answer.plan ? planFromAi(answer.plan, scope) : null;
         const checked = draft ? checkPlan(draft, scope) : null;
         const out: NewItem[] = [];

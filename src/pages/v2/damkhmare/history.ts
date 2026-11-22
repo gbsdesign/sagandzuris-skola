@@ -1,4 +1,4 @@
-import { collection, deleteDoc, doc, getDoc, getDocs, limit, orderBy, query, setDoc } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDoc, getDocs, limit, onSnapshot, orderBy, query, setDoc } from 'firebase/firestore';
 import { db } from '../../../firebase';
 
 // „ავტომატური პროგრამა“'s talks are kept (the user, 2026-11-22: „რო გამოვალ ჩათიდან არ უნდა აივიწყებდეს … ისტორია უნდა იყოს
@@ -21,13 +21,21 @@ export const listChats = async (uid: string): Promise<ChatHead[]> => {
   return snap.docs.map(d => ({ id: d.id, title: String(d.data().title || 'საუბარი'), at: Number(d.data().at) || 0 }));
 };
 
-export const loadChat = async (uid: string, id: string): Promise<Saved[]> => {
+const itemsOf = (raw: unknown): Saved[] => (Array.isArray(raw)
+  ? raw.filter((i): i is Saved => !!i && (i.k === 'me' || i.k === 'ai' || i.k === 'note') && typeof i.t === 'string')
+  : []);
+
+export const loadChat = async (uid: string, id: string): Promise<Saved[]> => (await loadChatFull(uid, id)).items;
+
+/** The talk with when it was last written (a question left without its answer a moment ago is still on its way). */
+export const loadChatFull = async (uid: string, id: string): Promise<{ items: Saved[]; at: number }> => {
   const snap = await getDoc(doc(chats(uid), id));
-  const items = snap.exists() ? snap.data().items : null;
-  return Array.isArray(items)
-    ? items.filter((i): i is Saved => !!i && (i.k === 'me' || i.k === 'ai' || i.k === 'note') && typeof i.t === 'string')
-    : [];
+  return snap.exists() ? { items: itemsOf(snap.data().items), at: Number(snap.data().at) || 0 } : { items: [], at: 0 };
 };
+
+/** Live changes of one talk (the server writes Lado's answer into it — `keepLadoAnswer` in the reminders Worker). */
+export const watchChat = (uid: string, id: string, cb: (items: Saved[]) => void) =>
+  onSnapshot(doc(chats(uid), id), snap => cb(snap.exists() ? itemsOf(snap.data().items) : []), () => undefined);
 
 export const saveChat = (uid: string, id: string, items: Saved[]) => {
   const kept = items.slice(-MAX_ITEMS).map(i => ({ k: i.k, t: i.t.slice(0, MAX_TEXT) }));

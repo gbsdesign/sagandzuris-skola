@@ -28,7 +28,7 @@ const withWhy = (e: AiTeacherError, why: string) => Object.assign(e, { why });
 const LADO_SERVER = 'https://sagandzuri-reminders.mr-gabunia.workers.dev/lado';
 
 // „ლადოს პროგრამა“: the same prompt to Claude through the Worker (the key stays there); its answer is the JSON as text
-export const askLado = async (prompt: string): Promise<string> => {
+export const askLado = async (prompt: string, keep?: { chat: string; items: { k: string; t: string }[] }): Promise<string> => {
   const user = auth.currentUser;
   if (!user) throw new AiTeacherError('setup');
   let res: Response;
@@ -36,7 +36,7 @@ export const askLado = async (prompt: string): Promise<string> => {
     res = await fetch(LADO_SERVER, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: await user.getIdToken(), prompt }),
+      body: JSON.stringify({ token: await user.getIdToken(), prompt, ...(keep ? { keep } : {}) }),
     });
   } catch {
     throw new AiTeacherError(offline() ? 'offline' : 'failed');
@@ -48,13 +48,14 @@ export const askLado = async (prompt: string): Promise<string> => {
   return String(data?.text || '').trim();
 };
 
-export const askAssistant = async (uid: string, scope: AssistantScope, history: Turn[], ask: string, engine: Engine = 'google'): Promise<Answer> => {
+export const askAssistant = async (uid: string, scope: AssistantScope, history: Turn[], ask: string, engine: Engine = 'google',
+  keep?: { chat: string; items: { k: string; t: string }[] }): Promise<Answer> => {
   if (offline()) throw new AiTeacherError('offline');
   const stop = await aiGate(uid);
   if (stop) throw new AiTeacherError(stop);
   let raw = '';
   if (engine === 'lado') {
-    raw = await askLado(assistantPrompt(scope, history, ask));
+    raw = await askLado(assistantPrompt(scope, history, ask), keep);
     const answer = parseAnswer(raw);
     if (!answer) throw withWhy(new AiTeacherError('failed'), `პასუხი გაუგებარი იყო: ${raw.slice(0, 120)}`);
     noteAiCall(uid);
