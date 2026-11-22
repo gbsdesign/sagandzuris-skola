@@ -248,6 +248,8 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
       const unread = classUnread(c);
       const lastMs = last?.at?.getTime() ?? 0;
       const pinned = prefs.pins.includes(id);
+      const editTimes = isAdmin || c.teacherIds.includes(uid) ? () => setTimesOf(c.id) : undefined;
+      const times = c.schedule.length > 0 || !!editTimes;
       // a class's chat is never hidden: one hidden before comes back
       const hidden = false;
       items.push({
@@ -256,13 +258,16 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
         node: (
           <ChatRow
             key={id}
-            face={<ClassLogo name={c.name} logo={c.logo} className="size-12 text-title" />}
+            face={<ClassLogo name={c.name} logo={c.logo} className="size-10 text-head" />}
             name={c.name}
             group
-            last={last ? <LastLine who={last.uid === uid ? 'შენ:' : undefined} text={last.text} /> : `კლასის ჩათი · ${c.members.length} წევრი`}
+            // compact (2026-11-22, the user: „უფრო კომპაქტური გახადო“): a class nobody wrote in yet shows its times in the
+            // second line in place of „კლასის ჩათი · N წევრი“ (that line stays only when there is nothing to show)
+            last={last
+              ? <LastLine who={last.uid === uid ? 'შენ:' : undefined} text={last.text} />
+              : (times ? <ClassTimes slots={c.schedule} onEdit={editTimes} inline /> : `კლასის ჩათი · ${c.members.length} წევრი`)}
             time={when(last?.at ?? null)}
-            extra={<ClassTimes slots={c.schedule}
-              onEdit={isAdmin || c.teacherIds.includes(uid) ? () => setTimesOf(c.id) : undefined} />}
+            extra={last && times ? <ClassTimes slots={c.schedule} onEdit={editTimes} /> : undefined}
             {...rowProps(id, lastMs, pinned, hidden, unread, true)}
           />
         ),
@@ -447,7 +452,7 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
               end={moreFor ? <AssistantButton classId={openCls.id} /> : undefined}
               program={() => setProgramIn(programIn === openCls.id ? '' : openCls.id)}
               programOpen={programIn === openCls.id}
-              members={moreFor ? () => classOn(openCls.id, 'people') : undefined}
+              // „წევრები“ left this row (2026-11-22, the user: „ეს მოხსენი“) — the class page's members open from „გვერდი ›“
             />
             {/* the program unfolds here, under the head, and scrolls inside (the chat stays below it) */}
             {programIn === openCls.id && (

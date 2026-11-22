@@ -62,14 +62,16 @@ export const ChatRow: React.FC<{
       disabled={busy}
       aria-current={active || undefined}
       className={cx(
-        'flex min-h-row w-full cursor-pointer items-center gap-3 py-2.5 pr-4 pl-3.5 text-left text-ink transition-colors select-none',
+        // a class's framed row is tighter (2026-11-22, the user: „უფრო კომპაქტური გახადო“)
+        group ? 'flex w-full cursor-pointer items-center gap-2.5 py-1.5 pr-3 pl-2.5 text-left text-ink transition-colors select-none'
+          : 'flex min-h-row w-full cursor-pointer items-center gap-3 py-2.5 pr-4 pl-3.5 text-left text-ink transition-colors select-none',
         'disabled:cursor-default disabled:opacity-60 [-webkit-touch-callout:none]',
         active ? 'bg-tint' : 'active:bg-soft',
         group && 'rounded-tile border-[1.5px] border-[color-mix(in_oklab,var(--color-sea)_70%,var(--color-ink))]',
       )}
     >
       {face}
-      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+      <span className={cx('flex min-w-0 flex-1 flex-col', !group && 'gap-0.5')}>
         <span className="flex items-baseline justify-between gap-2">
           <span className={cx('min-w-0 flex-1 truncate text-lead', unread ? 'font-extrabold' : 'font-bold')}>{name}</span>
           {time && <Small tone={unread ? 'wine' : 'mut'} bold={!!unread} className="tabular-nums">{time}</Small>}
@@ -80,11 +82,12 @@ export const ChatRow: React.FC<{
             {last}
           </span>
           <span className="flex shrink-0 items-center gap-1.5">
-            {/* the student's pearls: one softly shining pearl and the number (2026-11-22, „კოხტად … მკრთალად ბრწყინავდეს“) */}
-            {!!pearls && (
+            {/* the student's pearls: one softly shining pearl and the number (2026-11-22, „კოხტად … მკრთალად ბრწყინავდეს“); every
+                member's row shows it, none yet = a matte pearl and 0 (the same evening: „ვის რამდენი მარგალიტი აქვთ ჯამში“) */}
+            {pearls !== undefined && (
               <span aria-label={`მარგალიტი · ${pearls}`} title={`${pearls} მარგალიტი`}
                 className="inline-flex items-center gap-0.5 text-cap font-bold text-mut tabular-nums">
-                <PearlIcon state="shining" size={18} seed={String(pearls)} />{pearls}
+                <PearlIcon state={pearls ? 'shining' : 'new'} size={18} seed={String(pearls)} />{pearls}
               </span>
             )}
             {unread && (count ? <Badge n={count} /> : <span aria-label="წაუკითხავი" className="size-2.5 rounded-full bg-danger" />)}
@@ -99,7 +102,7 @@ export const ChatRow: React.FC<{
     ? <SwipeRow left={left} right={right} faceBg="bg-surf" className={group ? 'rounded-tile' : 'rounded-none'}>{button}</SwipeRow>
     : button;
   // the frame stands a little inside the card, its corners inside the card's
-  return group ? <div className="p-1.5">{row}</div> : row;
+  return group ? <div className="px-1.5 py-1">{row}</div> : row;
 };
 
 // ---- a class's lesson times on its chat row (2026-11-22, the user: „შიგნით რომაა ეგენი გარეთ გამოიტანე ლამაზად და კომპაქტურად …
@@ -108,7 +111,8 @@ export const ChatRow: React.FC<{
 
 const DAY_SHORT = ['კვ', 'ორშ', 'სამ', 'ოთხ', 'ხუთ', 'პარ', 'შაბ'];
 
-export const ClassTimes: React.FC<{ slots: LessonSlot[]; onEdit?: () => void }> = ({ slots, onEdit }) => {
+/** `inline`: standing in the row's second line (a class nobody wrote in yet), so no space above */
+export const ClassTimes: React.FC<{ slots: LessonSlot[]; onEdit?: () => void; inline?: boolean }> = ({ slots, onEdit, inline }) => {
   const lp = useLongPress(() => onEdit?.());
   if (!slots.length && !onEdit) return null;
   const next = nextLesson(slots)?.slot;
@@ -131,17 +135,17 @@ export const ClassTimes: React.FC<{ slots: LessonSlot[]; onEdit?: () => void }> 
     <span role="button" tabIndex={0} aria-label={slots.length ? 'გაკვეთილის საათების შეცვლა' : 'გაკვეთილის დანიშვნა'}
       onPointerDown={e => e.stopPropagation()} onClick={edit}
       onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') edit(e); }}
-      className="-my-1.5 -ml-1 flex h-9 shrink-0 cursor-pointer items-center gap-1 rounded-full px-1 text-wine transition active:scale-95 active:bg-soft focus-visible:outline-2 focus-visible:outline-wine/60">
+      className="-my-2 -ml-1 flex h-9 shrink-0 cursor-pointer items-center gap-1 rounded-full px-1 text-wine transition active:scale-95 active:bg-soft focus-visible:outline-2 focus-visible:outline-wine/60">
       <CalendarClock aria-hidden="true" className="size-5 shrink-0" strokeWidth={2} />
       {!slots.length && <span className="text-cap font-bold">გაკვეთილის დანიშვნა</span>}
     </span>
   ) : <CalendarClock aria-hidden="true" className="size-4 shrink-0 text-wine" strokeWidth={2} />;
   return (
-    <span {...own} aria-label="გაკვეთილები" className="mt-1 flex flex-wrap items-center gap-1 select-none [-webkit-touch-callout:none]">
+    <span {...own} aria-label="გაკვეთილები" className={cx(inline ? '' : 'mt-0.5', 'flex flex-wrap items-center gap-1 select-none [-webkit-touch-callout:none]')}>
       {sign}
       {sortSlots(slots).map((s, i) => (
         <span key={i} className={cx(
-          'inline-flex h-6 items-center rounded-full px-2 text-cap leading-none font-bold whitespace-nowrap tabular-nums',
+          'inline-flex h-5 items-center rounded-full px-1.5 text-cap leading-none font-bold whitespace-nowrap tabular-nums',
           s === next ? 'bg-wine text-white' : 'bg-surf text-ink ring-1 ring-wine/15',
         )}>{DAY_SHORT[s.day]} {s.start}</span>
       ))}
