@@ -1,10 +1,12 @@
 import React from 'react';
-import { Check, CheckCheck, Eye, EyeOff, GraduationCap, Mic, Pin, PinOff, ShieldCheck, Users } from 'lucide-react';
+import { CalendarClock, Check, CheckCheck, Eye, EyeOff, GraduationCap, ListChecks, Mic, Pin, PinOff, ShieldCheck, Users } from 'lucide-react';
+import { GearSpark } from '../damkhmare/GearSpark';
 import { Badge, Button, cx, Dot, Press, Sheet, Small } from '../../../components/ui2';
 import { useLongPress } from '../../../hooks/useLongPress';
 import { SwipeRow, type SwipeSide } from '../../../components/ui/SwipeRow';
 import { ClassLogo } from '../../../components/classes/ClassLogo';
-import type { SchoolClass } from '../../../hooks/useClasses';
+import type { LessonSlot, SchoolClass } from '../../../hooks/useClasses';
+import { nextLesson, sortSlots } from '../../../components/teacher/Schedule';
 import { triggerHaptic } from '../../../utils/haptics';
 
 // ---- small marks -------------------------------------------------------------------------------------------------
@@ -39,12 +41,16 @@ export const LastLine: React.FC<{ who?: string; text: string }> = ({ who, text }
 export const ChatRow: React.FC<{
   face: React.ReactNode; name: React.ReactNode; last: React.ReactNode; time?: string;
   unread?: boolean; active?: boolean; busy?: boolean; pinned?: boolean;
+  /** a class's chat: drawn on the accent's pale ground (2026-11-22, the user: „განსხვავებულად გამოკვეთე რომ ეტყობოდეს“) */
+  group?: boolean;
   /** how many wait (0 / none while not counted = a dot) */
   count?: number;
   tick?: React.ReactNode;
+  /** a third line under the last message (a class's lesson times) */
+  extra?: React.ReactNode;
   onClick: () => void; onMenu?: () => void;
   left?: SwipeSide; right?: SwipeSide;
-}> = ({ face, name, last, time, unread, active, busy, pinned, count, tick, onClick, onMenu, left, right }) => {
+}> = ({ face, name, last, time, unread, active, busy, pinned, group, count, tick, extra, onClick, onMenu, left, right }) => {
   const press = useLongPress(() => onMenu?.());
   const button = (
     <Press
@@ -55,7 +61,7 @@ export const ChatRow: React.FC<{
       className={cx(
         'flex min-h-row w-full cursor-pointer items-center gap-3 py-2.5 pr-4 pl-3.5 text-left text-ink transition-colors select-none',
         'disabled:cursor-default disabled:opacity-60 [-webkit-touch-callout:none]',
-        active ? 'bg-tint' : 'active:bg-soft',
+        group ? (active ? 'bg-wine/15' : 'bg-tint active:bg-wine/10') : active ? 'bg-tint' : 'active:bg-soft',
       )}
     >
       {face}
@@ -74,11 +80,73 @@ export const ChatRow: React.FC<{
             {pinned && <Pin aria-label="მიმაგრებული" className="size-4 rotate-45 text-mut" />}
           </span>
         </span>
+        {extra}
       </span>
     </Press>
   );
-  return left || right ? <SwipeRow left={left} right={right} faceBg="bg-surf" className="rounded-none">{button}</SwipeRow> : button;
+  return left || right ? <SwipeRow left={left} right={right} faceBg={group ? 'bg-tint' : 'bg-surf'} className="rounded-none">{button}</SwipeRow> : button;
 };
+
+// ---- a class's lesson times on its chat row (2026-11-22, the user: „შიგნით რომაა ეგენი გარეთ გამოიტანე ლამაზად და კომპაქტურად …
+// მარტო დაწყების საათი … დიდხანს დაჭერისას რედაქტირება … ფანქარი არ უნდა“): small pills „სამ 18:00“, the next lesson filled in,
+// no „N დღეში“; a long press on them opens the timetable's window for the class's teachers and admins (no ✎) -------------------
+
+const DAY_SHORT = ['კვ', 'ორშ', 'სამ', 'ოთხ', 'ხუთ', 'პარ', 'შაბ'];
+
+export const ClassTimes: React.FC<{ slots: LessonSlot[]; onEdit?: () => void }> = ({ slots, onEdit }) => {
+  const lp = useLongPress(() => onEdit?.());
+  if (!slots.length) return null;
+  const next = nextLesson(slots)?.slot;
+  // the row's own long press (its menu) and swipe stay off while the finger is on the times
+  const own = onEdit ? {
+    onPointerDown: (e: React.PointerEvent) => { e.stopPropagation(); lp.onPointerDown(e); },
+    onPointerMove: (e: React.PointerEvent) => { e.stopPropagation(); lp.onPointerMove(e); },
+    onPointerUp: (e: React.PointerEvent) => { e.stopPropagation(); lp.onPointerUp(); },
+    onPointerCancel: (e: React.PointerEvent) => { e.stopPropagation(); lp.onPointerCancel(); },
+    onPointerLeave: lp.onPointerLeave,
+    onContextMenu: (e: React.MouseEvent) => { e.stopPropagation(); lp.onContextMenu(e); },
+    onClickCapture: lp.onClickCapture,
+    title: 'შესაცვლელად დიდხანს დააჭირე',
+  } : {};
+  return (
+    <span {...own} aria-label="გაკვეთილები" className="mt-1 flex flex-wrap items-center gap-1 select-none [-webkit-touch-callout:none]">
+      <CalendarClock aria-hidden="true" className="size-4 shrink-0 text-wine" strokeWidth={2} />
+      {sortSlots(slots).map((s, i) => (
+        <span key={i} className={cx(
+          'inline-flex h-6 items-center rounded-full px-2 text-cap leading-none font-bold whitespace-nowrap tabular-nums',
+          s === next ? 'bg-wine text-white' : 'bg-surf text-ink ring-1 ring-wine/15',
+        )}>{DAY_SHORT[s.day]} {s.start}</span>
+      ))}
+    </span>
+  );
+};
+
+// ---- the open class chat's buttons under its name (2026-11-22, the user: „ავტო პროგრამის, პროგრამის და წევრები ღილაკები
+// გადმოიტანე ჩათის სახელის ქვეშ“): small pills in one row; „წევრები“ and the program's cog only for its teachers and admins ----
+
+const ToolPill: React.FC<{ icon: React.ReactNode; label: string; onClick: () => void }> = ({ icon, label, onClick }) => (
+  <Press onClick={() => { triggerHaptic(8); onClick(); }}
+    className="group flex h-tap min-w-0 cursor-pointer items-center rounded-full focus-visible:outline-none">
+    <span className={cx(
+      'flex h-9 min-w-0 items-center gap-1.5 rounded-full bg-surf py-1 pr-3.5 pl-2.5 text-meta font-bold text-ink transition',
+      'group-active:scale-[0.97] group-active:bg-soft group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-wine/60',
+      '[&_svg]:size-[18px] [&_svg]:shrink-0 [&_svg]:text-wine',
+    )}>
+      {icon}
+      <span className="min-w-0 truncate">{label}</span>
+    </span>
+  </Press>
+);
+
+export const ClassChatTools: React.FC<{
+  auto?: () => void; program: () => void; members?: () => void;
+}> = ({ auto, program, members }) => (
+  <div role="group" aria-label="კლასის ღილაკები" className="flex flex-wrap items-center gap-x-1.5">
+    {auto && <ToolPill icon={<GearSpark />} label="ავტ. პროგრამა" onClick={auto} />}
+    <ToolPill icon={<ListChecks strokeWidth={2} />} label="პროგრამა" onClick={program} />
+    {members && <ToolPill icon={<Users strokeWidth={2} />} label="წევრები" onClick={members} />}
+  </div>
+);
 
 // swipe sides
 export const hideSide = (run: () => void): SwipeSide => ({

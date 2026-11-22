@@ -9,7 +9,7 @@ import { CHIP_STATIC, CHIP_STRONG } from '../views/pathStyle';
 
 // Monday first, as a week is read in Georgia
 const ORDER = [1, 2, 3, 4, 5, 6, 0];
-const sortSlots = (list: LessonSlot[]) =>
+export const sortSlots = (list: LessonSlot[]) =>
   [...list].sort((a, b) => ORDER.indexOf(a.day) - ORDER.indexOf(b.day) || a.start.localeCompare(b.start));
 
 /** The next lesson from now: { slot, inDays }. */

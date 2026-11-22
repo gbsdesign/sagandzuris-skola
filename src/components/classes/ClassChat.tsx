@@ -67,7 +67,7 @@ export const CallBanner: React.FC<{ people: number; since: number; onHide: () =>
   </div>
 );
 
-export const ClassChat: React.FC<{ cls: SchoolClass; title?: React.ReactNode; fill?: boolean; chain?: boolean; timetable?: boolean; compact?: boolean; bare?: boolean }> = ({ cls, title, fill, chain, timetable = true, compact = false, bare = false }) => {
+export const ClassChat: React.FC<{ cls: SchoolClass; title?: React.ReactNode; fill?: boolean; chain?: boolean; timetable?: boolean; compact?: boolean; bare?: boolean; under?: React.ReactNode }> = ({ cls, title, fill, chain, timetable = true, compact = false, bare = false, under }) => {
   const { user, isAdmin: isSchoolAdmin } = useAuth();
   const { openDm, openStudent } = useNavigation();
   // this class's teachers (and the school's admins) speak as teachers here
@@ -193,6 +193,8 @@ export const ClassChat: React.FC<{ cls: SchoolClass; title?: React.ReactNode; fi
               {isAdmin && cls.schedule.length > 0 && <IconBtn label="ცხრილის შეცვლა" onClick={() => setLessons(true)}><Pencil /></IconBtn>}
             </div>
           )}
+          {/* the letters' class chat: its buttons under the name (ავტ. პროგრამა · პროგრამა · წევრები, 2026-11-22) */}
+          {under && <div className="mt-2">{under}</div>}
         </div>
         {banner}
       </>)}

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, ChevronDown, Eye, EyeOff, Loader2, MessageCircle, PenLine, Search, X } from 'lucide-react';
+import { ArrowLeft, ChevronDown, Eye, EyeOff, Loader2, MessageCircle, PenLine, Search, Users, X } from 'lucide-react';
 import { Waiting } from '../../../components/shell/PageSkeleton';
 import { useAuth, useNavigation } from '../../../context';
 import { useMyClasses, useTeachingClasses, useAllClasses } from '../../../hooks/useClasses';
@@ -24,7 +24,12 @@ import {
 } from '../../../components/ui2';
 import { DmChat } from './DmChat';
 import { BirthdaysSoon } from '../../../components/home/BirthdaysSoon';
-import { ChatMenu, ChatRow, ClassPick, hideSide, LastLine, NameMark, readSide, Tick } from './parts';
+import { ChatMenu, ChatRow, ClassChatTools, ClassPick, ClassTimes, hideSide, LastLine, NameMark, readSide, Tick } from './parts';
+import { ClassMoreSheet } from '../klasi/teacher/More';
+import { keepClassTab, type ClassTab } from '../klasi/nav';
+import { openAssistant, useAssistantAllowed } from '../damkhmare/open';
+import { useLongPress } from '../../../hooks/useLongPress';
+import { TimetableSheet } from '../klasi/teacher/Timetable';
 
 const MONTHS = ['იან', 'თებ', 'მარ', 'აპრ', 'მაი', 'ივნ', 'ივლ', 'აგვ', 'სექ', 'ოქტ', 'ნოე', 'დეკ'];
 // today: the time; earlier: the day and a short month („10 ნოე“) — one short line at a row's end
@@ -62,7 +67,7 @@ const SearchLine: React.FC<{ value: string; onChange: (v: string) => void }> = (
  *  chat takes the page, on a computer it stands beside the list. */
 export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
   const { user, isAdmin, isSuperAdmin, isTeacher } = useAuth();
-  const { currentPage, selectedDmId, openDm, handleGoBack, openClass } = useNavigation();
+  const { currentPage, selectedDmId, openDm, handleGoBack, openClass, openMapItem } = useNavigation();
   const wide = useWide();
   const uid = user?.uid || '';
   const open = currentPage === 'dm' ? selectedDmId : null;
@@ -96,10 +101,18 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
   const classRows = known.filter(c => mine.some(m => m.id === c.id) || chip === c.id);
   const lasts = useClassLasts(classRows.map(c => c.id));
   const openClassId = open?.startsWith(CLASS_PREFIX) ? open.slice(CLASS_PREFIX.length) : null;
+  const openKnown = openClassId ? known.find(c => c.id === openClassId) : undefined;
+  // the class page's „მეტი“ is its teachers' and admins'
+  const moreFor = openKnown && (isAdmin || openKnown.teacherIds.includes(uid)) ? openKnown.id : null;
 
   const { prefs, pin, unpin, hide, unhide } = useChatListPrefs(uid);
   const [menuKey, setMenuKey] = useState<string | null>(null);
   const [showHidden, setShowHidden] = useState(false);
+  const [timesOf, setTimesOf] = useState<string | null>(null);
+  // the open class chat: its „მეტი“ (the name held long) and the program's cog
+  const [moreOf, setMoreOf] = useState<string | null>(null);
+  const autoAllowed = useAssistantAllowed();
+  const nameHold = useLongPress(() => { if (moreFor) setMoreOf(moreFor); });
   const classUnread = (c: SchoolClass) => isClassUnread(lasts[c.id], seen[c.id], uid) && open !== CLASS_PREFIX + c.id;
   const dmUnread = (t: DirectThread) => isUnread(t, uid) && open !== t.id;
   const asks: CountAsk[] = overview ? [] : [
@@ -113,6 +126,8 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
   const counts = useUnreadCounts(asks);
 
   if (!user) return null;
+  // the class page on one of its tabs (the chat's „პროგრამა“ · „წევრები“)
+  const classOn = (id: string, tab: ClassTab) => { keepClassTab(id, tab); openClass(id); };
 
   const norm = (s: string) => s.toLocaleLowerCase('ka');
   const needle = norm(q.trim());
@@ -218,9 +233,17 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
           <ChatRow
             key={id}
             face={<ClassLogo name={c.name} logo={c.logo} className="size-12 text-title" />}
-            name={c.name}
+            name={(
+              <span className="flex min-w-0 items-center gap-1.5">
+                <Users aria-label="კლასის ჩათი" className="size-[18px] shrink-0 text-wine" strokeWidth={2} />
+                <span className="min-w-0 truncate">{c.name}</span>
+              </span>
+            )}
+            group
             last={last ? <LastLine who={last.uid === uid ? 'შენ:' : undefined} text={last.text} /> : `კლასის ჩათი · ${c.members.length} წევრი`}
             time={when(last?.at ?? null)}
+            extra={<ClassTimes slots={c.schedule}
+              onEdit={isAdmin || c.teacherIds.includes(uid) ? () => setTimesOf(c.id) : undefined} />}
             {...rowProps(id, lastMs, pinned, hidden, unread)}
           />
         ),
@@ -282,12 +305,15 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
         }
       }
     }
-    // the classes' chats first (2026-11-22, the user: „თითოეული კლასის ჩათი … სიის თავში … იმ წევრების თავზე“), then pinned
-    // (the newest pin on top), then a student's teachers, then the chats with messages, newest first, then the empty ones
+    // the classes' chats first, always, whoever wrote last (2026-11-22, the user: „თითოეული კლასის ჩათი … სიის თავში“, again: „სულ
+    // თავში იყოს ყოველთვის მიუხედავად იმისა ვინ მომწერა“) — they stand in their own pale card; then pinned (the newest pin on top),
+    // then a student's teachers, then the chats with messages, the newest message first („ვინც მომწერა, ზემოთ“), then the empty ones
     const pinRank = (i: Item) => (i.pinned ? prefs.pins.indexOf(i.key) : PIN_MAX);
     items.sort((a, b) => Number(!!b.cls) - Number(!!a.cls) || pinRank(a) - pinRank(b) || Number(b.teacher) - Number(a.teacher) || Number(a.empty) - Number(b.empty) || b.at - a.at);
   }
   const shownItems = items.filter(i => !i.hidden || needle);
+  const classItems = shownItems.filter(i => i.cls);
+  const peopleItems = shownItems.filter(i => !i.cls);
   const hiddenItems = needle ? [] : items.filter(i => i.hidden);
   const menuItem = menuKey ? items.find(i => i.key === menuKey) ?? null : null;
   const unreadIn = (cid: string) => {
@@ -396,16 +422,28 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
         key={openCls.id}
         cls={openCls}
         fill
+        timetable={false}
+        under={(
+          <ClassChatTools
+            auto={moreFor && autoAllowed ? () => openAssistant({ classId: openCls.id, page: 'class' }) : undefined}
+            program={() => classOn(openCls.id, 'program')}
+            members={moreFor ? () => classOn(openCls.id, 'people') : undefined}
+          />
+        )}
         title={
           <div className="flex min-w-0 flex-1 items-center gap-2.5">
             {!wide && <RoundButton label="უკან" onClick={handleGoBack}><ArrowLeft aria-hidden="true" strokeWidth={1.75} /></RoundButton>}
             {/* the class page (program, members) opens from the chat's head — the home lost its classes (2026-11-22) */}
-            <Press onClick={() => openClass(openCls.id)} aria-label={`${openCls.name} — კლასის გვერდი`}
-              className="flex min-w-0 flex-1 cursor-pointer items-center gap-2.5 rounded-field text-left">
-              <ClassLogo name={openCls.name} logo={openCls.logo} className="size-10 shrink-0 text-lead" />
+            {/* held long: the class page's „მეტი“ (the user: „მეტი ფუნქციები სახელზე დიდხანს დაჭერისას იხსნებოდეს“) */}
+            <Press {...(moreFor ? nameHold : {})} onClick={() => openClass(openCls.id)} aria-label={`${openCls.name} — კლასის გვერდი`}
+              title={moreFor ? 'დიდხანს დააჭირე — მეტი' : undefined}
+              className="flex min-w-0 flex-1 cursor-pointer items-center gap-2.5 rounded-field text-left select-none [-webkit-touch-callout:none]">
+              {/* a compact head, the whole name in view (2026-11-22, the user: „სახელი უფრო კომპაქტური … მთლიანად ეტეოდეს …
+                  დააპატარავე 50%“); the lesson times moved out to the list's row */}
+              <ClassLogo name={openCls.name} logo={openCls.logo} className="size-8 shrink-0 text-meta" />
               <span className="flex min-w-0 flex-col">
-                <span className="truncate text-title leading-tight font-bold">{openCls.name}</span>
-                <span className="truncate text-meta text-mut">{`კლასის ჩათი · ${openCls.members.length} წევრი · გვერდი ›`}</span>
+                <span className="line-clamp-2 text-body leading-tight font-bold break-words">{openCls.name}</span>
+                <span className="truncate text-cap leading-tight text-mut">{`${openCls.members.length} წევრი · გვერდი ›`}</span>
               </span>
             </Press>
           </div>
@@ -432,11 +470,12 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
   const list = (
     <div className="flex min-w-0 flex-col gap-3 pb-4 lg:min-h-0 lg:overflow-y-auto">
       {/* since 2026-11-21 the list has its „უკან“ (the phone's bottom menu is gone); a computer keeps its top bar */}
+      {/* the page's name is „სწავლა“, as on the home's main button that opens it (2026-11-22, the user: „სწავლა დააწერე აქაც და შიგნითაც“) */}
       <PageHead
-        title={wide ? 'წერილები' : (
+        title={wide ? 'სწავლა' : (
           <span className="flex items-center gap-2.5">
             <RoundButton label="უკან" onClick={handleGoBack}><ArrowLeft aria-hidden="true" strokeWidth={1.75} /></RoundButton>
-            წერილები
+            სწავლა
           </span>
         )}
         right={(
@@ -475,13 +514,20 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
         <p className="px-4 py-10 text-center text-body text-mut">{needle ? 'ვერავინ მოიძებნა.' : 'ამ კლასში ჩათი ჯერ არ არის.'}</p>
       ) : (
         <>
-          {shownItems.length > 0 && (
+          {classItems.length > 0 && (
             <>
-              <SectionLabel label="ჩათები" />
-              {/* over each class's chat: its own members' coming birthdays (the teachers' look; none → nothing) */}
-              <Rows>{shownItems.map(i => (i.cls
-                ? <React.Fragment key={i.key}><BirthdaysSoon row only={i.cls} />{i.node}</React.Fragment>
-                : i.node))}</Rows>
+              <SectionLabel label="კლასის ჩათები" />
+              {/* the classes' chats in their own pale wine card, so they read as group chats at a glance (2026-11-22);
+                  over each one its own members' coming birthdays (the teachers' look; none → nothing) */}
+              <div className="flex shrink-0 flex-col divide-y divide-wine/10 overflow-hidden rounded-card bg-tint ring-1 ring-wine/15">
+                {classItems.map(i => <React.Fragment key={i.key}><BirthdaysSoon row only={i.cls} />{i.node}</React.Fragment>)}
+              </div>
+            </>
+          )}
+          {peopleItems.length > 0 && (
+            <>
+              <SectionLabel label={classItems.length > 0 ? 'პირადი ჩათები' : 'ჩათები'} />
+              <Rows>{peopleItems.map(i => i.node)}</Rows>
             </>
           )}
           {hiddenItems.length > 0 && (
@@ -507,6 +553,17 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
       <div className={cx(open ? 'hidden lg:block' : 'block', 'lg:min-h-0 lg:flex lg:flex-col')}>{list}</div>
       <div className={cx(open ? 'block' : 'hidden lg:block', 'min-w-0 h-[calc(100dvh-1rem)] lg:h-full')}>{pane}</div>
 
+      {(() => {
+        const c = moreOf ? known.find(x => x.id === moreOf) : null;
+        return c ? (
+          <ClassMoreSheet cls={c} open onClose={() => setMoreOf(null)}
+            openItem={item => { openClass(c.id); openMapItem(item); }} />
+        ) : null;
+      })()}
+      {(() => {
+        const c = timesOf ? known.find(x => x.id === timesOf) : null;
+        return c ? <TimetableSheet cls={c} open edit onClose={() => setTimesOf(null)} /> : null;
+      })()}
       <Sheet open={writing} onClose={() => setWriting(false)} title="ახალი წერილი">
         <NewLetter render={contacts} />
       </Sheet>
