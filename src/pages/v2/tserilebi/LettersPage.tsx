@@ -35,6 +35,7 @@ import { useLongPress } from '../../../hooks/useLongPress';
 import { TimetableSheet } from '../klasi/teacher/Timetable';
 import { usePearlTotals } from './usePearlTotals';
 
+const StudentOutfitSheet = React.lazy(() => import('./StudentOutfit').then(m => ({ default: m.StudentOutfitSheet })));
 // the psalter group, unfolded under the list's head (its „📖 ფს.ჯ.“ button) — loaded only when it opens
 const PsalterFold = React.lazy(() => import('../psalmuni/PsalterScreen').then(m => ({ default: m.PsalterFold })));
 
@@ -120,6 +121,8 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
 
   const { prefs, pin, unpin, hide, unhide } = useChatListPrefs(uid);
   const [menuKey, setMenuKey] = useState<string | null>(null);
+  // a student's outfit, opened from the chokha on their row
+  const [outfitOf, setOutfitOf] = useState<{ uid: string; name: string } | null>(null);
   const [showHidden, setShowHidden] = useState(false);
   const [timesOf, setTimesOf] = useState<string | null>(null);
   // the open class chat: its „მეტი“ (the name held long) and the program's cog
@@ -148,7 +151,7 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
   const studentOf = (t: DirectThread): string | null =>
     t.kind === 'teach' ? (t.teacherUid === uid ? t.studentUid || null : null)
       : t.kind === 'admin' && isAdmin && !t.members.includes(uid) ? t.members[0] ?? null : null;
-  const pearls = usePearlTotals(isTeacher || isAdmin ? threads.map(studentOf).filter((x): x is string => !!x) : []);
+  const { pearls, outfits } = usePearlTotals(isTeacher || isAdmin ? threads.map(studentOf).filter((x): x is string => !!x) : []);
 
   if (!user) return null;
   // the class page on one of its tabs (the chat's „პროგრამა“ · „წევრები“)
@@ -313,6 +316,8 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
               const cid = t.classId || known.find(c => c.memberIds.includes(s))?.id || '';
               return () => { openStudent(s, cid); openMapItem(studentItem(s, cid, 'gza')); };
             })()}
+            outfit={(() => { const s = studentOf(t); return s ? outfits[s] : undefined; })()}
+            onOutfit={(() => { const s = studentOf(t); return s ? () => setOutfitOf({ uid: s, name }) : undefined; })()}
             {...rowProps(t.id, lastMs, pinned, hidden, unread)}
           />
         ),
@@ -537,14 +542,17 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
                 title={psalterOpen ? 'ფსალმუნთა ჯგუფის დაკეცვა' : 'ფსალმუნთა ჯგუფი'}
                 aria-expanded={psalterOpen}
                 onClick={() => setPsalterOpen(v => !v)}
+                // neater (2026-11-22 evening, the user: „ფს.ჯ. უფრო კოხტა გახადე“): a 36px pill, the book in a small wine round
                 className={cx(
-                  'flex h-tap shrink-0 cursor-pointer items-center gap-1.5 rounded-full pr-4 pl-3.5 select-none transition active:scale-95',
-                  psalterOpen ? 'bg-wine text-white active:bg-wine-deep' : 'bg-surf text-ink active:bg-soft',
+                  'relative flex h-icon shrink-0 cursor-pointer items-center gap-1.5 rounded-full py-1 pr-3 pl-1 select-none transition before:absolute before:-inset-y-1 before:inset-x-0 active:scale-95',
+                  psalterOpen ? 'bg-wine text-white active:bg-wine-deep' : 'bg-surf text-wine ring-1 ring-wine/15 active:bg-soft',
                   FOCUS,
                 )}
               >
-                <BookOpen aria-hidden="true" className="size-5" />
-                <span className="text-body leading-none font-semibold whitespace-nowrap">ფს.ჯ.</span>
+                <span aria-hidden="true" className={cx('flex size-7 items-center justify-center rounded-full', psalterOpen ? 'bg-white/20' : 'bg-wine text-white')}>
+                  <BookOpen className="size-4" />
+                </span>
+                <span className="text-meta leading-none font-bold whitespace-nowrap">ფს.ჯ.</span>
               </Press>
             )}
           </>
@@ -586,7 +594,6 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
         <>
           {shownItems.length > 0 && (
             <>
-              <SectionLabel label="ჩათები" />
               {/* one list (the user: „ესეთი დაყოფა არ მინდა“): the class chats first, each in its thin dark-blue frame, with its own
                   members' coming birthdays over it (the teachers' look; none → nothing) */}
               <Rows>{shownItems.map(i => (i.cls
@@ -634,6 +641,11 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
       <Sheet open={writing} onClose={() => setWriting(false)} title="ახალი წერილი">
         <NewLetter render={contacts} />
       </Sheet>
+      {outfitOf && (
+        <React.Suspense fallback={null}>
+          <StudentOutfitSheet uid={outfitOf.uid} name={outfitOf.name} onClose={() => setOutfitOf(null)} />
+        </React.Suspense>
+      )}
       <ChatMenu
         chat={menuItem && { id: menuItem.key, name: menuItem.name, pinned: menuItem.pinned, unread: menuItem.unread, hidden: menuItem.hidden, keep: !!menuItem.cls }}
         onClose={() => setMenuKey(null)}

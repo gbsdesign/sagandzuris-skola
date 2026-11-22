@@ -2,6 +2,8 @@ import React from 'react';
 import { CalendarClock, Check, CheckCheck, ChevronDown, Eye, EyeOff, GraduationCap, ListChecks, Mic, Pin, PinOff, ShieldCheck, Users } from 'lucide-react';
 import { Badge, Button, cx, Dot, Press, Sheet, Small } from '../../../components/ui2';
 import { useLongPress } from '../../../hooks/useLongPress';
+import { ChokhaThumb } from '../gza/ChokhaThumb';
+import type { OutfitBadge } from './usePearlTotals';
 import { PearlIcon } from '../../../components/pearls/PearlIcon';
 import { SwipeRow, type SwipeSide } from '../../../components/ui/SwipeRow';
 import { ClassLogo } from '../../../components/classes/ClassLogo';
@@ -53,12 +55,15 @@ export const ChatRow: React.FC<{
   pearls?: number;
   /** a tap on the pearls: the student's own path (the user: „მასზე დაჭერისას მისივე პროგრამა იხსნებოდეს“) */
   onPearls?: () => void;
+  /** the student's outfit („ჩემი სამოსი“): pale with no part, coloured with one, shining when whole; a tap opens it */
+  outfit?: OutfitBadge;
+  onOutfit?: () => void;
   /** a class's ▾ on its row: shows only its members' chats under the classes (2026-11-22, the user: „ჩამოსაშლელი ისარი … მხოლოდ
    *  მაგ ჩათის წევრები გამოჩნდნენ … თუ არცერთი არ არის დაჭერილი მაშინ ყველა“) */
   fold?: { open: boolean; onToggle: () => void };
   onClick: () => void; onMenu?: () => void;
   left?: SwipeSide; right?: SwipeSide;
-}> = ({ face, name, last, time, unread, active, busy, pinned, group, count, tick, extra, pearls, onPearls, fold, onClick, onMenu, left, right }) => {
+}> = ({ face, name, last, time, unread, active, busy, pinned, group, count, tick, extra, pearls, onPearls, outfit, onOutfit, fold, onClick, onMenu, left, right }) => {
   const press = useLongPress(() => onMenu?.());
   const button = (
     <Press
@@ -99,7 +104,24 @@ export const ChatRow: React.FC<{
                   'relative -my-1 inline-flex items-center gap-1 rounded-full px-1 text-body leading-none font-bold text-mut tabular-nums',
                   onPearls && 'cursor-pointer transition before:absolute before:-inset-1.5 active:scale-95 active:bg-soft focus-visible:outline-2 focus-visible:outline-wine/60',
                 )}>
-                <PearlIcon state={pearls ? 'shining' : 'new'} size={22} seed={String(pearls)} />{pearls}
+                <PearlIcon state={pearls ? 'shining' : 'new'} size={24} seed={String(pearls)} />{pearls}
+              </span>
+            )}
+            {/* the outfit where the pearl stood, the pearl's size (2026-11-22 evening, the user: „მარგალიტი წინ გადმოწიე და 10% კიდევ
+                გაადიდე ხოლო მის ადგილას ჩემი სამოსის ხატულა … ფერმკრთალი … გაუფერადდეს … ბრწყინავდეს“) */}
+            {outfit && (
+              <span role={onOutfit ? 'button' : undefined} tabIndex={onOutfit ? 0 : undefined}
+                aria-label={`სამოსი · ${outfit.have} / ${outfit.total}`} title={`სამოსი · ${outfit.have} / ${outfit.total}`}
+                onPointerDown={onOutfit ? e => e.stopPropagation() : undefined}
+                onClick={onOutfit ? e => { e.stopPropagation(); e.preventDefault(); triggerHaptic(8); onOutfit(); } : undefined}
+                onKeyDown={onOutfit ? e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); onOutfit(); } } : undefined}
+                className={cx(
+                  'relative -my-1 inline-flex size-[24px] items-center justify-center rounded-full',
+                  outfit.have <= 0 && 'opacity-40 grayscale',
+                  outfit.have >= outfit.total && 'sg-outfit-shine',
+                  onOutfit && 'cursor-pointer transition before:absolute before:-inset-2 active:scale-95 focus-visible:outline-2 focus-visible:outline-wine/60',
+                )}>
+                <ChokhaThumb color={outfit.color} size={24} />
               </span>
             )}
             {unread && (count ? <Badge n={count} /> : <span aria-label="წაუკითხავი" className="size-2.5 rounded-full bg-danger" />)}
