@@ -1659,7 +1659,7 @@ async function calendarFeed(request, env) {
 // the person's own documents, keyed by their uid (and the takes and settings under some of them)
 const OWN_DOCS = ['students', 'directory', 'memberAccess', 'accessDecisions', 'birthdays', 'birthYears', 'nameDays', 'confirmations',
   'albumAccess', 'adminNotes', 'adminPush', 'samosiTryOn', 'chatFlags', 'teachers', 'pearlTakes', 'drillTakes', 'users'];
-const OWN_SUBS = [['pearlTakes', 'takes'], ['drillTakes', 'takes'], ['users', 'settings'], ['samosiProof', 'parts']];
+const OWN_SUBS = [['pearlTakes', 'takes'], ['drillTakes', 'takes'], ['users', 'settings'], ['samosiProof', 'parts'], ['assistantChats', 'chats']];
 
 const docName = (env, path) => `projects/${env.FIREBASE_PROJECT_ID}/databases/${env.FIRESTORE_DB}/documents/${path}`;
 
@@ -1771,14 +1771,14 @@ async function lado(request, env) {
     return [401, 'bad token'];
   }
   const prompt = typeof body?.prompt === 'string' ? body.prompt : '';
-  if (!prompt || prompt.length > 120000) return [400, 'prompt'];
+  if (!prompt || prompt.length > 400000) return [400, 'prompt'];
   const email = claims.email_verified ? String(claims.email || '').toLowerCase() : '';
   const role = email && email !== OWNER_EMAIL ? (await fsGet(env, `admins/${email}`, ['role']))?.role : null;
   if (email !== OWNER_EMAIL && role !== 'superadmin') return [403, 'not a superadmin'];
   if (!env.ANTHROPIC_API_KEY) return [503, 'setup'];
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
+  const call = (version) => fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
-    headers: { 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+    headers: { 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': version, 'content-type': 'application/json' },
     body: JSON.stringify({
       model: LADO_MODEL,
       max_tokens: 4096,
@@ -1786,14 +1786,21 @@ async function lado(request, env) {
       messages: [{ role: 'user', content: prompt }],
     }),
   });
-  const data = await res.json().catch(() => null);
+  // the Console's own example names the newer version; the long-standing one is tried first
+  let res = await call('2023-06-01');
+  let data = await res.json().catch(() => null);
+  if (res.status === 400 && /version/i.test(String(data?.error?.message || ''))) {
+    res = await call('2026-10-21');
+    data = await res.json().catch(() => null);
+  }
   if (!res.ok) {
     const msg = String(data?.error?.message || '');
     console.warn('lado:', res.status, msg.slice(0, 200));
     if (res.status === 402 || /credit|balance|billing/i.test(msg)) return [402, 'no-credits'];
     if (res.status === 429 || res.status === 529) return [429, 'busy'];
     if (res.status === 401 || res.status === 403) return [503, 'setup'];
-    return [502, 'failed'];
+    // the reason goes back (only superadmins get here), so a failure can be read on the phone
+    return [502, `failed ${res.status}: ${msg.slice(0, 160)}`];
   }
   const text = (data?.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('').trim();
   return [200, JSON.stringify({ text }), 'application/json'];

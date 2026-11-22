@@ -2016,6 +2016,12 @@
   (`claude-sonnet-5-5`) through the reminders Worker's `POST /lado { token, prompt }` (owner/superadmins only, checked on the server).
   The key is the GitHub secret `ANTHROPIC_API_KEY`, put into the Worker by `reminders-worker.yml` on every run — never in the app. It
   spends the Max plan's monthly API credit ($100, no rollover); when it is gone the call answers 402 → „დაიღალა“, nothing is charged.
+- **Kept talks (2026-11-22**, the user: „რო გამოვალ ჩათიდან არ უნდა აივიწყებდეს … წინა ჩათების და ახლის გახსნა … + ღილაკით“):
+  `damkhmare/history.ts` — `assistantChats/{uid}/chats/{id}` {title, at, items [{k me|ai|note, t}] ≤ 80} (rules: one's own only; the
+  account's deletion takes them); the panel (`keep`) reopens the device's last talk (`sg-program-chat:<uid>`), saves 0.8 s after a
+  change, the head's 🕘 lists the talks (open, 🗑) and „+“ starts a new one. A plan is kept as text only (never done again). A Lado
+  failure shows its reason small under the plain words (`whyOf`; the Worker sends Claude's error text), and the Worker retries with
+  the Console's newer `anthropic-version` when the old one is refused.
 - Not built yet: the other „AI“ words in the app (~70 files; „AI მასწავლებელი“ → „ავტომატური მასწავლებელი“), memory, photos and files, the students' program, layout by words. Don't raise Google's under-18 rule again (the user: „მე
   ვიდარდებ“).
 

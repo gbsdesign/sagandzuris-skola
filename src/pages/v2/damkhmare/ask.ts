@@ -21,6 +21,10 @@ export const ASSISTANT_PROBLEM_TEXT: Record<AiTeacherProblem, string> = {
 
 const offline = () => navigator.onLine === false;
 
+/** A failure's reason for the superadmin's eyes (Lado only): shown small under the plain words. */
+export const whyOf = (e: unknown): string => String((e as { why?: string })?.why || '');
+const withWhy = (e: AiTeacherError, why: string) => Object.assign(e, { why });
+
 const LADO_SERVER = 'https://sagandzuri-reminders.mr-gabunia.workers.dev/lado';
 
 // „ლადოს პროგრამა“: the same prompt to Claude through the Worker (the key stays there); its answer is the JSON as text
@@ -39,7 +43,7 @@ const askLado = async (prompt: string): Promise<string> => {
   }
   if (res.status === 402 || res.status === 429) throw new AiTeacherError('no-credits');
   if (res.status === 503 || res.status === 403 || res.status === 404) throw new AiTeacherError('setup');
-  if (!res.ok) throw new AiTeacherError('failed');
+  if (!res.ok) throw withWhy(new AiTeacherError('failed'), (await res.text().catch(() => '')).slice(0, 200) || `${res.status}`);
   const data = await res.json().catch(() => null) as { text?: string } | null;
   return String(data?.text || '').trim();
 };
@@ -52,7 +56,7 @@ export const askAssistant = async (uid: string, scope: AssistantScope, history: 
   if (engine === 'lado') {
     raw = await askLado(assistantPrompt(scope, history, ask));
     const answer = parseAnswer(raw);
-    if (!answer) throw new AiTeacherError('failed');
+    if (!answer) throw withWhy(new AiTeacherError('failed'), `პასუხი გაუგებარი იყო: ${raw.slice(0, 120)}`);
     noteAiCall(uid);
     return answer;
   }
