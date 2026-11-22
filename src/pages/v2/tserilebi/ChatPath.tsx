@@ -1,5 +1,5 @@
 import React, { Suspense, useEffect, useMemo, useState } from 'react';
-import { BookOpen, Check, ClipboardList, GraduationCap, Plus, Trash2 } from 'lucide-react';
+import { BookOpen, Check, ClipboardList, GraduationCap, Plus } from 'lucide-react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../../../firebase';
 import { useAuth, useChants, useNavigation, useViewing } from '../../../context';
@@ -26,6 +26,7 @@ import { chipsOf } from '../gza/chips';
 import { SearchBox } from '../klasi/teacher/SearchBox';
 import { studentItem } from '../klasi/nav';
 import { pathSummary, recordFromDoc } from '../../../utils/masteryPath';
+import { ArrangeSheet, Held } from '../klasi/ArrangeSheet';
 
 // the student's own fold = the whole „საგანძური“ page without its bar (the user, 2026-11-21: „გზას რომ ჩახსნიდი … ჩამოსაშლელად
 // პირდაპირ ჩათში“, answer „მთელი გზა, როგორც გზის გვერდზე“) — loaded only when the fold opens
@@ -248,6 +249,19 @@ export const ChatPath: React.FC<{
     offerUndo('სიიდან მოიხსნა', () => save({ ...next, [item.id]: path[item.id] }));
   };
 
+  // a line's long press (or tap): move it among the lines shown — the whole list gets steady `order`s, so the move sticks
+  const move = (item: Item, dir: -1 | 1) => {
+    if (!path) return;
+    const i = shown.findIndex(x => x.id === item.id);
+    const other = shown[i + dir];
+    if (i < 0 || !other) return;
+    const list = items.map(x => x.it);
+    const a = list.findIndex(x => x.variantId === item.id);
+    const b = list.findIndex(x => x.variantId === other.id);
+    [list[a], list[b]] = [list[b], list[a]];
+    save({ ...path, ...Object.fromEntries(list.map((it, n) => [it.variantId, { ...path[it.variantId], order: n }])) });
+  };
+
   const add = (e: CatalogEntry) => {
     if (!path || path[e.id]) return;
     save({ ...path, [e.id]: e.make() });
@@ -269,7 +283,8 @@ export const ChatPath: React.FC<{
       </span>
     );
     return (
-      <div key={item.id} className="flex min-h-[60px] items-center gap-2.5 py-1 pr-2 pl-4">
+      <Held key={item.id} onLong={() => setPicked(item.id)}>
+      <div className="flex min-h-[60px] items-center gap-2.5 py-1 pr-2 pl-4">
         <span className="flex size-6 shrink-0 items-center justify-center"><Token item={item} size={18} /></span>
         {go ? (
           <Press onClick={go} className={cx('flex min-h-tap min-w-0 flex-1 cursor-pointer items-center rounded-field text-left', FOCUS)}>{name}</Press>
@@ -302,6 +317,7 @@ export const ChatPath: React.FC<{
           })}
         </span>
       </div>
+      </Held>
     );
   };
 
@@ -348,9 +364,12 @@ export const ChatPath: React.FC<{
 
       {editor && (
         <>
-          <Sheet open={!!pickedItem} title={pickedItem?.name ?? ''} onClose={() => setPicked(null)}>
+          <ArrangeSheet open={!!pickedItem} title={pickedItem?.name ?? ''} onClose={() => setPicked(null)}
+            at={pickedItem ? shown.findIndex(x => x.id === pickedItem.id) : -1} count={shown.length}
+            onMove={dir => { if (pickedItem) move(pickedItem, dir); }}
+            onDelete={() => { if (pickedItem) void remove(pickedItem); }} deleteSub={`${studentName}-ის სიიდან`}>
             {pickedItem && (
-              <Rows>
+              <>
                 {pickedOpen && (
                   <Row lead={<Dot icon={<BookOpen />} />} title={categoryOf(pickedItem.id) === 'galoba' ? 'ნოტები' : 'გახსნა'}
                     onClick={() => { setPicked(null); pickedOpen(); }} />
@@ -359,11 +378,9 @@ export const ChatPath: React.FC<{
                   <Row lead={<Dot icon={<ClipboardList />} />} title="დავალებად მიცემა" sub={`${studentName}-ს`}
                     onClick={() => { const e = findCatalogEntry(pickedItem.id); setPicked(null); if (e) onAssign(e); }} />
                 )}
-                <Row lead={<Dot icon={<Trash2 />} color="soft" />} title="სიიდან ამოშლა" tone="danger" right={null}
-                  onClick={() => { void remove(pickedItem); }} />
-              </Rows>
+              </>
             )}
-          </Sheet>
+          </ArrangeSheet>
           <AddSheet open={adding} onClose={() => setAdding(false)} taken={id => !!path?.[id]} onPick={add} />
         </>
       )}
