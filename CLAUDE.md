@@ -1791,7 +1791,8 @@
   side: a voice's tap = „ჩათვლა“ (marks it too), a counted one = taken off (undo; an AI pass by `removeAiPass`), „დამატება“ = a
   catalogue search, a name → sheet: notes · „დავალებად მიცემა“ (the 📎 window opened on that chant — `PinSheet preset`) · „სიიდან
   ამოშლა“. The student's side = their own path through `usePathMarks` (the lock holds) + „საგანძურში გახსნა“. A teacher's / admin's
-  message line in any chat = „გიორგი (ადმინი)“ / „გიორგი (მასწავლებელი)“ (`staffName` in ChatPanel); the member's administration chat
+  message line in any chat = „გიორგი (ადმინი)“ / „გიორგი (მასწავლებელი)“ (`staffName` in ChatPanel; since 2026-11-22 every sender's line has the
+  surname too — „ნინო ბერიძე“, „გიორგი ბერიძე (ადმინი)“ — `senderName`, the user: „გვარის ეწეროს სახელის მერე ჩათში“); the member's administration chat
   shows staff names and its title „ადმინისტრაცია · გიორგი“ (the last staff writer). `hooks/useMyTeacherChat.ts`: a plain member
   whose classes have one teacher — the bottom menu's „წერილები“ opens that chat (the list one „უკან“ away; not while another chat
   waits — `useUnreadParts`, not from inside the letters); with several teachers the list puts them first, a teacher not written to
