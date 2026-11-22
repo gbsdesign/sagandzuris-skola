@@ -2330,7 +2330,8 @@ Pending small tasks the user mentioned: remove the old Drive `ნოტები
   coloured with one, `.sg-outfit-shine` when whole); a tap opens `StudentOutfit.tsx` (the figure + its parts, only to look). No
   „ჩათები“ heading over the list; the „ფს.ჯ.“ pill is 36 px with the book in a small wine round. The home's „სწავლა“ card has a round ⛪ before its arrow
   for teachers and admins (`lesson.onProgram` = `openProgram`, „დღევანდელი წირვა“). The psalter page has no ⋯: the group's settings (`ParamsSheet`)
-  open from the ✎ sheet's row „ჯგუფის პარამეტრები“ (leaders), on the page and in the „სწავლა“ fold alike.
+  open from the ✎ sheet's row „ჯგუფის პარამეტრები“ (leaders), on the page and in the „სწავლა“ fold alike. The class chat's program fold is `ProgramTab compact` (one header line
+  with „N / M“, a thin bar, „+“ beside the ☁, tighter rows, no psalter row).
 - **The whole path in the chat's fold (2026-11-21 night**, the user: „გზას რომ ჩახსნიდი … ჩამოსაშლელად პირდაპირ ჩათში“, answer „მთელი
   გზა, როგორც გზის გვერდზე“): `ChatPath` — the student's own side unfolds the whole „საგანძური“ page (`SagandzuriPage bare`, lazy: no
   bar, the ✎ by „ჩემი საგალობლები“; numbers, assignments, chips, flights, ოსტატობა); the teacher's side keeps its ჩათვლა / დამატება /
