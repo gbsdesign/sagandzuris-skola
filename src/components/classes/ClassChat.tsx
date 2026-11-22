@@ -67,7 +67,7 @@ export const CallBanner: React.FC<{ people: number; since: number; onHide: () =>
   </div>
 );
 
-export const ClassChat: React.FC<{ cls: SchoolClass; title?: React.ReactNode; fill?: boolean; chain?: boolean; timetable?: boolean; compact?: boolean; bare?: boolean; under?: React.ReactNode; beforeCall?: React.ReactNode }> = ({ cls, title, fill, chain, timetable = true, compact = false, bare = false, under, beforeCall }) => {
+export const ClassChat: React.FC<{ cls: SchoolClass; title?: React.ReactNode; fill?: boolean; chain?: boolean; timetable?: boolean; compact?: boolean; bare?: boolean; under?: React.ReactNode }> = ({ cls, title, fill, chain, timetable = true, compact = false, bare = false, under }) => {
   const { user, isAdmin: isSchoolAdmin } = useAuth();
   const { openDm, openStudent } = useNavigation();
   // this class's teachers (and the school's admins) speak as teachers here
@@ -179,7 +179,6 @@ export const ClassChat: React.FC<{ cls: SchoolClass; title?: React.ReactNode; fi
               </h2>
             )}
             <div className="ml-auto flex items-center gap-1.5 shrink-0">
-              {beforeCall}
               <ClassCallButton cls={cls} />
             </div>
           </div>

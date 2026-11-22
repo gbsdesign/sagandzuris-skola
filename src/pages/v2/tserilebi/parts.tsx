@@ -40,7 +40,8 @@ export const LastLine: React.FC<{ who?: string; text: string }> = ({ who, text }
 export const ChatRow: React.FC<{
   face: React.ReactNode; name: React.ReactNode; last: React.ReactNode; time?: string;
   unread?: boolean; active?: boolean; busy?: boolean; pinned?: boolean;
-  /** a class's chat: drawn on the accent's pale ground (2026-11-22, the user: „განსხვავებულად გამოკვეთე რომ ეტყობოდეს“) */
+  /** a class's chat: an ordinary row in a thin dark-blue frame (2026-11-22, the user: „როგორც ჩვეულებრივი ჩათი … განსხვავებული
+   *  კარკასი … თხლად … მუქ ლურჯში“) */
   group?: boolean;
   /** how many wait (0 / none while not counted = a dot) */
   count?: number;
@@ -60,7 +61,8 @@ export const ChatRow: React.FC<{
       className={cx(
         'flex min-h-row w-full cursor-pointer items-center gap-3 py-2.5 pr-4 pl-3.5 text-left text-ink transition-colors select-none',
         'disabled:cursor-default disabled:opacity-60 [-webkit-touch-callout:none]',
-        group ? (active ? 'bg-wine/15' : 'bg-tint active:bg-wine/10') : active ? 'bg-tint' : 'active:bg-soft',
+        active ? 'bg-tint' : 'active:bg-soft',
+        group && 'rounded-tile border-[1.5px] border-[color-mix(in_oklab,var(--color-sea)_70%,var(--color-ink))]',
       )}
     >
       {face}
@@ -83,7 +85,11 @@ export const ChatRow: React.FC<{
       </span>
     </Press>
   );
-  return left || right ? <SwipeRow left={left} right={right} faceBg={group ? 'bg-tint' : 'bg-surf'} className="rounded-none">{button}</SwipeRow> : button;
+  const row = left || right
+    ? <SwipeRow left={left} right={right} faceBg="bg-surf" className={group ? 'rounded-tile' : 'rounded-none'}>{button}</SwipeRow>
+    : button;
+  // the frame stands a little inside the card, its corners inside the card's
+  return group ? <div className="p-1.5">{row}</div> : row;
 };
 
 // ---- a class's lesson times on its chat row (2026-11-22, the user: „შიგნით რომაა ეგენი გარეთ გამოიტანე ლამაზად და კომპაქტურად …
@@ -137,13 +143,14 @@ const ToolPill: React.FC<{ icon: React.ReactNode; label: string; onClick: () => 
   </Press>
 );
 
-// the program's cog stands before the phone in the chat's head (the user: „ყურმილის წინ მხოლოდ ლოგო“)
+// `end`: the program's round cog, alone at the row's right — under the phone (the user: „წარწერა მოაცილე … ყურმილის დაბლა ჩასვი“)
 export const ClassChatTools: React.FC<{
-  program: () => void; members?: () => void;
-}> = ({ program, members }) => (
+  program: () => void; members?: () => void; end?: React.ReactNode;
+}> = ({ program, members, end }) => (
   <div role="group" aria-label="კლასის ღილაკები" className="flex flex-wrap items-center gap-x-1.5">
     <ToolPill icon={<ListChecks strokeWidth={2} />} label="პროგრამა" onClick={program} />
     {members && <ToolPill icon={<Users strokeWidth={2} />} label="წევრები" onClick={members} />}
+    {end && <span className="ml-auto flex shrink-0">{end}</span>}
   </div>
 );
 
