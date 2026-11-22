@@ -34,6 +34,12 @@ service cloud.firestore {
         && (d.kind != 'file' || (d.fname is string && d.fname.size() <= 200 && d.size is int && d.size <= 10485760
           && d.mime is string && d.mime.size() <= 100 && d.parts is int && d.parts >= 1 && d.parts <= 16));
     }
+    // a reply (2026-11-22) keeps only the answered message's id, writer and one short line
+    function replyOk(d) {
+      return !('re' in d) || (d.re is map && d.re.keys().hasOnly(['id', 'name', 'text'])
+        && d.re.id is string && d.re.id.size() <= 64 && d.re.name is string && d.re.name.size() <= 120
+        && d.re.text is string && d.re.text.size() <= 200);
+    }
     function heartOnly() {
       return changed().hasOnly(['hearts'])
         && incoming().hearts is list && incoming().hearts.size() <= 300
@@ -507,7 +513,7 @@ service cloud.firestore {
           && incoming().createdAt == request.time
           && incoming().kind in ['text', 'voice', 'game', 'draw', 'photo', 'file']
           && incoming().text is string && incoming().text.size() <= 2000
-          && mediaFields(incoming())
+          && mediaFields(incoming()) && replyOk(incoming())
           // an invitation into a game room of the class (its card leads into the room)
           && (incoming().kind != 'game' || (incoming().room is string && incoming().room.size() <= 40))
           // a drawing to guess („ნახატობანა“): its lines, its word folded, its theme
@@ -777,7 +783,7 @@ service cloud.firestore {
               || (incoming().kind in ['note', 'work'] && incoming().teacher == true && kindOf(thread()) != 'peer'
                   && incoming().to in thread().members && incoming().to != uid() && pinCard(incoming())))
           && incoming().text is string && incoming().text.size() <= 2000
-          && mediaFields(incoming());
+          && mediaFields(incoming()) && replyOk(incoming());
         allow update: if inThread() && stillLinked() && heartOnly();
         allow delete: if isSuperAdmin() || (isSignedIn() && existing().uid == uid());
       }

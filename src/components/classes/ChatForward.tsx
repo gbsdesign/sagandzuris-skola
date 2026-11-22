@@ -2,14 +2,14 @@ import React, { useMemo, useState } from 'react';
 import { Check, Users } from 'lucide-react';
 import { useAuth } from '../../context';
 import { useMyAllClasses } from '../../hooks/useShellCounts';
-import { classChatBase, forwardVoice, type ChatAuthor, type ChatMessage } from '../../hooks/useClassChat';
+import { classChatBase, forwardMessage, messagePreview, type ChatAuthor, type ChatMessage } from '../../hooks/useClassChat';
 import { dmBase, isStaffSide, noteSent, otherOf, useInbox, type DirectThread } from '../../hooks/useDirectChat';
 import type { SchoolClass } from '../../hooks/useClasses';
 import { Button, Sheet, cx } from '../ui2';
 import { Avatar } from './ChatPanel';
 import { triggerHaptic } from '../../utils/haptics';
 
-// „გადაგზავნა“ of one of my voice messages (2026-11-22, the user: „ჩემს მიერ ჩაწერილ ვოისებს ქონდეს გადაზიარების ფუნქცია რომ
+// „გადაგზავნა“ of any message (a voice, a text, a photo, a file; at first only my voice messages) (2026-11-22, the user: „ჩემს მიერ ჩაწერილ ვოისებს ქონდეს გადაზიარების ფუნქცია რომ
 // კლასებში ან სხვა მოსწავლეს გადავუგზავნო“): my classes' chats and my private chats, several at once; the classmates' old chats
 // (closed) are not offered.
 
@@ -57,7 +57,7 @@ export const ForwardSheet: React.FC<{ m: ChatMessage | null; fromBase: string; o
           const author: ChatAuthor = {
             uid, name: me?.name || user.displayName || '', photoURL: me?.photoURL || user.photoURL || '', teacher: isAdmin || t.cls.teacherIds.includes(uid),
           };
-          await forwardVoice(fromBase, m, t.key, author);
+          await forwardMessage(fromBase, m, t.key, author);
         } else {
           const th = t.thread;
           const staff = isAdmin && isStaffSide(th, uid);
@@ -65,8 +65,8 @@ export const ForwardSheet: React.FC<{ m: ChatMessage | null; fromBase: string; o
             uid, name: th.names[uid] || user.displayName || '', photoURL: th.photos[uid] || user.photoURL || '',
             teacher: (th.kind === 'teach' && th.teacherUid === uid) || staff,
           };
-          await forwardVoice(fromBase, m, t.key, author);
-          await noteSent(th, uid, `🎤 ${m.text || 'ხმოვანი შეტყობინება'}`).catch(() => {});
+          await forwardMessage(fromBase, m, t.key, author);
+          await noteSent(th, uid, messagePreview(m)).catch(() => {});
         }
         sent++;
       } catch (e) {
@@ -82,9 +82,9 @@ export const ForwardSheet: React.FC<{ m: ChatMessage | null; fromBase: string; o
   };
 
   return (
-    <Sheet open={!!m} onClose={close} title="ხმოვანის გადაგზავნა">
+    <Sheet open={!!m} onClose={close} title="გადაგზავნა">
       <div className="flex flex-col gap-2 pb-1">
-        {m?.text && <p className="truncate rounded-field bg-soft px-3 py-2 text-meta font-semibold text-ink">🎤 {m.text}</p>}
+        {m && <p className="truncate rounded-field bg-soft px-3 py-2 text-meta font-semibold text-ink">{messagePreview(m)}</p>}
         {targets.length > 6 && (
           <input
             value={q}
