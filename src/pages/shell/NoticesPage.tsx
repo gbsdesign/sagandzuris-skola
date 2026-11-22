@@ -8,6 +8,7 @@ import { askConfirm, offerUndo } from '../../components/ui/kit';
 import { Button, Chips, RoundButton, Rows, SectionLabel, TopBar, type ChipItem } from '../../components/ui2';
 import { NoticeRow } from './notices/NoticeRow';
 import { WriteSheet } from './notices/WriteSheet';
+import { kaName } from '../../utils/georgianName';
 
 // „შეტყობინებები“ in the new look (redesign stage 2, the prototype `shetyobinebebi`): the page the home bar's 🔔 and
 // `/?open=bell` open, in place of the old drop-down under the header (layout/Bell.tsx). One line = one piece of news;
@@ -173,7 +174,7 @@ export const NoticesPage: React.FC = () => {
   const admin: NoticesViewProps['admin'] = isAdmin && user
     ? {
       onSend: async text => {
-        const ref = await sendAnnouncement(user.uid, user.displayName || '', text);
+        const ref = await sendAnnouncement(user.uid, kaName(user.displayName) || '', text);
         void notifyAnnouncement(ref.id);
       },
       onTakeBack: async n => {

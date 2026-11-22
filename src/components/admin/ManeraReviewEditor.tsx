@@ -7,6 +7,7 @@ import { MANERA_ITEMS } from '../../data/habitsAndManera';
 import { triggerHaptic } from '../../utils/haptics';
 import { ManeraMark, ManeraScore, markDate, readManeraReview } from '../views/ManeraPanel';
 import { askConfirm, Btn, FIELD, Flash, useFlash } from '../ui/kit';
+import { kaName } from '../../utils/georgianName';
 
 const STEPS = [0, 25, 50, 75, 100];
 
@@ -57,7 +58,7 @@ export const ManeraReviewEditor: React.FC<{ uid: string }> = ({ uid }) => {
     void write(num, {
       v: draft.v,
       ...(text ? { note: text } : {}),
-      by: user?.displayName || 'მასწავლებელი',
+      by: kaName(user?.displayName) || 'მასწავლებელი',
       byUid: user?.uid || '',
       at: Date.now(),
     });

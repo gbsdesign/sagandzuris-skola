@@ -9,6 +9,7 @@ import { fullName } from '../../utils/memberName';
 import { NameDay, clearNameDay, saveNameDay } from '../../utils/nameDays';
 import { nameDayCandidates } from '../../utils/nameDayMatch';
 import { Btn, FIELD, Sheet } from '../ui/kit';
+import { kaName } from '../../utils/georgianName';
 
 // „ჩემი ანგელოზის დღე“ on the birthdays page: the member's chosen saint's day, and the window to choose it from the
 // days of the church calendar that name a saint of their (baptismal) name; another name can be typed in.
@@ -46,7 +47,7 @@ export const MyNameDay: React.FC<{ mine?: NameDay }> = ({ mine }) => {
           first={baptismal}
           mine={mine}
           onPick={async c => {
-            const name = fullName(profile) || user.displayName || '';
+            const name = fullName(profile) || kaName(user.displayName) || '';
             await saveNameDay(user.uid, name, user.photoURL || '', c);
             setOpen(false);
           }}

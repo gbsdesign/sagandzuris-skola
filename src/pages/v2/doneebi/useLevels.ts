@@ -6,6 +6,7 @@ import { useViewing } from '../../../context/AuthContext';
 import { useMasteryPath } from '../../../components/mastery/useMasteryPath';
 import { findDrill } from '../../../data/vocalDrills';
 import { certLevels, shortTitle, unseenCert } from '../../../utils/levelsView';
+import { kaName } from '../../../utils/georgianName';
 
 // The levels page's data: the path's record (useMasteryPath) + the days exercises were done (students.drillDone, and this
 // device's own days) and the tips a teacher marked (students.maneraReview) — for the certificate's date and its line.
@@ -40,7 +41,7 @@ export const useLevels = () => {
     return { days, marked };
   }, [doc_, viewing]);
   const closed = useMemo(() => certLevels(path.record), [path.record]);
-  return { ...path, days, marked, closed, uid, viewing: !!viewing, loaded: doc_ !== null, name: user?.displayName || '' };
+  return { ...path, days, marked, closed, uid, viewing: !!viewing, loaded: doc_ !== null, name: kaName(user?.displayName) || '' };
 };
 
 export const drillName = (id: string) => shortTitle(findDrill(id)?.title ?? id);

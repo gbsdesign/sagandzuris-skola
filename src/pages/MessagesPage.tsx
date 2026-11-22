@@ -22,6 +22,7 @@ import { ClassLogo } from '../components/classes/ClassLogo';
 import { ClassChat } from '../components/classes/ClassChat';
 import { useNewLook } from '../design/newLook';
 import { DirectChat, AdminAvatar, PaneTitle } from './DirectChatPage';
+import { kaName } from '../utils/georgianName';
 
 // today: the time; earlier: the day
 const when = (d: Date | null) => (!d ? '' : d.toDateString() === new Date().toDateString() ? hhmm(d) : dayLabel(d));
@@ -176,7 +177,7 @@ export const MessagesPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
   const me = (classId?: string): Person => {
     const c = known.find(x => x.id === classId) || mine[0];
     const p = c?.members.find(m => m.uid === uid) || c?.teachers.find(m => m.uid === uid);
-    return { uid, name: p?.name || user.displayName || '', photoURL: p?.photoURL || user.photoURL || '' };
+    return { uid, name: p?.name || kaName(user.displayName) || '', photoURL: p?.photoURL || user.photoURL || '' };
   };
 
   const go = (id: string) => openDm(id, currentPage === 'dm');

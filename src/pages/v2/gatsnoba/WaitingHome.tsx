@@ -3,6 +3,7 @@ import { Hourglass, House, MessageCircle } from 'lucide-react';
 import { useAuth, useNavigation } from '../../../context';
 import { Dot, Row, Rows } from '../../../components/ui2';
 import { useMembership } from '../../../utils/memberAccess';
+import { kaName } from '../../../utils/georgianName';
 
 // x-elodeba — „განაცხადი მიღებულია“: a new member a superadmin has not let in yet sees, in place of the home page, one calm
 // screen — what happens, what comes next, whom to write to. „დაათვალიერე აპი“ shows the home page for the rest of the
@@ -30,7 +31,7 @@ export const WaitingHome: React.FC<{ home: React.ReactNode }> = ({ home }) => {
     setBusy(true); setError('');
     try {
       const { openAdminThread } = await import('../../../hooks/useDirectChat');
-      openDm(await openAdminThread({ uid: user.uid, name: user.displayName || '', photoURL: user.photoURL || '' }));
+      openDm(await openAdminThread({ uid: user.uid, name: kaName(user.displayName) || '', photoURL: user.photoURL || '' }));
     } catch {
       setError('ვერ გაიხსნა — სცადე ცოტა ხანში.');
     }

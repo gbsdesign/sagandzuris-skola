@@ -4,6 +4,7 @@ import {
   updateDoc, writeBatch,
 } from 'firebase/firestore';
 import { db } from '../firebase';
+import { kaName } from '../utils/georgianName';
 import type { VoiceTake } from '../utils/voiceRecorder';
 import type { RoomGame } from '../utils/gameRoom';
 import { ROOM_GAME_INFO, chatRoomRef } from '../data/roomGames';
@@ -72,7 +73,7 @@ export const toChatMessage = (d: QueryDocumentSnapshot, pinned = false): ChatMes
   return {
     id: d.id,
     uid: m.uid || '',
-    name: m.name || '',
+    name: kaName(m.name) || '',
     photoURL: m.photoURL || '',
     teacher: !!m.teacher,
     kind: (KINDS as readonly string[]).includes(m.kind) ? m.kind : 'text',

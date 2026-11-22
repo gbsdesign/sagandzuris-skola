@@ -18,6 +18,7 @@ import { registerTeacher } from '../hooks/useDirectChat';
 import { ensureMembership } from '../utils/memberAccess';
 import { iosCall, iosWord, isIosApp } from '../utils/iosApp';
 import { setUpdateCheckEvery } from '../utils/appUpdate';
+import { kaName } from '../utils/georgianName';
 
 export const SUPER_ADMIN_EMAIL = 'mr.gabunia@gmail.com';
 
@@ -156,7 +157,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (email === SUPER_ADMIN_EMAIL.toLowerCase()) {
         setDoc(
           doc(db, 'admins', email),
-          { email, role: 'superadmin', userId: currentUser.uid, name: currentUser.displayName || '', addedBy: 'system' },
+          { email, role: 'superadmin', userId: currentUser.uid, name: kaName(currentUser.displayName) || '', addedBy: 'system' },
           { merge: true }
         ).catch(() => {});
       }

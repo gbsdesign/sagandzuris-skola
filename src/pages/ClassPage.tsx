@@ -25,6 +25,7 @@ import { isClassUnread, useChatSeen, useClassLasts } from '../hooks/useClassChat
 import { triggerHaptic } from '../utils/haptics';
 import { errorText } from '../utils/errorText';
 import type { ClassMember, SchoolClass } from '../hooks/useClasses';
+import { kaName } from '../utils/georgianName';
 
 // the teacher's windows opened from the class page: the one ✎'s list ('edit') and what it opens
 type Panel = 'edit' | 'class' | 'teachers' | 'members' | 'schedule';
@@ -126,7 +127,7 @@ const ClassView: React.FC<{ cls: SchoolClass; focus?: 'psalter'; inUse: SchoolCl
   const person = (p: ClassMember): Person => ({ uid: p.uid, name: p.name || '', photoURL: p.photoURL || '' });
   const meHere = (): Person => {
     const p = cls.members.find(m => m.uid === user?.uid) || cls.teachers.find(m => m.uid === user?.uid);
-    return { uid: user!.uid, name: p?.name || user!.displayName || '', photoURL: p?.photoURL || user!.photoURL || '' };
+    return { uid: user!.uid, name: p?.name || kaName(user!.displayName) || '', photoURL: p?.photoURL || user!.photoURL || '' };
   };
   const writeTo = async (other: ClassMember, otherIsTeacher: boolean) => {
     setDmErr('');

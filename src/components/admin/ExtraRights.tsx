@@ -8,6 +8,7 @@ import { FAIL } from './CentreDownload';
 import { Fold } from './Fold';
 import { changed } from './changed';
 import type { UserRecord } from './UsersTab';
+import { kaName } from '../../utils/georgianName';
 
 type Msg = (text: string, type: 'success' | 'error') => void;
 
@@ -73,7 +74,7 @@ const Head: React.FC<{ title: string; sub: string }> = ({ title, sub }) => (
   </p>
 );
 
-const nameOf = (u: UserRecord) => u.name || u.displayName || u.email;
+const nameOf = (u: UserRecord) => u.name || kaName(u.displayName) || u.email;
 
 const People: React.FC<{ people: UserRecord[]; off: string; onOff: (u: UserRecord) => void }> = ({ people, off, onOff }) => (
   <ul>

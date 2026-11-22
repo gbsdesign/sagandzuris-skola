@@ -8,6 +8,7 @@ import { useClassStudents } from '../../../hooks/useTeaching';
 import { errorText } from '../../../utils/errorText';
 import { NOTE_MAX, activeFor, makeNote, noteLine, type AiStudentNote } from '../../../utils/aiTeacherNotes';
 import { changeClassNotes, changeStudentNotes, useClassNotes } from './useAiNotes';
+import { kaName } from '../../../utils/georgianName';
 
 // x-ai-mititeba — what the teacher tells the AI teacher: one text for the whole class or for one student, and the list of
 // what works now. The AI reads these before every lesson until a note is taken away.
@@ -40,7 +41,7 @@ export const InstructionScreen: React.FC<{ cls: SchoolClass }> = ({ cls }) => {
 
   const save = async () => {
     if (!user || !ready) return;
-    const base = makeNote(text, user.uid, user.displayName || 'მასწავლებელი');
+    const base = makeNote(text, user.uid, kaName(user.displayName) || 'მასწავლებელი');
     if (!base) return;
     setBusy(true);
     setError('');

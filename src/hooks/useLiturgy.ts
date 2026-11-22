@@ -12,6 +12,7 @@ import { useManagedClasses, useMyClasses, SchoolClass } from './useClasses';
 import { chantLookupLoaded, chantLookupNow, useChantLookupReady } from '../data/chantLookupLazy';
 import type { VersionInfo } from '../data/chantLookup';
 import { MONTHS_GE, WEEKDAYS_GE } from '../utils/dateNames';
+import { kaName } from '../utils/georgianName';
 
 export interface LiturgyProgram {
   date: string;      // YYYY-MM-DD
@@ -147,7 +148,7 @@ export const useLiturgy = () => {
     if (!teacherClass) throw new Error('no class');
     const sentAt = new Date().toISOString();
     await updateDoc(doc(db, 'classes', teacherClass.id), {
-      liturgy: { date: draft.date, items: draft.items, sentAt, by: user?.displayName || '' },
+      liturgy: { date: draft.date, items: draft.items, sentAt, by: kaName(user?.displayName) || '' },
     });
     return teacherClass.name;
   }, [teacherClass, draft, user]);
@@ -156,7 +157,7 @@ export const useLiturgy = () => {
   const lead = useCallback(async (vid: string) => {
     if (!teacherClass) return;
     await updateDoc(doc(db, 'classes', teacherClass.id), {
-      live: { vid, at: new Date().toISOString(), by: user?.displayName || '' },
+      live: { vid, at: new Date().toISOString(), by: kaName(user?.displayName) || '' },
     });
   }, [teacherClass, user]);
 

@@ -10,6 +10,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { useManagedClasses, type SchoolClass } from '../../../hooks/useClasses';
 import { sendLetters, sendToClass, type Me } from '../damkhmare/act';
 import { useBackClose } from '../../notes/QrTools';
+import { kaName } from '../../../utils/georgianName';
 
 type State = 'busy' | 'done' | 'fail';
 
@@ -37,7 +38,7 @@ export const SendSheet: React.FC<{
   const shown = open ?? (classes.length === 1 ? classes[0].id : null);
 
   const nameIn = (c: SchoolClass) =>
-    c.teachers.find(t => t.uid === user.uid)?.name || c.members.find(m => m.uid === user.uid)?.name || user.displayName || 'მასწავლებელი';
+    c.teachers.find(t => t.uid === user.uid)?.name || c.members.find(m => m.uid === user.uid)?.name || kaName(user.displayName) || 'მასწავლებელი';
   const meIn = (c: SchoolClass): Me => ({
     uid: user.uid, name: nameIn(c), photoURL: user.photoURL || '', email: user.email || undefined,
   });

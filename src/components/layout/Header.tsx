@@ -12,6 +12,7 @@ import { BellButton, BellPanel } from './Bell';
 import { useBellState, useNotices } from '../../hooks/useNotices';
 import { useOpenRequest } from '../../utils/searchOpen';
 import { useShownPhoto } from '../../hooks/useMyPhoto';
+import { kaName } from '../../utils/georgianName';
 
 interface HeaderProps {
   logoUrl: string;
@@ -164,13 +165,13 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
                 onClick={() => !kids && navigateTo('profile')}
                 disabled={kids}
                 className="shrink-0 rounded-full p-0.5 hover:ring-2 hover:ring-[#7a2028]/30 transition-all cursor-pointer active:scale-95 disabled:cursor-default disabled:hover:ring-0"
-                title={`${user.displayName || user.email} — პროფილი`}
+                title={`${kaName(user.displayName) || user.email} — პროფილი`}
                 aria-label="პროფილის გახსნა"
               >
                 {photo ? (
                   <img
                     src={photo}
-                    alt={user.displayName || 'მოსწავლე'}
+                    alt={kaName(user.displayName) || 'მოსწავლე'}
                     className="w-8 h-8 rounded-full ring-2 ring-[#e8dcc8] object-cover"
                     referrerPolicy="no-referrer"
                   />
@@ -204,7 +205,7 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
               <BellPanel
                   notices={notices}
                   seenBefore={seenBefore}
-                  admin={isAdmin && user ? { uid: user.uid, name: user.displayName || '' } : undefined}
+                  admin={isAdmin && user ? { uid: user.uid, name: kaName(user.displayName) || '' } : undefined}
                   onOpenChat={chat => { setDrop(null); openDm(chat); }}
                   onHide={bell.hide}
                   onUnhide={bell.unhide}

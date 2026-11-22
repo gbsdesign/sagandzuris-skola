@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { addDoc, collection, limit, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { auth, db } from '../firebase';
+import { kaName } from './georgianName';
 
 // The admins' change log (⚙ „სკოლა“ → „ცვლილებების ჟურნალი“, superadmins only): who changed what and when — a role,
 // letting someone in, a class, the archive, a section, a right, the kids' mode, an undo. adminLog/{auto id}
@@ -19,7 +20,7 @@ export const logChange = (kind: LogKind, text: string, target = '') => {
   void addDoc(collection(db, 'adminLog'), {
     at: new Date().toISOString(),
     by: u.email.toLowerCase(),
-    byName: u.displayName || '',
+    byName: kaName(u.displayName) || '',
     kind,
     text: text.slice(0, MAX_TEXT),
     target,

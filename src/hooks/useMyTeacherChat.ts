@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useAuth } from '../context';
 import { useMyClasses } from './useClasses';
 import { dmId, openThread, type Person } from './useDirectChat';
+import { kaName } from '../utils/georgianName';
 
 // A student's „წერილები“ goes straight to their teacher's chat (2026-11-21, the user: „მოსწავლეს უჩანდეს მასწავლებელი ანუ
 // მასწის ჩათი იხსნებოდეს პირდაპირ“; answer „ერთი მასწავლებელი — პირდაპირ, რამდენიმე — სია, მასწავლებლები თავში“).
@@ -32,7 +33,7 @@ export const useMyTeacherChat = (): TeacherChat | null => {
     const [{ teacher, classId }] = [...teachers.values()];
     const cls = classes.find(c => c.id === classId);
     const m = cls?.members.find(x => x.uid === user.uid);
-    const me: Person = { uid: user.uid, name: m?.name || user.displayName || '', photoURL: m?.photoURL || user.photoURL || '' };
+    const me: Person = { uid: user.uid, name: m?.name || kaName(user.displayName) || '', photoURL: m?.photoURL || user.photoURL || '' };
     return { id: dmId(teacher.uid, user.uid), teacher, open: () => openThread(teacher, me, classId) };
   }, [plain, user, classes]);
 };

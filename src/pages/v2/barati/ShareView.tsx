@@ -14,6 +14,7 @@ import {
 import { useBackToClose } from '../../../utils/backToClose';
 import { drawCard, loadLogo, saveCard, shareCard } from './drawCard';
 import type { LearnedItem } from './useLearned';
+import { kaName } from '../../../utils/georgianName';
 
 // „გაზიარე“ (board x-idea-barati) and the sheet „რა ეწეროს ბარათზე“ (x-idea-barati-2); the moment screen (x-idea-barati-0).
 // By props; `ShareLayer` / `LearnedMoment` hold the data.
@@ -149,5 +150,5 @@ export const ShareLayer: React.FC<{ item: LearnedItem; onClose: () => void }> = 
     window.addEventListener('keydown', k);
     return () => window.removeEventListener('keydown', k);
   }, [onClose]);
-  return <Layer><ShareView item={item} person={user?.displayName || ''} onBack={onClose} /></Layer>;
+  return <Layer><ShareView item={item} person={kaName(user?.displayName) || ''} onBack={onClose} /></Layer>;
 };

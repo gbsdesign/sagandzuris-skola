@@ -5,6 +5,7 @@ import { ADMIN_NAME, DirectThread, dmBase, isStaffSide, notePrivateCall, otherOf
 import { sendCallEndMessage } from '../../hooks/useClassChat';
 import { CallInfo, CallKind, endChatCall, endClassCall, giveUpAfter, joinCall, ringClass, watchEnd, whenCallLeft } from '../../utils/callSession';
 import { notifyRing } from '../../utils/groupPush';
+import { kaName } from '../../utils/georgianName';
 
 // Starting, answering and leaving the school's calls (utils/callSession.ts), the same from every button.
 
@@ -28,7 +29,7 @@ export const chatCallInfo = (t: DirectThread, user: User): CallInfo => {
     // every private call may be by video (the administration's since 2026-11-06 — the member sees the admin's face)
     canVideo: true,
     anonStaff: t.kind === 'admin' && !staff,
-    me: { uid: user.uid, name: t.names[user.uid] || user.displayName || '', photoURL: t.photos[user.uid] || user.photoURL || '', staff },
+    me: { uid: user.uid, name: t.names[user.uid] || kaName(user.displayName) || '', photoURL: t.photos[user.uid] || user.photoURL || '', staff },
   };
 };
 
@@ -40,7 +41,7 @@ export const classCallInfo = (c: SchoolClass, user: User): CallInfo => {
     oneToOne: false,
     canVideo: true,
     anonStaff: false,
-    me: { uid: user.uid, name: p?.name || user.displayName || '', photoURL: p?.photoURL || user.photoURL || '', staff: false },
+    me: { uid: user.uid, name: p?.name || kaName(user.displayName) || '', photoURL: p?.photoURL || user.photoURL || '', staff: false },
     leaders: c.teacherIds,
   };
 };

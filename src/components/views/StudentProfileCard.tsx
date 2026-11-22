@@ -25,6 +25,7 @@ import { writeDirectory } from '../../utils/directory';
 import { ABILITY_OPTIONS, AbilityId, GEORGIAN_REGIONS, INTEREST_OPTIONS, abilitiesOf, isPlaceholderBirth, normalizePhone, showPhone, validBirth } from '../../utils/profileFields';
 import { BirthPick } from '../ui/BirthPick';
 import { INSTRUMENTS_LIST } from '../../data/instrumentsData';
+import { kaName } from '../../utils/georgianName';
 
 const INITIAL_PROFILE: StudentProfile = {
   firstName: '',
@@ -72,7 +73,7 @@ export const StudentProfileCard: React.FC<{ member?: ProfileOwner; slot?: React.
     if (user.displayName) {
       setProfile(prev => {
         if (!prev.firstName && !prev.lastName) {
-          const parts = (user.displayName || '').trim().split(' ');
+          const parts = (kaName(user.displayName) || '').trim().split(' ');
           const first = parts[0] || '';
           const last = parts.slice(1).join(' ') || '';
           return {
@@ -216,7 +217,7 @@ export const StudentProfileCard: React.FC<{ member?: ProfileOwner; slot?: React.
         await setDoc(doc(db, 'students', user.uid), {
           userId: user.uid,
           email: user.email || '',
-          displayName: user.displayName || `${profile.firstName} ${profile.lastName}`.trim(),
+          displayName: kaName(user.displayName) || `${profile.firstName} ${profile.lastName}`.trim(),
           photoURL: user.photoURL || '',
           authProvider: user.providerData.some(pd => pd.providerId === 'google.com') ? 'Google' : 'email',
           profile: { ...profile, phone: normalizePhone(profile.phone) ?? (profile.phone || '') },
@@ -254,7 +255,7 @@ export const StudentProfileCard: React.FC<{ member?: ProfileOwner; slot?: React.
   };
   const displayFullName = profile.firstName || profile.lastName
     ? `${profile.firstName} ${profile.lastName}`.trim()
-    : currentUser?.displayName || 'მოსწავლის პროფილი';
+    : kaName(currentUser?.displayName) || 'მოსწავლის პროფილი';
   const userEmail = currentUser?.email;
 
   const field = 'w-full h-11 px-3.5 rounded-xl bg-white ring-1 ring-[#e8dcc8] hover:ring-[#d9c8ac] focus:ring-2 focus:ring-[#7a2028]/40 text-sm text-[#2a2017] placeholder:text-[#b3a594] outline-none transition';

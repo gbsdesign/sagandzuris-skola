@@ -18,6 +18,10 @@
   „დავითნის კანონი“. Only the search's hidden words keep the other word (`searchIndex.ts` keys, `mkitkhe.ts` keys: someone who
   types it must still find the kanon); the saints' lives' „კათისმის მონასტერი“ is a place's name. The books (`public/wignebi`)
   say „კანონი“ themselves.
+- **Names only in Georgian letters (the user's rule, 2026-11-22: „მინდა რომ მხოლოდ ქართულად ეწეროს ყველგან“).** A member's
+  name shown anywhere goes through `kaName()` (`src/utils/georgianName.ts`), which spells Latin (Google) names in Georgian
+  letters. The reading hooks (`useClasses`, `useDirectChat`, `useClassChat`, `directory.shownName`) already do it; any new place
+  that shows `user.displayName` or a stored name wraps it in `kaName()`.
 - **The games are frozen (the user's rule, 2026-11-20: „თამაშებს არ შეეხო … თამაშებს არ ვავითარებთ სანამ არ გეტყვი მე“).** Don't
   develop, restyle or fix anything in the games — the hub, any game's page, rooms, print kits, their data — until the user says
   so himself. A flaw seen there is only written down for him. (A change elsewhere that would break a game must still keep it working.)

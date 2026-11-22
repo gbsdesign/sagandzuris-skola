@@ -15,6 +15,7 @@ import { ChemiSamosi } from '../components/views/ChemiSamosi';
 import { ShortcutShelf } from '../components/home/ShortcutShelf';
 import { StudentTools } from '../components/teacher/StudentsOverview';
 import { removeClassMember } from '../components/admin/ClassesAdmin';
+import { kaName } from '../utils/georgianName';
 
 // A student's own page, opened by their teacher or an admin (2026-11-04, the user: „მოსწავლეზე დაჭერისას იხსნებოდეს მისი
 // გზა … ახალი გვერდი კი არ იქმნება, არამედ მის გზაზე გადავდივართ, მის პირად პროფილზე და თან მაქვს ცვლილებების უფლება ზუსტად
@@ -34,7 +35,7 @@ const useStudentFace = (uid: string) => {
       s => {
         const d = s.data() || {};
         const p = d.profile || {};
-        const name = `${p.firstName || ''} ${p.lastName || ''}`.trim() || d.displayName || '';
+        const name = `${p.firstName || ''} ${p.lastName || ''}`.trim() || kaName(d.displayName) || '';
         setFace({ name, photoURL: d.photoURL || '' });
       },
       () => setDenied(true),
@@ -83,7 +84,7 @@ export const StudentPage: React.FC<{ item: string | null }> = ({ item }) => {
 
   const meHere = () => {
     const p = cls?.teachers.find(t => t.uid === auth.user!.uid);
-    return { uid: auth.user!.uid, name: p?.name || auth.user!.displayName || '', photoURL: p?.photoURL || auth.user!.photoURL || '' };
+    return { uid: auth.user!.uid, name: p?.name || kaName(auth.user!.displayName) || '', photoURL: p?.photoURL || auth.user!.photoURL || '' };
   };
   const write = async (m: ClassMember) => {
     setNote('');

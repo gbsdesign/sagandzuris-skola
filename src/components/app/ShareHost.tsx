@@ -6,6 +6,7 @@ import { ChatAuthor, classChatBase, sendTextMessage, sendVoiceMessage } from '..
 import { VOICE_MAX_SECONDS, toSmallMp3 } from '../../utils/voiceRecorder';
 import { triggerHaptic } from '../../utils/haptics';
 import { Avatar, Dot, Row, Rows, Sheet } from '../ui2';
+import { kaName } from '../../utils/georgianName';
 
 // „გაზიარება → საგანძური“: a recording or a text shared from another app on the phone waits in the service worker's
 // cache 'sg-share' (public/prayer-notify-sw.js) and the page opens at /?open=share. This window asks which class chat it
@@ -58,7 +59,7 @@ export const ShareHost: React.FC = () => {
     const cls = classes.find(c => c.id === classId);
     const me = cls?.members.find(m => m.uid === user.uid) || cls?.teachers.find(m => m.uid === user.uid);
     const author: ChatAuthor = {
-      uid: user.uid, name: me?.name || user.displayName || 'წევრი', photoURL: me?.photoURL || user.photoURL || '',
+      uid: user.uid, name: me?.name || kaName(user.displayName) || 'წევრი', photoURL: me?.photoURL || user.photoURL || '',
       teacher: !!cls?.teacherIds.includes(user.uid),
     };
     try {

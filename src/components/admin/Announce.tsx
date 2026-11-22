@@ -7,6 +7,7 @@ import { logChange } from '../../utils/adminLog';
 import { askConfirm, Btn } from '../ui/kit';
 import { ClassLogo } from '../classes/ClassLogo';
 import { Fold } from './Fold';
+import { kaName } from '../../utils/georgianName';
 
 type Msg = (text: string, type: 'success' | 'error') => void;
 const MAX = 2000;
@@ -28,7 +29,7 @@ export const sendAnnouncement = async (
   for (const c of to) {
     const me = c.teachers.find(m => m.uid === user.uid) || c.members.find(m => m.uid === user.uid);
     try {
-      await sendTextMessage(classChatBase(c.id), { uid: user.uid, name: me?.name || user.displayName || 'ადმინისტრაცია', photoURL: me?.photoURL || user.photoURL || '', teacher: true }, t);
+      await sendTextMessage(classChatBase(c.id), { uid: user.uid, name: me?.name || kaName(user.displayName) || 'ადმინისტრაცია', photoURL: me?.photoURL || user.photoURL || '', teacher: true }, t);
     } catch {
       failed++;
     }

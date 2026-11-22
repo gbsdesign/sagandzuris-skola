@@ -18,6 +18,7 @@ import { hideNav, useNewLook } from '../../design/newLook';
 import { parseChatRoomRef } from '../../data/roomGames';
 import { useCall, useClassCallState, useLivePeers, type ClassCallState } from '../../utils/callSession';
 import { Button, Duo } from '../ui2';
+import { kaName } from '../../utils/georgianName';
 
 // The class's chat: text and voice messages between members and teachers, and the class's call (the school's own,
 // components/calls): a teacher or an admin starts it, everyone in the class may join (with the camera off at first).
@@ -114,7 +115,7 @@ export const ClassChat: React.FC<{ cls: SchoolClass; title?: React.ReactNode; fi
 
   const me = cls.members.find(m => m.uid === user.uid) || cls.teachers.find(m => m.uid === user.uid);
   const author: ChatAuthor = {
-    uid: user.uid, name: me?.name || user.displayName || 'მასწავლებელი', photoURL: me?.photoURL || user.photoURL || '', teacher: isAdmin,
+    uid: user.uid, name: me?.name || kaName(user.displayName) || 'მასწავლებელი', photoURL: me?.photoURL || user.photoURL || '', teacher: isAdmin,
   };
 
   const all = nl ? withCallEnd(messages, callState, callOn) : messages;
@@ -127,7 +128,7 @@ export const ClassChat: React.FC<{ cls: SchoolClass; title?: React.ReactNode; fi
   // „პასუხი“ on a card for me: my private chat with the one who wrote it (an admin who doesn't teach here: the administration's)
   const reply = async (m: ChatMessage) => {
     const teacher = cls.teachers.find(t => t.uid === m.uid);
-    const meHere = { uid: user.uid, name: me?.name || user.displayName || '', photoURL: me?.photoURL || user.photoURL || '' };
+    const meHere = { uid: user.uid, name: me?.name || kaName(user.displayName) || '', photoURL: me?.photoURL || user.photoURL || '' };
     try {
       const id = teacher
         ? await openThread({ uid: teacher.uid, name: teacher.name, photoURL: teacher.photoURL || '' }, meHere, cls.id)

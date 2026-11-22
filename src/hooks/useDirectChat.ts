@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { collection, doc, getDoc, onSnapshot, query, serverTimestamp, setDoc, updateDoc, where } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
 import { db } from '../firebase';
+import { kaName } from '../utils/georgianName';
 import { sendCallMessage, sendTextMessage, ChatAuthor } from './useClassChat';
 import type { SchoolClass } from './useClasses';
 
@@ -63,7 +64,7 @@ const toThread = (id: string, d: any): DirectThread => {
     studentUid: d.studentUid || '',
     classId: d.classId || '',
     room: d.room || '',
-    names: d.names || {},
+    names: Object.fromEntries(Object.entries(d.names || {}).map(([k, v]) => [k, kaName(String(v || ''))])),
     photos: d.photos || {},
     lastAt: toDate(d.lastAt),
     lastBy: d.lastBy || '',
@@ -204,7 +205,7 @@ export const contactGroups = (
     const list: Contact[] = [];
     const add = (p: { uid: string; name?: string; photoURL?: string }, rel: Relation) => {
       if (p.uid !== uid && !list.some(x => x.uid === p.uid)) {
-        list.push({ uid: p.uid, name: p.name || '', photoURL: p.photoURL || '', classId: c.id, className: c.name, rel });
+        list.push({ uid: p.uid, name: kaName(p.name) || '', photoURL: p.photoURL || '', classId: c.id, className: c.name, rel });
       }
     };
     if (c.teacherIds.includes(uid)) c.members.forEach(p => add(p, 'student'));
@@ -239,7 +240,7 @@ export const useTeacherCards = (enabled: boolean) => {
     if (!enabled) return;
     return onSnapshot(
       collection(db, 'teachers'),
-      s => setCards(Object.fromEntries(s.docs.map(d => [d.id, { uid: d.id, name: d.get('name') || '', photoURL: d.get('photoURL') || '' }]))),
+      s => setCards(Object.fromEntries(s.docs.map(d => [d.id, { uid: d.id, name: kaName(d.get('name')) || '', photoURL: d.get('photoURL') || '' }]))),
       err => console.warn('teachers: ', err?.code || err)
     );
   }, [enabled]);
@@ -268,7 +269,7 @@ export const syncKidsFlag = (uid: string, kids: boolean) =>
 export const registerTeacher = (user: User) =>
   setDoc(
     doc(db, 'teachers', user.uid),
-    { name: user.displayName || 'მასწავლებელი', photoURL: user.photoURL || '', updatedAt: new Date().toISOString() },
+    { name: kaName(user.displayName) || 'მასწავლებელი', photoURL: user.photoURL || '', updatedAt: new Date().toISOString() },
     { merge: true }
   );
 

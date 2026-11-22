@@ -5,6 +5,7 @@ import { useCall } from '../../../utils/callSession';
 import { useBackToClose } from '../../../utils/backToClose';
 import { Layer, MomentView, ShareView } from './ShareView';
 import { useLearned, type LearnedItem } from './useLearned';
+import { kaName } from '../../../utils/georgianName';
 
 /** „ვისწავლე“: the first time this device sees an item whose marked voices a teacher all confirmed, one full-screen moment
  *  (board x-idea-barati-0) → „გაზიარე“ opens the card page. Mount it once, anywhere under the providers (App's late layers). */
@@ -40,7 +41,7 @@ export const LearnedMoment: React.FC = () => {
   return (
     <Layer>
       {card
-        ? <ShareView item={shown} person={user?.displayName || ''} onBack={() => setCard(false)} />
+        ? <ShareView item={shown} person={kaName(user?.displayName) || ''} onBack={() => setCard(false)} />
         : <MomentView item={shown} onShare={() => setCard(true)} onClose={close} />}
     </Layer>
   );

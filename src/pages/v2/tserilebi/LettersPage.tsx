@@ -35,6 +35,7 @@ import { openAssistant, useAssistantAllowed } from '../damkhmare/open';
 import { useLongPress } from '../../../hooks/useLongPress';
 import { TimetableSheet } from '../klasi/teacher/Timetable';
 import { usePearlTotals } from './usePearlTotals';
+import { kaName } from '../../../utils/georgianName';
 
 const MemberActions = React.lazy(() => import('./MemberActions').then(m => ({ default: m.MemberActions })));
 const StudentOutfitSheet = React.lazy(() => import('./StudentOutfit').then(m => ({ default: m.StudentOutfitSheet })));
@@ -172,7 +173,7 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
   const me = (classId?: string): Person => {
     const c = known.find(x => x.id === classId) || mine[0];
     const p = c?.members.find(m => m.uid === uid) || c?.teachers.find(m => m.uid === uid);
-    return { uid, name: p?.name || user.displayName || '', photoURL: p?.photoURL || user.photoURL || '' };
+    return { uid, name: p?.name || kaName(user.displayName) || '', photoURL: p?.photoURL || user.photoURL || '' };
   };
 
   const go = (id: string) => openDm(id, currentPage === 'dm');

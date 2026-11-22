@@ -7,6 +7,7 @@ import { shownName, useDirectory } from '../../../utils/directory';
 import { georgiaToday } from '../../../utils/psalter';
 import { buildScope, MAX_CONTEXT_PEOPLE, type AssistantScope } from '../../../utils/aiAssistant';
 import type { Me } from './act';
+import { kaName } from '../../../utils/georgianName';
 
 // What the assistant may know, read on the phone from what the person can already read: a teacher's own classes (useManaged-
 // Classes) and their members' records; an admin's every class, the directory's names and the class members' records. Each
@@ -50,7 +51,7 @@ export const useAssistantScope = (focusClassId?: string): { scope: AssistantScop
     const fromDir = dir.people.find(p => p.uid === uid);
     return {
       uid,
-      name: fromClass?.name || (fromDir ? shownName(fromDir) : '') || user?.displayName || 'მასწავლებელი',
+      name: fromClass?.name || (fromDir ? shownName(fromDir) : '') || kaName(user?.displayName) || 'მასწავლებელი',
       photoURL: fromClass?.photoURL || fromDir?.photoURL || user?.photoURL || '',
       email: user?.email || '',
     };

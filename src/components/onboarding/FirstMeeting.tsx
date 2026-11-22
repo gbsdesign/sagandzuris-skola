@@ -17,6 +17,7 @@ import { BirthPick } from '../ui/BirthPick';
 import { useMembership } from '../../utils/memberAccess';
 import { useNewLook } from '../../design/newLook';
 import { FirstMeetingV2 } from '../../pages/v2/gatsnoba/FirstMeetingV2';
+import { kaName } from '../../utils/georgianName';
 
 // "პირველი გაცნობა": until a member's profile holds everything below, this form covers the app and cannot be
 // closed (only "გამოსვლა"). Seven short cards, one question each, with what is already known filled in: name and
@@ -181,7 +182,7 @@ export const useFirstMeeting = () => {
   useEffect(() => {
     if (data === undefined || prefilled || !user) return;
     setPrefilled(true);
-    const parts = (user.displayName || '').trim().split(/\s+/);
+    const parts = (kaName(user.displayName) || '').trim().split(/\s+/);
     const f = profile.firstName || parts[0] || '';
     const l = profile.lastName || parts.slice(1).join(' ') || '';
     const b = profile.birthDate || {};

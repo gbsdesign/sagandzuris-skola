@@ -6,6 +6,7 @@ import { useAuth } from '../context';
 import { fullName } from './memberName';
 import { isPlaceholderBirth, validBirth } from './profileFields';
 import { useMembership } from './memberAccess';
+import { kaName } from './georgianName';
 
 // Birthdays (redesign stage 4, 2026-10-25). The day and month of every member who wrote a birth date in their
 // profile: birthdays/{uid} {uid, name, photoURL, month, day}, readable by every admitted member. The year is kept
@@ -76,7 +77,7 @@ export const useBirthdaySync = () => {
       const p = data.profile || {};
       const b = p.birthDate;
       if (!validBirth(b) || (isPlaceholderBirth(b) && !data.firstMeeting)) return;
-      const name = fullName({ firstName: p.firstName || '', lastName: p.lastName || '', churchName: '' }) || user.displayName || '';
+      const name = fullName({ firstName: p.firstName || '', lastName: p.lastName || '', churchName: '' }) || kaName(user.displayName) || '';
       if (!name) return;
       const photoURL = user.photoURL || '';
       const stamp = `${b.year}-${b.month}-${b.day}|${name}|${photoURL}`;

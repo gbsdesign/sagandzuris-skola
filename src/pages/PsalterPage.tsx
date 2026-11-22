@@ -16,6 +16,7 @@ import { DEFAULT_SHIFT_DAYS, KATHISMA_COUNT, MAX_CYCLE_DAYS, cycleOf, georgiaTod
 import { fullName, hasGeorgianName, isGeorgian, saveProfileName, useProfileName } from '../utils/memberName';
 import { pushSupported, setGroupPush, useGroupPush } from '../utils/groupPush';
 import { PinButton } from '../components/home/ShortcutShelf';
+import { kaName } from '../utils/georgianName';
 
 export { openPsalterGroup };
 
@@ -283,7 +284,7 @@ export const CreateGroupSheet: React.FC<{
     if (shiftDays === null) { msg.fail('გადასვლის რიცხვები 1-დან 28-მდე ჩაწერე, მძიმით: მაგ. 1, 15.'); return; }
     setSaving(true);
     try {
-      const me = { uid: user.uid, name: user.displayName || 'მასწავლებელი', photoURL: user.photoURL || '' };
+      const me = { uid: user.uid, name: kaName(user.displayName) || 'მასწავლებელი', photoURL: user.photoURL || '' };
       const teachers = [me, ...(preset?.teachers || []).filter(t => t.uid !== user.uid)];
       const members = preset?.members || [];
       const ref = await addDoc(collection(db, 'psalterGroups'), {

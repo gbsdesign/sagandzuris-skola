@@ -12,6 +12,7 @@ import { recordWeek, useGrowthWeeks } from '../../hooks/useGrowth';
 import { AccessRecord, DecisionRecord, toAccess } from './AccessRequests';
 import { filterTests, StaffRecord, toUser, UserRecord } from './UsersTab';
 import { roleOf } from './PersonSheet';
+import { kaName } from '../../utils/georgianName';
 
 export type Leader = { userId: string; name: string; photoURL: string; email: string };
 
@@ -76,7 +77,7 @@ export const useAdminData = () => {
       if (known.has(u.userId) || filled.current.has(u.userId)) continue;
       filled.current.add(u.userId);
       void writeDirectory(u.userId, {
-        name: u.displayName || u.name,
+        name: kaName(u.displayName) || u.name,
         ...(u.firstName ? { firstName: u.firstName } : {}),
         ...(u.lastName ? { lastName: u.lastName } : {}),
         ...(u.photoURL ? { photoURL: u.photoURL } : {}),

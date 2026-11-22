@@ -14,6 +14,7 @@ import { ChatPanel, Avatar } from '../components/classes/ChatPanel';
 import { PinCard } from '../components/classes/PinCard';
 import { PinSheet } from '../components/classes/PinSheet';
 import { pinPreview, sendDmPin } from '../hooks/useChatPins';
+import { kaName } from '../utils/georgianName';
 
 /** The call button over a chat: one round button — a tap asks „ხმოვანი ზარი“ or „ვიდეოზარი“ —, or join a call that is on,
  *  or back to one's own call. */
@@ -122,7 +123,7 @@ export const DirectChat: React.FC<{ id: string; classes: SchoolClass[]; logoUrl?
   const inClass = cls ? ` · ${cls.name}` : '';
   const iTeach = thread.kind === 'teach' && thread.teacherUid === uid;
   const other = otherOf(thread, uid);
-  const myName = thread.names[uid] || user.displayName || '';
+  const myName = thread.names[uid] || kaName(user.displayName) || '';
   const author: ChatAuthor = {
     uid, name: myName, photoURL: thread.photos[uid] || user.photoURL || '', teacher: iTeach || staff,
   };

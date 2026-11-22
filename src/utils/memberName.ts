@@ -9,7 +9,7 @@ import { fullName, prayerName, type ProfileName } from './georgianName';
 // commemoration lists; when empty the first name is used). Google names are often Latin or carry
 // a surname, so groups ask for these instead.
 
-export { isGeorgian, fullName, prayerName, hasGeorgianName } from './georgianName';
+export { isGeorgian, fullName, prayerName, hasGeorgianName, kaName } from './georgianName';
 export type { ProfileName } from './georgianName';
 
 /** The signed-in person's profile name (live). `null` while loading. */

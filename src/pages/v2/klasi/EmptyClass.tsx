@@ -3,6 +3,7 @@ import { Loader2, MessageCircle, Users } from 'lucide-react';
 import { useAuth, useNavigation } from '../../../context';
 import { Button, TopBar } from '../../../components/ui2';
 import { openAdminThread } from '../../../hooks/useDirectChat';
+import { kaName } from '../../../utils/georgianName';
 
 /** x-carieli-klasi — the class page of someone who is in no class (or whose class is not found): what is true and who adds them. */
 export const EmptyClassScreen: React.FC = () => {
@@ -17,7 +18,7 @@ export const EmptyClassScreen: React.FC = () => {
     setBusy(true);
     setErr('');
     try {
-      const id = await openAdminThread({ uid: user.uid, name: user.displayName || '', photoURL: user.photoURL || '' });
+      const id = await openAdminThread({ uid: user.uid, name: kaName(user.displayName) || '', photoURL: user.photoURL || '' });
       openDm(id);
     } catch (e) {
       console.warn('admin thread: ', e);

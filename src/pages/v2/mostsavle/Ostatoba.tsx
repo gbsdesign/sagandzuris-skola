@@ -15,6 +15,7 @@ import { useAccess } from '../../../hooks/useAccess';
 import { factsOf } from '../../../utils/aiPlan';
 import { georgiaToday } from '../../../utils/psalter';
 import { memberWeek, statusWord } from '../../../utils/weekReport';
+import { kaName } from '../../../utils/georgianName';
 
 // „ოსტატობის შეფასება“ of a student (board x-mostsavle-ostatoba): the four lines of the mastery path with a bar and a word,
 // and the performance tips with the teacher's marks. A tap on a tip sets the mark as the old ManeraReviewEditor did:
@@ -144,7 +145,7 @@ const MarkSheet: React.FC<{ uid: string; num: string; title: string; mark?: Mane
   const save = () => {
     if (v === null) return;
     const note = text.trim();
-    void write({ v, ...(note ? { note } : {}), by: user?.displayName || 'მასწავლებელი', byUid: user?.uid || '', at: Date.now() });
+    void write({ v, ...(note ? { note } : {}), by: kaName(user?.displayName) || 'მასწავლებელი', byUid: user?.uid || '', at: Date.now() });
   };
   const clear = () => void write(deleteField());
 

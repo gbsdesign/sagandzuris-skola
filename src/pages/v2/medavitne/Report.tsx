@@ -5,6 +5,7 @@ import { useAuth } from '../../../context';
 import { openAdminThread, sendThreadText } from '../../../hooks/useDirectChat';
 import { errorText } from '../../../utils/errorText';
 import { REPORT_MAX, placeLine, reportText, type ReportPlace } from '../../../utils/dayReport';
+import { kaName } from '../../../utils/georgianName';
 
 // „შეცდომა ვნახე“ under a step of „დღის მსახურება“: the reader writes what does not match their temple's service. It is sent
 // as a letter into the reader's own chat with the administration (hooks/useDirectChat — no store of its own), with the
@@ -25,7 +26,7 @@ export const ReportSheet: React.FC<{ place: ReportPlace | null; onClose: () => v
     setBusy(true);
     setError('');
     try {
-      const me = { uid: user.uid, name: user.displayName || '', photoURL: user.photoURL || '' };
+      const me = { uid: user.uid, name: kaName(user.displayName) || '', photoURL: user.photoURL || '' };
       const id = await openAdminThread(me);
       await sendThreadText(id, { ...me, teacher: false }, reportText(place, text));
       setSent(true);

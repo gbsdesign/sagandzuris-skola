@@ -14,6 +14,7 @@ import { MONTHS_GE, MONTHS_SHORT_GE } from '../../../utils/dateNames';
 import { fullName } from '../../../utils/memberName';
 import { openAdminThread, openThread, type Person } from '../../../hooks/useDirectChat';
 import { NameDaySheetV2 } from './NameDaySheet';
+import { kaName } from '../../../utils/georgianName';
 
 /** x-dabadebis — „დაბადების დღეები“: the nearest day on top, then month by month, my own „ანგელოზის დღე“ last.
  *  Members see the day and month only; teachers and admins also the age (as the old page). */
@@ -56,7 +57,7 @@ const useCongratulate = () => {
       const r = route(p.uid);
       const find = (cls: { members: { uid: string; name?: string; photoURL?: string }[]; teachers: { uid: string; name?: string; photoURL?: string }[] }): Person => {
         const m = cls.members.find(x => x.uid === user.uid) || cls.teachers.find(x => x.uid === user.uid);
-        return { uid: user.uid, name: m?.name || user.displayName || '', photoURL: m?.photoURL || user.photoURL || '' };
+        return { uid: user.uid, name: m?.name || kaName(user.displayName) || '', photoURL: m?.photoURL || user.photoURL || '' };
       };
       let id: string;
       if (!r) id = await openAdminThread(p);
@@ -191,7 +192,7 @@ export const BirthdaysScreen: React.FC = () => {
           first={profile.churchName || profile.firstName}
           mine={mine}
           onPick={async c => {
-            const name = fullName(profile) || user.displayName || '';
+            const name = fullName(profile) || kaName(user.displayName) || '';
             await saveNameDay(user.uid, name, user.photoURL || '', c);
             setNaming(false);
           }}
