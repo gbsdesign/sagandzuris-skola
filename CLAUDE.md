@@ -2298,6 +2298,9 @@ Pending small tasks the user mentioned: remove the old Drive `ნოტები
   doesn't read keeps the two links inline. A number's tap opens the kanon; a long press marks it read / takes the mark back
   (same rights as the window), else opens the old `KanonSheet`. „დაბრუნება“ of a taken kanon is now a row in the ✎ sheet. The
   card's „წაიკითხე“ is a round 📖 only.
+- **The „სწავლა“ list's head (2026-11-22**, the user: „ეს ღილაკები მოხსენი ხოლო იმას ფს.ჯ. დაუწერე გვერდთან“): the 👁 (all chats,
+  only to look) and ✎ (new letter) are gone; the psalter group's 📖 is a pill with „ფს.ჯ.“ written beside it (the teacher's
+  „დასწრება“ stays).
 - **The whole path in the chat's fold (2026-11-21 night**, the user: „გზას რომ ჩახსნიდი … ჩამოსაშლელად პირდაპირ ჩათში“, answer „მთელი
   გზა, როგორც გზის გვერდზე“): `ChatPath` — the student's own side unfolds the whole „საგანძური“ page (`SagandzuriPage bare`, lazy: no
   bar, the ✎ by „ჩემი საგალობლები“; numbers, assignments, chips, flights, ოსტატობა); the teacher's side keeps its ჩათვლა / დამატება /
