@@ -2356,3 +2356,10 @@ Pending small tasks the user mentioned: remove the old Drive `ნოტები
   `settings/chantListEdits.services[service] {order, archived, deleted, deletedAt}` (`utils/chantListEdits.ts`, `arrange`; no rules
   change). The admin panel's row „წაშლილი საგალობლები · N“ → mapItem `chants` (`admini/DeletedChants.tsx`, „აღდგენა“). Only this list —
   the search and the books still find a deleted chant.
+- **A version card's long press (2026-11-22**, the user: „ეს ღილაკები … დიდხანს დაჭერისას ამოვიდეს ფანჯარა … ცარიელი ადგილები … კლასის
+  პროგრამაში და ინდივიდუალურ პროგრამაშიც მიმაგრება … დღის მსახურებაში მონიშვნა“; answers: all four rows · a button „დღის მსახურებაში
+  დამატება“ · chants first, songs / poets / films later): `v2/galoba/Versions.tsx` cards have no 🔖 / ≡+ column any more (only a small ✓
+  and the liturgy's № in the grey line); a long press opens `VersionMenu.tsx`: ჩემს საგანძურში · დღევანდელ წირვაში (the regent, as
+  before) · დღის მსახურებაში (`utils/dayChants.ts`: `students.dayChants {iso: ids}`, Tbilisi day; the day page's `medavitne/DayChants.tsx`
+  lists them on top, today's too while it shows „ახლა“) · for teachers / admins „კლასის პროგრამაში მიმაგრება“ (a managed class, toggles,
+  `saveClassProgram`) and „მოსწავლის გზაზე მიმაგრება“ (class → member, adds to `selectedChantVariants` unless there). No rules change.

@@ -12,6 +12,7 @@ import { NextButton, ReportLink, StepBody, whoLine } from './DayParts';
 import { MoreSheet, NotesSheet, OrderSheet, PatronSheet, RankSheet, ReadingsSheet, ToneSheet } from './DaySheets';
 import { ReportSheet } from './Report';
 import { Page } from './parts';
+import { DayChants } from './DayChants';
 
 // x-medavitne-dghe — „დღის მსახურება“ in the new look: one line for the day (‹ date ›, the tone and the rank), the services as a
 // switch, then the service's steps as one list — a step's text opens with a tap, its number marks „აქ ვარ“, a ♪ opens its
@@ -114,6 +115,8 @@ export const DayScreen: React.FC = () => {
           {when && <p className="min-w-0 flex-1 text-meta leading-normal text-mut wrap-break-word">{when}</p>}
         </div>
       )}
+
+      <DayChants iso={d.iso} now={d.iso === d.nowIso} />
 
       {/* the steps; the old script (ხუცური) turns this box's text */}
       <div key={String(d.oldOn)} ref={d.setFlowEl}>

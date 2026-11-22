@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Bookmark, BookmarkCheck, ChevronDown, CircleCheck, Headphones, ListPlus, LoaderCircle, Play, Square, X } from 'lucide-react';
+import { BookmarkCheck, ChevronDown, CircleCheck, Headphones, LoaderCircle, Play, Square, X } from 'lucide-react';
+import { useLongPress } from '../../../hooks/useLongPress';
+import { VersionMenu } from './VersionMenu';
 import { ChantItem, ChantVariant, isChantGroup, variantLines } from '../../../data';
 import { useChants } from '../../../context';
 import { useNotes } from '../../../context/NotesContext';
@@ -118,30 +120,9 @@ const VersionCard: React.FC<{
   const play = hasNotes && (
     <PlayBtn id={variant.id} onToggle={() => toggleSynthPreview(variant.id, variant.bookNums![0], variant.book)} />
   );
-  const bookmark = (
-    <button
-      type="button"
-      onClick={() => { triggerHaptic(15); onToggleSelect(chant, variant); }}
-      className="flex size-10 cursor-pointer items-center justify-center rounded-full transition active:scale-90"
-      title={isSelected ? 'ჩემი სიიდან ამოღება' : 'ჩემს სიაში დამატება'}
-      aria-label={isSelected ? 'ჩემი სიიდან ამოღება' : 'ჩემს სიაში დამატება'}
-      aria-pressed={isSelected}
-    >
-      {isSelected ? <BookmarkCheck className="size-5 text-leaf" strokeWidth={2} /> : <Bookmark className="size-5 text-mut" strokeWidth={2} />}
-    </button>
-  );
-  const program = progAt !== null && (
-    <button
-      type="button"
-      onClick={() => { triggerHaptic(12); liturgy.toggle(variant.id); }}
-      className="flex size-10 cursor-pointer items-center justify-center rounded-full transition active:scale-90"
-      title={progAt >= 0 ? `წირვაშია, №${progAt + 1}. ამოღება` : 'წირვაში დამატება'}
-      aria-label={progAt >= 0 ? `წირვიდან ამოღება (№${progAt + 1})` : 'წირვაში დამატება'}
-      aria-pressed={progAt >= 0}
-    >
-      {progAt >= 0 ? <span className="flex h-[22px] min-w-[22px] items-center justify-center rounded-full bg-wine px-1 text-cap font-bold text-white tabular-nums">{progAt + 1}</span> : <ListPlus className="size-5 text-mut" strokeWidth={2} />}
-    </button>
-  );
+  // the bookmark and the liturgy's „+“ live in the long press's window now; only their state shows on the card
+  const [menu, setMenu] = useState(false);
+  const press = useLongPress(() => setMenu(true));
   const recPlay = recOnly && (
     <button
       type="button"
@@ -158,16 +139,18 @@ const VersionCard: React.FC<{
     </button>
   );
   return (
+    <>
     <div
+      {...press}
       className={cx(
-        'relative flex min-w-0 flex-col overflow-hidden rounded-tile transition-transform active:scale-[0.985]',
+        'relative flex min-w-0 flex-col overflow-hidden rounded-tile transition-transform select-none active:scale-[0.985] [-webkit-touch-callout:none]',
         recOnly && 'col-span-2',
         !playable ? 'border border-dashed border-dim bg-transparent' : wide ? 'bg-surf' : 'bg-page',
         isOpen && 'ring-2 ring-wine',
       )}
     >
       {hasPic && <Picture src={pic} onClick={open} onMissing={() => setHasPic(false)} play={play} />}
-      <div className={cx('flex gap-1 pr-1 pl-3', recOnly ? 'items-center py-2 pl-2' : 'items-start py-2', hasPic && 'pt-2.5')}>
+      <div className={cx('flex gap-1 pl-3', !hasPic && play ? 'pr-1' : 'pr-3', recOnly ? 'items-center py-2 pl-2' : 'items-start py-2', hasPic && 'pt-2.5')}>
         {recPlay}
         <button
           type="button"
@@ -183,22 +166,22 @@ const VersionCard: React.FC<{
               </React.Fragment>
             ))}
           </span>
-          {(under || hasRecording || offline) && (
+          {(under || hasRecording || offline || isSelected || (progAt ?? -1) >= 0) && (
             <span className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-meta text-mut">
               {under && <span className="min-w-0">{under}</span>}
               {hasRecording && !who && <Headphones className="size-3.5 shrink-0 text-gold" aria-label="ჩანაწერი" />}
               {offline && <CircleCheck className="size-3.5 shrink-0 text-leaf" aria-label="ჩამოწერილია" />}
+              {isSelected && <BookmarkCheck className="size-3.5 shrink-0 text-leaf" aria-label="ჩემს საგანძურშია" />}
+              {progAt !== null && progAt >= 0 && <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-wine px-1 text-cap leading-none font-bold text-white tabular-nums" aria-label={`წირვაშია, №${progAt + 1}`}>{progAt + 1}</span>}
             </span>
           )}
         </button>
-        <div className="flex shrink-0 flex-col items-center">
-          {bookmark}
-          {program}
-          {!hasPic && play && <span className="pb-1">{play}</span>}
-        </div>
+        {!hasPic && play && <span className="shrink-0 self-center">{play}</span>}
       </div>
       {hasNotes && <PlayLine id={variant.id} />}
     </div>
+    {menu && <VersionMenu chant={chant} variant={variant} hasNotes={hasNotes} onClose={() => setMenu(false)} />}
+    </>
   );
 };
 
