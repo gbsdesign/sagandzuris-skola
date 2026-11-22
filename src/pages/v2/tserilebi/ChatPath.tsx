@@ -1,5 +1,5 @@
 import React, { Suspense, useEffect, useMemo, useState } from 'react';
-import { BookOpen, Check, ChevronDown, ClipboardList, Cog, GraduationCap, Plus, Trash2 } from 'lucide-react';
+import { BookOpen, Check, ClipboardList, GraduationCap, Plus, Trash2 } from 'lucide-react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../../../firebase';
 import { useAuth, useChants, useNavigation, useViewing } from '../../../context';
@@ -20,6 +20,7 @@ import {
 import { filterValidSoft } from '../../../utils/variantValidationLazy';
 import { errorText } from '../../../utils/errorText';
 import { Bar, Card, Chips, Dot, Helper, Note, Press, Row, Rows, Sheet, cx, FOCUS } from '../../../components/ui2';
+import { GearSpark } from '../damkhmare/GearSpark';
 import { chestIdOf } from '../../../components/pearls/LearnChests';
 import { Waiting } from '../../../components/shell/PageSkeleton';
 import { chipsOf } from '../gza/chips';
@@ -33,7 +34,8 @@ const SagandzuriPage = React.lazy(() => import('../gza/Sagandzuri').then(m => ({
 
 // „რა ისწავლა · რას სწავლობს“ at the top of a private chat (2026-11-21, the user: „მაღლა ჩამოსაშლელი სია … საგანძურის გზა …
 // აქედანვე შეიძლებოდეს სიის ცვლილება, დამატება, წაშლა, ჩათვლა“; answers „ორივეს · ოთხივე · დაკეცილი ერთი ხაზი · პირდაპირ აპში“).
-// One folded line under the chat's head; a tap unfolds the student's path as on „საგანძური“ (pearl, name, voices 1 · 2 · 3).
+// Since 2026-11-22 the folded line is gone: the head's sign „გზა“ (before the phone, `PathSigns`) drops the path under the head,
+// a second tap folds it (`ChatPath` is drawn only while open), as on „საგანძური“ (pearl, name, voices 1 · 2 · 3).
 // The teacher's (or the administration's) side: a voice's tap = „ჩათვლა“ (a mark the student had not made is made too), a tap
 // on a counted voice takes it off (with „გაუქმება“); „+ დამატება“ puts a chant on the path; a tap on a name opens its window:
 // notes, „დავალებად მიცემა“ (the chat's 📎 window, already on that chant), „სიიდან ამოშლა“; on top the two numbers and the bar,
@@ -116,7 +118,45 @@ const Token: React.FC<{ item: Item; size: number }> = ({ item, size }) =>
     ? <PearlIcon state={item.pearl} size={size} seed={item.id} />
     : <TokenIcon kind={item.token} state={item.pearl} size={size} />;
 
-/** The fold. `student` = whose path; `editor` = the teacher's / the administration's side (else it is the student's own). */
+/** One small sign in the chat's head, before the phone: an icon with a word under it (2026-11-22, the user: „ყურმილის წინ
+ *  ნიშნებად გადაიტანე … ერთს გზა … მეორეს ლოგო … ავტ.პროგ.“). */
+const HeadSign: React.FC<{ icon: React.ReactNode; word: string; label: string; onClick: () => void; active?: boolean; expanded?: boolean }> = ({
+  icon, word, label, onClick, active, expanded,
+}) => (
+  <Press
+    onClick={onClick}
+    aria-label={label}
+    aria-expanded={expanded}
+    title={label}
+    className={cx(
+      'flex h-tap min-w-[52px] shrink-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-field px-1.5 transition active:scale-95',
+      active ? 'bg-tint text-wine' : 'bg-surf text-wine',
+      FOCUS,
+    )}
+  >
+    <span className="flex size-[18px] items-center justify-center [&_svg]:size-[18px]">{icon}</span>
+    <span className="text-cap leading-none font-semibold whitespace-nowrap">{word}</span>
+  </Press>
+);
+
+/** The chat head's two signs: „გზა“ (a tap drops the path under the head, again folds it) and „ავტ.პროგ.“ — the automatic
+ *  teaching program's day lesson, with the program's own cog-and-spark. */
+export const PathSigns: React.FC<{ open: boolean; onToggle: () => void }> = ({ open, onToggle }) => {
+  const viewing = useViewing();
+  const access = useAccess();
+  const autoLesson = !viewing && access.on('aiTeacher');
+  return (
+    <>
+      <HeadSign icon={<PearlIcon state="shining" size={18} />} word="გზა" label={open ? 'გზის დაკეცვა' : 'გზა — ისწავლა · სწავლობს'}
+        onClick={onToggle} active={open} expanded={open} />
+      {autoLesson && (
+        <HeadSign icon={<GearSpark />} word="ავტ.პროგ." label="ავტომატური სასწავლო პროგრამა — დღის გაკვეთილი" onClick={openAiLesson} />
+      )}
+    </>
+  );
+};
+
+/** The dropped path (drawn only while „გზა“ is open). `student` = whose path; `editor` = the teacher's / the administration's side (else it is the student's own). */
 export const ChatPath: React.FC<{
   student: string;
   studentName: string;
@@ -136,7 +176,6 @@ export const ChatPath: React.FC<{
   const lock = useMarksLock(student);
   const opener = usePathItemOpener();
   const { navigateTo, openMapItem, openStudent, currentPage } = useNavigation();
-  const [open, setOpen] = useState(false);
   const [chip, setChip] = useState('all');
   const [picked, setPicked] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
@@ -145,7 +184,6 @@ export const ChatPath: React.FC<{
   const path: PathMap | null = editor ? theirs : (own as PathMap);
   const items = useMemo(() => (path ? itemsOf(path, allConf) : []), [path, allConf]);
   const learned = items.filter(i => i.pearl === 'shining');
-  const learning = items.filter(i => i.pearl !== 'shining');
   const chips = useMemo(() => chipsOf(items.map(i => i.chip)), [items]);
   const current = chips.some(c => c.id === chip) ? chip : 'all';
   const shown = current === 'all' ? items : items.filter(i => i.chip === current);
@@ -153,9 +191,7 @@ export const ChatPath: React.FC<{
   const voices = items.reduce((n, i) => n + (i.voiced ? i.marks.filter(m => m !== 'off').length : 0), 0);
   const locked = !!lock?.on;
 
-  const viewing = useViewing();
   const access = useAccess();
-  const autoLesson = !viewing && access.on('aiTeacher');
   // the student's „ოსტატობა“ on the teacher's side too (2026-11-22, the user: „მთელი გზა აბა სადაა ოსტატობა?“)
   const theirMastery = useMemo(() => (editor && theirRec ? pathSummary(recordFromDoc(theirRec.data)) : null), [editor, theirRec]);
   if (!user || (editor && path === null)) return null;
@@ -266,48 +302,18 @@ export const ChatPath: React.FC<{
     );
   };
 
-  const line = items.length
-    ? <>ისწავლა <b className="text-ink tabular-nums">{learned.length}</b> · სწავლობს <b className="text-ink tabular-nums">{learning.length}</b></>
-    : <>{editor ? 'საგანძური ცარიელია' : 'შენი საგანძური ცარიელია'}</>;
-
   return (
     <div className="px-3.5 pb-2">
-      {/* the strip a little narrower, „ავტო გაკვეთილი“ right of it (2026-11-21, the user: „აი აქ მარჯვნივ … შეავიწროვე და მარჯვნივ ჩასვი“) */}
-      <div className="flex items-stretch gap-2">
-      <Press
-        onClick={() => setOpen(o => !o)}
-        aria-expanded={open}
-        className={cx('flex min-h-tap min-w-0 flex-1 cursor-pointer items-center gap-2.5 rounded-tile bg-surf px-4 text-left transition active:bg-soft', FOCUS)}
-      >
-        <span className="flex size-6 shrink-0 items-center justify-center"><PearlIcon state="shining" size={18} /></span>
-        <span className="flex min-w-0 flex-1 flex-col py-1">
-          <span className="truncate text-cap font-semibold text-mut">{editor ? `${studentName} — საგანძური` : 'ჩემი საგანძური'}</span>
-          <span className="text-meta text-mut">{line}</span>
-        </span>
-        <ChevronDown aria-hidden="true" className={cx('size-5 shrink-0 text-mut transition-transform', open && 'rotate-180')} />
-      </Press>
-      {autoLesson && (
-        <Press
-          onClick={openAiLesson}
-          aria-label="ავტო გაკვეთილი — ავტომატური სასწავლო პროგრამის დღის გაკვეთილი"
-          className={cx('flex w-[92px] shrink-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-tile bg-surf px-1.5 py-1.5 text-center text-wine transition active:bg-soft', FOCUS)}
-        >
-          <Cog aria-hidden="true" className="size-5 shrink-0" strokeWidth={2} />
-          <span className="text-cap leading-tight font-semibold">ავტო<br />გაკვეთილი</span>
-        </Press>
-      )}
-      </div>
-
-      {open && !editor && (
-        <div className="mt-2 max-h-[72dvh] overflow-x-hidden overflow-y-auto overscroll-contain px-0.5">
+      {!editor && (
+        <div className="max-h-[72dvh] overflow-x-hidden overflow-y-auto overscroll-contain px-0.5">
           <Suspense fallback={<Waiting />}>
             <SagandzuriPage bare onMastery={toMastery} />
           </Suspense>
         </div>
       )}
 
-      {open && editor && (
-        <div className="mt-2 flex max-h-[72dvh] flex-col gap-2 overflow-x-hidden overflow-y-auto overscroll-contain">
+      {editor && (
+        <div className="flex max-h-[72dvh] flex-col gap-2 overflow-x-hidden overflow-y-auto overscroll-contain">
           {items.length > 0 && (
             <Card pad="none" className="flex shrink-0 flex-col gap-2.5 px-[18px] py-4">
               <div className="flex items-start gap-7">
