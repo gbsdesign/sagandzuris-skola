@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowUpRight, NotebookPen, type LucideIcon } from 'lucide-react';
+import { ArrowUpRight, Church, NotebookPen, type LucideIcon } from 'lucide-react';
 import { Press, cx, FOCUS, FOCUS_IN } from '../../../components/ui2';
 
 // The new look's home page. Since 2026-11-22 it has no vine and no grapes (the user: „ყურძენი და ხე მოაცილო, თანამედროვე
@@ -26,7 +26,8 @@ export interface HomeTile {
 export interface HomeV2ViewProps {
   saying: { text: string; author: string };
   /** „გაკვეთილი“: none — the card is not drawn (a member with no letters) */
-  lesson?: { unread: number; onOpen: () => void };
+  /** `onProgram`: the round ⛪ on the card — „დღევანდელი წირვა“ (teachers and admins) */
+  lesson?: { unread: number; onOpen: () => void; onProgram?: () => void };
   /** the three big tiles: გალობა · სიმღერა · ლოცვანი (a hidden section is left out) */
   main: HomeTile[];
   /** the other sections, small, four in a row */
@@ -130,6 +131,16 @@ export const HomeV2View: React.FC<HomeV2ViewProps> = ({ saying, lesson, main, mo
             </span>
           )}
         </span>
+        {/* today's service, only its sign (2026-11-22 evening, the user: „ლამაზი მრგვალი ღილაკი დღევანდელი მსახურების … მხოლოდ ლოგო“) */}
+        {lesson.onProgram && (
+          <span role="button" tabIndex={0} aria-label="დღევანდელი წირვა" title="დღევანდელი წირვა"
+            onPointerDown={e => e.stopPropagation()}
+            onClick={e => { e.stopPropagation(); e.preventDefault(); lesson.onProgram?.(); }}
+            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); lesson.onProgram?.(); } }}
+            className={cx('relative flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full bg-white/15 ring-1 ring-white/30 backdrop-blur-md transition active:scale-90 [&_svg]:size-[22px]', FOCUS_IN)}>
+            <Church strokeWidth={2} aria-hidden="true" />
+          </span>
+        )}
         <span aria-hidden="true" className="flex size-11 shrink-0 items-center justify-center rounded-full bg-surf text-wine shadow-knob transition group-active:scale-90 [&_svg]:size-5">
           <ArrowUpRight strokeWidth={2.5} />
         </span>
