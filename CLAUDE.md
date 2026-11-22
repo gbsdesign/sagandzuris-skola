@@ -2022,6 +2022,10 @@
   change, the head's 🕘 lists the talks (open, 🗑) and „+“ starts a new one. A plan is kept as text only (never done again). A Lado
   failure shows its reason small under the plain words (`whyOf`; the Worker sends Claude's error text), and the Worker retries with
   the Console's newer `anthropic-version` when the old one is refused.
+  Closing the window does not stop an ask (the user: „ჩათიდან გასვლის მერე წყვეტს მუშაობას … არ მინდა“): the module's `running` map
+  (`uid:chatId` → the ask's task) keeps it; its answer is shown if the window is still open on that talk, else written straight into
+  the kept talk (`deliver` → `saveChat`), and a window opened on that talk waits for it (busy) and then loads it. Closing also saves
+  the talk at once. A plan that arrives while closed is kept as text only. The app itself closed = the ask is lost.
 - Not built yet: the other „AI“ words in the app (~70 files; „AI მასწავლებელი“ → „ავტომატური მასწავლებელი“), memory, photos and files, the students' program, layout by words. Don't raise Google's under-18 rule again (the user: „მე
   ვიდარდებ“).
 
