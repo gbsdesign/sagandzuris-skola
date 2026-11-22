@@ -10,6 +10,7 @@ import { useMarksLock, saveMarksLock } from '../../hooks/usePathMarks';
 import { Btn, askConfirm, Toggle } from '../ui/kit';
 import { CatalogPicker } from './CatalogPicker';
 import { errorText } from '../../utils/errorText';
+import { kaName } from '../../utils/georgianName';
 
 type PathMap = Record<string, PathItem>;
 
@@ -88,7 +89,7 @@ export const MemberPathEditor: React.FC<{ uid: string; name: string; onError: (t
     else setMark(it, v, true);
   };
   const setLocked = (on: boolean) =>
-    saveMarksLock(uid, on, user?.displayName || '').catch(e => onError('ვერ შეინახა: ' + errorText(e)));
+    saveMarksLock(uid, on, kaName(user?.displayName) || '').catch(e => onError('ვერ შეინახა: ' + errorText(e)));
 
   if (!loaded) return <p className="py-6 text-center text-sm text-[#8a7a6a]">იტვირთება...</p>;
 

@@ -7,6 +7,7 @@ import { askConfirm, Btn, FIELD, Flash, Label, Sheet, Toggle, useFlash } from '.
 import type { SchoolClass } from '../../hooks/useClasses';
 import { MAX_CYCLE_DAYS, cycleOf, georgiaToday, halfIndex, kathismasOf, ownersIn, parseCycleDays, parseShiftDays, rebase } from '../../utils/psalter';
 import { ALL_KATHISMAS, PsalterGroup, distributionLog } from '../../hooks/usePsalter';
+import { kaName } from '../../utils/georgianName';
 
 const TIMES = ['', '18:00', '19:00', '20:00', '21:00', '22:00'];
 
@@ -74,7 +75,7 @@ export const GroupSettingsSheet: React.FC<{
     const mineNow = kathismasOf(owners, user.uid);
     if (!on && mineNow.length && !(await askConfirm({ title: 'აღარ კითხულობ?', text: `კანონი ${mineNow.join(', ')} თავისუფალი დარჩება.`, ok: 'დიახ' }))) return;
     const me = group.members.find(m => m.uid === user.uid)
-      || { uid: user.uid, name: cls?.teachers.find(t => t.uid === user.uid)?.name || user.displayName || 'მასწავლებელი', prayer: '', photoURL: user.photoURL || '' };
+      || { uid: user.uid, name: cls?.teachers.find(t => t.uid === user.uid)?.name || kaName(user.displayName) || 'მასწავლებელი', prayer: '', photoURL: user.photoURL || '' };
     try {
       await updateDoc(ref, on
         ? { members: arrayUnion(me), memberIds: arrayUnion(user.uid), updatedAt: new Date().toISOString() }

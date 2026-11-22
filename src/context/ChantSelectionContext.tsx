@@ -8,6 +8,7 @@ import { triggerHaptic } from '../utils/haptics';
 import { HabitCounts, HabitLog, canTickDay, dayKey, getHabitsWeekKey, habitsThisWeek } from '../utils/habitsWeek';
 import { HABIT_ITEMS } from '../data/habitsAndManera';
 import type { ChantItem, ChantVariant } from '../data/tsirvaChants';
+import { kaName } from '../utils/georgianName';
 
 export interface SelectedChantVariant {
   variantId: string;
@@ -307,7 +308,7 @@ export const ChantSelectionProvider: React.FC<{ children: React.ReactNode }> = (
           // Initialize new student doc
           setDoc(userDocRef, {
             email: user.email || '',
-            displayName: user.displayName || '',
+            displayName: kaName(user.displayName) || '',
             photoURL: user.photoURL || '',
             selectedChantVariants: {},
             maneraStats: {},

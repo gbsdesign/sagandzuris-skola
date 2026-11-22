@@ -32,6 +32,7 @@ import { ChevIcon } from './Home';
 import { SchoolAlbums } from './Albums';
 import { SectionsScreen } from './Sections';
 import { ErrorsScreen, LogScreen, NumbersScreen, TopScreen } from './Numbers';
+import { kaName } from '../../../utils/georgianName';
 
 /** ⚙ „სკოლა“ (x-skola) and each of its pages: the school's settings, a line each, every line its own page. */
 export const SchoolRoute: React.FC<{ part: SchoolPart | null }> = ({ part }) => {
@@ -195,7 +196,7 @@ const RightsScreen: React.FC = () => {
   const seeing = people(viewers);
   const who = (n: number) => `წევრებიდან: ${n ? `${n}` : 'არავის'}`;
   const failSave = () => say(FAIL, 'error');
-  const nameOf = (u: UserRecord) => u.name || u.displayName || u.email;
+  const nameOf = (u: UserRecord) => u.name || kaName(u.displayName) || u.email;
 
   const RIGHTS: { id: RightId; icon: React.ReactNode; title: string; sub: string; note: string; list: UserRecord[]; off: (u: UserRecord) => void }[] = [
     {

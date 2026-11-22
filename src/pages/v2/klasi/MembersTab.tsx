@@ -10,6 +10,7 @@ import { openThread, type Person } from '../../../hooks/useDirectChat';
 import { useClassAttendance, type ClassAttendance } from '../../../components/teacher/AttendancePanel';
 import { classFigures, summarize } from '../../../components/teacher/StudentsOverview';
 import { AddMemberSheetV2 } from './teacher/AddMember';
+import { kaName } from '../../../utils/georgianName';
 
 const AttendanceSheet = React.lazy(() => import('../daswreba/AttendanceSheet').then(m => ({ default: m.AttendanceSheet })));
 
@@ -22,7 +23,7 @@ export const useWriteTo = (cls: SchoolClass) => {
   const person = (p: ClassMember): Person => ({ uid: p.uid, name: p.name || '', photoURL: p.photoURL || '' });
   const meHere = (): Person => {
     const p = cls.members.find(m => m.uid === user?.uid) || cls.teachers.find(m => m.uid === user?.uid);
-    return { uid: user!.uid, name: p?.name || user!.displayName || '', photoURL: p?.photoURL || user!.photoURL || '' };
+    return { uid: user!.uid, name: p?.name || kaName(user!.displayName) || '', photoURL: p?.photoURL || user!.photoURL || '' };
   };
   const writeTo = async (other: ClassMember, otherIsTeacher: boolean) => {
     if (!user) return;

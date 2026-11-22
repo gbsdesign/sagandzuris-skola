@@ -5,6 +5,7 @@ import { db } from '../../../firebase';
 import { useAuth } from '../../../context';
 import { saveProfileName } from '../../../utils/memberName';
 import type { WorkSchedule } from '../../../components/views/WorkScheduleEditor';
+import { kaName } from '../../../utils/georgianName';
 
 // The signed-in person's own record for the new look's profile screens (boards x-propili, x-piradi-inpormatsia,
 // x-galoba-interesebi, x-mushaobis-ganrigi). The same fields the old profile card (components/views/StudentProfileCard)
@@ -72,7 +73,7 @@ export const useProfileDoc = (): ProfileDoc => {
 const accountFields = (user: User, profile: ProfileFields) => ({
   userId: user.uid,
   email: user.email || '',
-  displayName: user.displayName || `${profile.firstName || ''} ${profile.lastName || ''}`.trim(),
+  displayName: kaName(user.displayName) || `${profile.firstName || ''} ${profile.lastName || ''}`.trim(),
   photoURL: user.photoURL || '',
   authProvider: user.providerData.some(pd => pd.providerId === 'google.com') ? 'Google' : 'email',
 });

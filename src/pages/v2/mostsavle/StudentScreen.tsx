@@ -18,6 +18,7 @@ import { MoreSheet } from './More';
 import { AttendanceSheet, OutfitSheet } from './Sheets';
 import { markedCount, monthAttendance, usePathItems, useStudent, voiceLine } from './useStudent';
 import type { StudentData } from './useStudent';
+import { kaName } from '../../../utils/georgianName';
 
 // A student's page in the new look (boards x-mostsavle, -gza, -ostatoba, -meti). Page `student`; its place is the
 // navigation's mapItem — `<uid>|<classId>` the page, `…|gza` the chants learned, `…|ostatoba` the mastery's marks.
@@ -90,7 +91,7 @@ export const Main: React.FC<{ s: StudentData }> = ({ s }) => {
   const person = (): ClassMember => s.member || { uid: s.uid, name: s.name, photoURL: s.photoURL };
   const meHere = () => {
     const p = s.cls?.teachers.find(t => t.uid === me.uid);
-    return { uid: me.uid, name: p?.name || me.displayName || '', photoURL: p?.photoURL || me.photoURL || '' };
+    return { uid: me.uid, name: p?.name || kaName(me.displayName) || '', photoURL: p?.photoURL || me.photoURL || '' };
   };
   const chatId = async () => {
     const m = person();

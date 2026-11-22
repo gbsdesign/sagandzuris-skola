@@ -19,6 +19,7 @@ import { categoryOf, sortPathItems, usesVoices, voicesOf } from '../../../utils/
 import type { PathItem, Voice } from '../../../utils/pathItems';
 import { ROMAN, markedCount, usePathItems } from './useStudent';
 import type { StudentData } from './useStudent';
+import { kaName } from '../../../utils/georgianName';
 
 // „ნასწავლი საგალობლები“ of a student (board x-mostsavle-gza): what the old path editor's „გზა“ tab did, as a screen.
 // A voice goes: not known → marked by the student → confirmed by the teacher („ჩათვლა“, confirmations/{uid}) — the cards
@@ -73,7 +74,7 @@ export const StudentGza: React.FC<{ s: StudentData }> = ({ s }) => {
     saveConfirmation(s.uid, it.variantId, next, user?.email || '').catch(e => setError('ჩათვლა ვერ შეინახა: ' + errorText(e)));
   };
   const setLocked = (on: boolean) =>
-    saveMarksLock(s.uid, on, user?.displayName || '').catch(e => setError('ვერ შეინახა: ' + errorText(e)));
+    saveMarksLock(s.uid, on, kaName(user?.displayName) || '').catch(e => setError('ვერ შეინახა: ' + errorText(e)));
 
   // the AI teacher's passed exams (students/{uid}.aiPass): they count as counted, the teacher may hear the take and take one off
   const pass = (s.data?.aiPass as AiPass | undefined) ?? {};

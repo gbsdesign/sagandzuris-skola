@@ -25,6 +25,7 @@ import { ButtonsScreen } from './Buttons';
 import { HelpButton } from '../mkitkhe/HelpButton';
 import { ChokhaThumb } from '../gza/ChokhaThumb';
 import { useLearnCount } from '../gza/useGza';
+import { kaName } from '../../../utils/georgianName';
 
 // x-propili — „პროფილი“ in the new look (the bottom menu's own page): me and this month's three numbers on top, then five
 // rows — my class, my voice (the AI teacher's), my outfit, my home buttons — and the settings and the admin panel. What
@@ -83,7 +84,7 @@ const ProfileMain: React.FC = () => {
 
   if (!user) return null;
   const p = me.profile;
-  const name = p.firstName || p.lastName ? `${p.firstName || ''} ${p.lastName || ''}`.trim() : user.displayName || 'შენი სახელი';
+  const name = p.firstName || p.lastName ? `${p.firstName || ''} ${p.lastName || ''}`.trim() : kaName(user.displayName) || 'შენი სახელი';
   const role = isSuperAdmin ? 'სუპერადმინი' : isAdmin ? 'ადმინი' : isTeacher ? 'მასწავლებელი' : '';
   const voices = (Array.isArray(p.voices) ? p.voices : []).map(v => VOICE_NAMES[v]).filter(Boolean);
   const sub = [role, ...voices].filter(Boolean).join(' · ') || user.email || '';

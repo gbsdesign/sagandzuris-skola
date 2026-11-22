@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth, useViewing } from '../context/AuthContext';
+import { kaName } from '../utils/georgianName';
 
 // A class (group of students) made by an admin: shown to its members in the header and on its own page.
 // Member names/photos are copied into the class so members can see each other without reading
@@ -52,15 +53,17 @@ export interface SchoolClass {
 }
 
 const list = (v: unknown) => (Array.isArray(v) ? v : []);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const kaPerson = (m: any) => (m && typeof m.name === 'string' ? { ...m, name: kaName(m.name) } : m);
 
 export const toClass = (id: string, d: any): SchoolClass => ({
   id,
   name: d.name || 'კლასი',
   logo: d.logo || '',
   memberIds: list(d.memberIds),
-  members: list(d.members),
+  members: list(d.members).map(kaPerson),
   teacherIds: list(d.teacherIds),
-  teachers: list(d.teachers),
+  teachers: list(d.teachers).map(kaPerson),
   program: list(d.program),
   schedule: list(d.schedule).filter((x: any) => x && typeof x.day === 'number' && typeof x.start === 'string'),
   classMode: Boolean(d.classMode),

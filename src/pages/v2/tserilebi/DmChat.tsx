@@ -18,6 +18,7 @@ import { PinCard } from '../../../components/classes/PinCard';
 import { PinSheet } from '../../../components/classes/PinSheet';
 import { pinPreview, sendDmPin } from '../../../hooks/useChatPins';
 import { Press, RoundButton, Row, Rows, Sheet, TopBar, Dot, cx } from '../../../components/ui2';
+import { kaName } from '../../../utils/georgianName';
 
 const green = 'flex h-tap shrink-0 cursor-pointer items-center gap-2 rounded-full bg-leaf px-4 text-body font-bold text-white transition active:scale-95';
 const VOICE_PREVIEW = '🎤 ხმოვანი შეტყობინება';
@@ -110,7 +111,7 @@ export const DmChat: React.FC<{ id: string; classes: SchoolClass[]; wide: boolea
   const cls = classes.find(c => c.id === thread.classId);
   const iTeach = thread.kind === 'teach' && thread.teacherUid === uid;
   const other = otherOf(thread, uid);
-  const myName = thread.names[uid] || user.displayName || '';
+  const myName = thread.names[uid] || kaName(user.displayName) || '';
   const author: ChatAuthor = { uid, name: myName, photoURL: thread.photos[uid] || user.photoURL || '', teacher: iTeach || staff };
 
   const pair = thread.members.map(m => thread.names[m] || '').filter(Boolean).join(' — ');

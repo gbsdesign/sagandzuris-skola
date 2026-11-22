@@ -7,6 +7,7 @@ import type { ClassMember, SchoolClass } from '../../../hooks/useClasses';
 import { openAdminThread, openThread, sendThreadText } from '../../../hooks/useDirectChat';
 import { errorText } from '../../../utils/errorText';
 import { longDay, readyLetter, type WeekRow } from '../../../utils/weekReport';
+import { kaName } from '../../../utils/georgianName';
 
 // x-idea-kvira-2 — „ერთი შეხებით — მზა წერილი“: a member's row in the week's report opens a ready letter built from their week
 // (utils/weekReport `readyLetter`). „გაგზავნა“ puts it into the private chat with them (the class's teacher's chat, an admin's
@@ -37,7 +38,7 @@ export const LetterSheet: React.FC<{
     setError('');
     try {
       const mine = cls.teachers.find(t => t.uid === user.uid);
-      const me = { uid: user.uid, name: mine?.name || user.displayName || '', photoURL: mine?.photoURL || user.photoURL || '' };
+      const me = { uid: user.uid, name: mine?.name || kaName(user.displayName) || '', photoURL: mine?.photoURL || user.photoURL || '' };
       const other = { uid: member.uid, name: member.name || row.name, photoURL: member.photoURL || '' };
       // the class's teacher writes in their own chat with the member; an admin who does not teach it, as the administration
       const id = cls.teacherIds.includes(user.uid) ? await openThread(me, other, cls.id) : await openAdminThread(other);

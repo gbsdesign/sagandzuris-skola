@@ -19,6 +19,7 @@ import { useNewLook } from '../../design/newLook';
 import { StudioScreen } from '../../pages/v2/learn/StudioScreen';
 import { RecordView } from '../../pages/v2/learn/RecordView';
 import { MixView } from '../../pages/v2/learn/MixView';
+import { kaName } from '../../utils/georgianName';
 
 // „კლასის სტუდია“ (2026-10-29): every member records their own voice of a program chant at home, singing with the
 // synth's other voices in the earphones; the take starts where the synth starts, so the takes lie on one another.
@@ -319,7 +320,7 @@ const MixBody: React.FC<{ cls: SchoolClass; vid: string; onBusy: (b: boolean) =>
   };
 
   const authorOf = (): ChatAuthor => ({
-    uid: user!.uid, name: cls.teachers.find(t => t.uid === user!.uid)?.name || user!.displayName || 'მასწავლებელი',
+    uid: user!.uid, name: cls.teachers.find(t => t.uid === user!.uid)?.name || kaName(user!.displayName) || 'მასწავლებელი',
     photoURL: user!.photoURL || '', teacher: true,
   });
   const askClass = async () => {

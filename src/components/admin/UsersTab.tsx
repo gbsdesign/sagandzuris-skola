@@ -16,6 +16,7 @@ import { useNotTwins } from '../../utils/notTwins';
 import { TeachLine, useLastLessons } from './TeacherOverview';
 import { BulkBar } from './BulkActions';
 import { PersonSheet, ROLE_ICON, roleName, roleOf } from './PersonSheet';
+import { kaName } from '../../utils/georgianName';
 
 export interface UserRecord {
   userId: string;
@@ -64,8 +65,8 @@ export const toUser = (id: string, d: any): UserRecord => {
   return {
     userId: id,
     email,
-    displayName: d.displayName || '',
-    name: [firstName, lastName].filter(Boolean).join(' ') || d.displayName || email || 'უსახელო მომხმარებელი',
+    displayName: kaName(d.displayName) || '',
+    name: [firstName, lastName].filter(Boolean).join(' ') || kaName(d.displayName) || email || 'უსახელო მომხმარებელი',
     photoURL: d.photoURL || '',
     firstName,
     lastName,

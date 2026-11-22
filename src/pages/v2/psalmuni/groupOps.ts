@@ -4,6 +4,7 @@ import { askConfirm } from '../../../components/ui/kit';
 import type { SchoolClass } from '../../../hooks/useClasses';
 import { ALL_KATHISMAS, PsalterGroup, distributionLog, type GroupMember } from '../../../hooks/usePsalter';
 import { cycleOf, georgiaToday, halfIndex, kathismasOf, ownersIn, rebase } from '../../../utils/psalter';
+import { kaName } from '../../../utils/georgianName';
 
 // The saves of the psalter group's new-look screens — the old GroupManage / CreateGroupSheet writes, unchanged.
 
@@ -55,7 +56,7 @@ export const setReading = async (group: PsalterGroup, cls: SchoolClass | undefin
   const mineNow = kathismasOf(owners, user.uid);
   if (!on && mineNow.length && !(await askConfirm({ title: 'აღარ კითხულობ?', text: `კანონი ${mineNow.join(', ')} თავისუფალი დარჩება.`, ok: 'დიახ' }))) return '';
   const me = group.members.find(m => m.uid === user.uid)
-    || { uid: user.uid, name: cls?.teachers.find(t => t.uid === user.uid)?.name || user.displayName || 'მასწავლებელი', prayer: '', photoURL: user.photoURL || '' };
+    || { uid: user.uid, name: cls?.teachers.find(t => t.uid === user.uid)?.name || kaName(user.displayName) || 'მასწავლებელი', prayer: '', photoURL: user.photoURL || '' };
   try {
     await updateDoc(doc(db, 'psalterGroups', group.id), on
       ? { members: arrayUnion(me), memberIds: arrayUnion(user.uid), updatedAt: new Date().toISOString() }
@@ -111,7 +112,7 @@ const people = (list: SchoolClass['members']): GroupMember[] => list.map(m => ({
  *  teachers) and linked to the class. Returns the new group's id. */
 export const createClassGroup = async (cls: SchoolClass, user: Me, name: string, cycleDays: number, shiftDays: number[]): Promise<string> => {
   const today = georgiaToday();
-  const me = { uid: user.uid, name: user.displayName || 'მასწავლებელი', photoURL: user.photoURL || '' };
+  const me = { uid: user.uid, name: kaName(user.displayName) || 'მასწავლებელი', photoURL: user.photoURL || '' };
   const teachers = [me, ...people(cls.teachers).filter(t => t.uid !== user.uid)];
   const members = people(cls.members);
   const ref = await addDoc(collection(db, 'psalterGroups'), {
