@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, BookOpen, CalendarCheck, ChevronDown, EyeOff, Loader2, MessageCircle, Search, X } from 'lucide-react';
+import { ArrowLeft, BookOpen, ChevronDown, EyeOff, Loader2, MessageCircle, Search, X } from 'lucide-react';
 import { Waiting } from '../../../components/shell/PageSkeleton';
 import { useAuth, useNavigation } from '../../../context';
 import { useMyClasses, useTeachingClasses, useAllClasses } from '../../../hooks/useClasses';
@@ -34,7 +34,6 @@ import { useLongPress } from '../../../hooks/useLongPress';
 import { TimetableSheet } from '../klasi/teacher/Timetable';
 import { usePearlTotals } from './usePearlTotals';
 
-const AttendanceSheet = React.lazy(() => import('../daswreba/AttendanceSheet').then(m => ({ default: m.AttendanceSheet })));
 // the psalter group, unfolded under the list's head (its „📖 ფს.ჯ.“ button) — loaded only when it opens
 const PsalterFold = React.lazy(() => import('../psalmuni/PsalterScreen').then(m => ({ default: m.PsalterFold })));
 
@@ -131,9 +130,6 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
   const { groups: psalterGroups } = useMyPsalterGroups(uid);
   const psalterOn = psalterGroups.length > 0 && access.section('medavitneoba') === 'open';
   const [psalterOpen, setPsalterOpen] = useState(false);
-  // „დასწრება“ in the head for the classes one leads (2026-11-22, the user: „დასწრების ღილაკი მიამაგრე“)
-  const leading = isAdmin ? known : known.filter(c => c.teacherIds.includes(uid));
-  const [attOpen, setAttOpen] = useState(false);
   const nameHold = useLongPress(() => { if (moreFor) setMoreOf(moreFor); });
   const classUnread = (c: SchoolClass) => isClassUnread(lasts[c.id], seen[c.id], uid) && open !== CLASS_PREFIX + c.id;
   const dmUnread = (t: DirectThread) => isUnread(t, uid) && open !== t.id;
@@ -502,11 +498,8 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
         )}
         right={(
           <>
-            {leading.length > 0 && !overview && (
-              <RoundButton label="დასწრება" onClick={() => setAttOpen(true)}><CalendarCheck aria-hidden="true" /></RoundButton>
-            )}
             {/* the 👁 and ✎ went; the psalter group's 📖 has „ფს.ჯ.“ beside it (2026-11-22, the user: „ეს ღილაკები მოხსენი ხოლო
-                იმას ფს.ჯ. დაუწერე გვერდთან“) */}
+                იმას ფს.ჯ. დაუწერე გვერდთან“); „დასწრება“ moved to each class chat's „მეტი“ the same evening */}
             {psalterOn && !overview && (
               <Press
                 aria-label={psalterOpen ? 'ფსალმუნთა ჯგუფის დაკეცვა' : 'ფსალმუნთა ჯგუფი'}
@@ -604,11 +597,6 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
         const c = timesOf ? known.find(x => x.id === timesOf) : null;
         return c ? <TimetableSheet cls={c} open edit onClose={() => setTimesOf(null)} /> : null;
       })()}
-      {attOpen && (
-        <React.Suspense fallback={null}>
-          <AttendanceSheet classes={leading} open onClose={() => setAttOpen(false)} />
-        </React.Suspense>
-      )}
       <Sheet open={writing} onClose={() => setWriting(false)} title="ახალი წერილი">
         <NewLetter render={contacts} />
       </Sheet>

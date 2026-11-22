@@ -2286,8 +2286,9 @@ Pending small tasks the user mentioned: remove the old Drive `ნოტები
 - **„დასწრება“ (2026-11-22**, the user: „გაუგებარია … მარტივად კლასების მიხედვით ვნიშნავდე … სტატისტიკასაც ვხედავდე … დასწრების
   ღილაკი მიამაგრე“): `pages/v2/daswreba/AttendanceSheet.tsx` — class chips · „მონიშვნა“ (lesson day ‹ ›, „ყველა მოვიდა“, a tap on a
   name) · „სტატისტიკა“ (`utils/attendanceStats.ts` + test: the class's share, each member's share and the newest lessons missed in a
-  row, the lessons — a tap marks that day). Opened from the „სწავლა“ head (📅, the classes one leads; admins all) and the class's
-  „წევრები“ row (the old card and the ✓ on every name are gone). On every class row the calendar sign is a button for its leaders —
+  row, the lessons — a tap marks that day). Opened from the class's „მეტი“ (its first row — `ClassMoreSheet`, so the class chat's
+  name held long; only that class's members; the „სწავლა“ head's 📅 went the same evening — the user: „დასწრება გადაუტანე მეტში …
+  ყველა კლასს თავისი დასწრება“) and the class's „წევრები“ row (the old card and the ✓ on every name are gone). On every class row the calendar sign is a button for its leaders —
   a tap opens the timetable, a class with none says „გაკვეთილის დანიშვნა“.
 - **The psalter group on the „სწავლა“ list (2026-11-22**, the user: „ამას მინდა დაბლა შლიდეს მათთვის ვინც ფსალმუნთა ჯგუფშია სწავლის
   გვერდით“): a round 📖 before the 👁 (anyone in a group — `useMyPsalterGroups` —, while section `medavitneoba` is open) unfolds

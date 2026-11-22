@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Archive, BookOpen, CalendarDays, Church, ClipboardCheck, ListChecks, Pencil, Sparkles, UserPlus, Users } from 'lucide-react';
+import { Archive, BookOpen, CalendarCheck, CalendarDays, Church, ClipboardCheck, ListChecks, Pencil, Sparkles, UserPlus, Users } from 'lucide-react';
 import { useAuth, useNavigation } from '../../../../context';
 import { useNotes } from '../../../../context/NotesContext';
 import { useAllClasses, type LessonSlot, type SchoolClass } from '../../../../hooks/useClasses';
@@ -20,6 +20,9 @@ import { NameLogoSheet } from './NameLogo';
 import { TeachersSheetV2 } from './Teachers';
 import { TimetableSheet, slotTime } from './Timetable';
 
+// the class's attendance — only its own members (2026-11-22, the user: „დასწრება გადაუტანე მეტში … ყველა კლასს თავისი დასწრება“)
+const AttendanceSheet = React.lazy(() => import('../../daswreba/AttendanceSheet').then(m => ({ default: m.AttendanceSheet })));
+
 // x-klasi-meti — the teacher's rare jobs in one list, each with a grey line saying what is now. A row opens its own
 // window in place of this one (one at a time); closing it comes back here.
 
@@ -35,7 +38,7 @@ const timetableLine = (slots: LessonSlot[]) => {
     : sorted.map(s => `${DAY_SHORT[s.day]} ${slotTime(s)}`).join(', ');
 };
 
-type Sub = 'name' | 'time' | 'member' | 'teachers' | 'group';
+type Sub = 'att' | 'name' | 'time' | 'member' | 'teachers' | 'group';
 
 /** the psalter group's line: how many kanons are read in this cycle */
 const useGroupLine = (cls: SchoolClass) => {
@@ -83,6 +86,7 @@ export const ClassMoreSheet: React.FC<{ cls: SchoolClass; open: boolean; onClose
     <>
       <Sheet open={mainOpen} onClose={closeAll} title="მეტი">
         <Rows>
+          <Row lead={<Dot icon={<CalendarCheck />} />} title="დასწრება" sub="მონიშვნა და სტატისტიკა" onClick={() => setSub('att')} />
           <Row lead={<Dot icon={<Church />} />} title="დღევანდელი წირვა" sub="პროგრამა ტაძრისთვის" onClick={() => { closeAll(); openProgram(); }} />
           <Row lead={<Dot icon={<Pencil />} />} title="სახელი და ლოგო" onClick={() => setSub('name')} />
           <Row lead={<Dot icon={<CalendarDays />} />} title="გაკვეთილების ცხრილი" sub={timetableLine(cls.schedule)} onClick={() => setSub('time')} />
@@ -105,6 +109,11 @@ export const ClassMoreSheet: React.FC<{ cls: SchoolClass; open: boolean; onClose
         </Rows>
         {problem && <p className="px-1.5 text-meta text-danger">{problem}</p>}
       </Sheet>
+      {open && sub === 'att' && (
+        <React.Suspense fallback={null}>
+          <AttendanceSheet classes={[cls]} open onClose={back} />
+        </React.Suspense>
+      )}
       <NameLogoSheet cls={cls} open={open && sub === 'name'} onClose={back} />
       <TimetableSheet cls={cls} open={open && sub === 'time'} onClose={back} edit />
       <AddMemberSheetV2 cls={cls} open={open && sub === 'member'} onClose={back} />
