@@ -146,6 +146,7 @@ export const ClassChat: React.FC<{ cls: SchoolClass; title?: React.ReactNode; fi
     <ChatPanel
       base={base}
       author={author}
+      canPin={isAdmin}
       extraTool={extraTool}
       messages={shown}
       loading={loading}

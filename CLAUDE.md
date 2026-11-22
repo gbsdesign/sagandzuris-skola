@@ -2363,3 +2363,12 @@ Pending small tasks the user mentioned: remove the old Drive `ნოტები
   before) · დღის მსახურებაში (`utils/dayChants.ts`: `students.dayChants {iso: ids}`, Tbilisi day; the day page's `medavitne/DayChants.tsx`
   lists them on top, today's too while it shows „ახლა“) · for teachers / admins „კლასის პროგრამაში მიმაგრება“ (a managed class, toggles,
   `saveClassProgram`) and „მოსწავლის გზაზე მიმაგრება“ (class → member, adds to `selectedChantVariants` unless there). No rules change.
+- **Pins on top, a voice's title, forwarding (2026-11-22**, the user: „ვოისებს … გადაზიარების ფუნქცია … ჩათის თავში აპინვა … ვოისს ზემოთ
+  სათაურის/ინსტრუქციის მიწერა გაგზავნამდე … კომპაქტურად“; answers „მასწავლებელს და ადმინს · 7“): `ChatPanel canPin` (a class's
+  teachers/admins — ClassChat `isAdmin`; either side of a private chat — `canWrite`). The chat's own doc keeps `topPins` (ids, ≤ 7;
+  rules: class update and the dms update list, size ≤ 7; tests in the rules test); `useTopPins` / `setTopPin` in useClassChat. One line
+  under the head (📌 N/M + the pin in short, `pinPreview`; a tap goes to the message — `data-mid`, lit gold a moment — and the line
+  moves to the next; ▾ = a Sheet of all, a voice plays there, ✕ unpins). A held message's menu: ❤️ · მიმაგრება/მოხსნა · გადაგზავნა
+  (my own voice) · წაშლა. A voice take gets a one-line title before „გაგზავნა“ (the message's `text`, ≤ `VOICE_TITLE_MAX` 200, drawn
+  bold over the player; list lines „🎤 title“). „გადაგზავნა“ = `ChatForward.tsx` (lazy): my classes' chats + my private chats (no
+  peer), several at once, `forwardVoice` copies the MP3 parts into a new message with its title.

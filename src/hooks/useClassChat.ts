@@ -138,7 +138,7 @@ export const useClassLasts = (ids: string[]) => {
         const d = s.docs[0]?.data({ serverTimestamps: 'estimate' });
         setLast(p => ({
           ...p,
-          [id]: d ? { at: d.createdAt?.toDate?.() || null, uid: d.uid || '', text: d.kind === 'voice' ? '🎤 ხმოვანი შეტყობინება' : d.text || '' } : null,
+          [id]: d ? { at: d.createdAt?.toDate?.() || null, uid: d.uid || '', text: d.kind === 'voice' ? `🎤 ${d.text || 'ხმოვანი შეტყობინება'}` : d.text || '' } : null,
         }));
       },
       err => console.warn('class chat: ', err?.code || err)
@@ -303,7 +303,10 @@ export const sendCallEndMessage = async (base: string, author: ChatAuthor, o: { 
   });
 };
 
-export const sendVoiceMessage = async (base: string, author: ChatAuthor, { mp3, seconds, wave }: VoiceTake) => {
+/** a voice message's title (an instruction written above it before it is sent — 2026-11-22) */
+export const VOICE_TITLE_MAX = 200;
+
+export const sendVoiceMessage = async (base: string, author: ChatAuthor, { mp3, seconds, wave }: VoiceTake, title = '') => {
   const bytes = new Uint8Array(await mp3.arrayBuffer());
   const ref = doc(messagesOf(base));
   const batch = writeBatch(db);
@@ -311,7 +314,7 @@ export const sendVoiceMessage = async (base: string, author: ChatAuthor, { mp3, 
   for (let i = 0; i < bytes.length; i += PART_BYTES, parts++) {
     batch.set(voicePart(base, ref.id, parts), { uid: author.uid, data: Bytes.fromUint8Array(bytes.subarray(i, i + PART_BYTES)) });
   }
-  batch.set(ref, { ...stamp(author), kind: 'voice', text: '', seconds: Math.round(seconds * 10) / 10, wave, parts });
+  batch.set(ref, { ...stamp(author), kind: 'voice', text: title.trim().slice(0, VOICE_TITLE_MAX), seconds: Math.round(seconds * 10) / 10, wave, parts });
   await batch.commit();
   void notifyChat(base, ref.id);
 };
@@ -359,6 +362,47 @@ export const sendFileMessage = async (base: string, author: ChatAuthor, file: Fi
   await sendWithParts(base, author, bytes, {
     kind: 'file', text: `📎 ${name}`, fname: name, size: file.size, mime: (file.type || 'application/octet-stream').slice(0, 100),
   }, onPct);
+};
+
+/** One of my voice messages sent on into another chat (a class's or a private one — 2026-11-22, the user: „ვოისებს … გადაზიარების
+ *  ფუნქცია რომ კლასებში ან სხვა მოსწავლეს გადავუგზავნო“): its MP3 put together again and written there as a new message, with
+ *  its title. */
+export const forwardVoice = async (fromBase: string, m: ChatMessage, toBase: string, author: ChatAuthor) => {
+  const url = await loadVoiceUrl(fromBase, m);
+  const bytes = new Uint8Array(await (await fetch(url)).arrayBuffer());
+  await sendWithParts(toBase, author, bytes, { kind: 'voice', text: m.text.slice(0, VOICE_TITLE_MAX), seconds: m.seconds, wave: m.wave });
+};
+
+// ---- messages pinned on top of a chat (2026-11-22, the user: „ჩათის თავში … შეტყობინებების აპინვა“; answers: in a class only its
+// teachers and admins, in a private chat either side; up to seven) — their ids in the chat's own document, `topPins`
+export const TOP_PINS_MAX = 7;
+
+export const setTopPin = (base: string, id: string, on: boolean) =>
+  updateDoc(doc(db, base), { topPins: on ? arrayUnion(id) : arrayRemove(id) });
+
+/** The chat's pinned messages, newest pin first (a deleted one drops out). */
+export const useTopPins = (base?: string | null) => {
+  const [ids, setIds] = useState<string[]>([]);
+  const [found, setFound] = useState<Record<string, ChatMessage | null>>({});
+  useEffect(() => {
+    setIds([]);
+    if (!base) return;
+    return onSnapshot(doc(db, base), snap => {
+      const v = snap.get('topPins');
+      setIds(Array.isArray(v) ? v.filter((x: unknown): x is string => typeof x === 'string').slice(-TOP_PINS_MAX) : []);
+    }, () => setIds([]));
+  }, [base]);
+  const key = ids.join(',');
+  useEffect(() => {
+    setFound({});
+    if (!base || !ids.length) return;
+    const offs = ids.map(id => onSnapshot(doc(messagesOf(base), id), snap => {
+      setFound(f => ({ ...f, [id]: snap.exists() ? toChatMessage(snap as unknown as QueryDocumentSnapshot) : null }));
+    }, () => setFound(f => ({ ...f, [id]: null }))));
+    return () => offs.forEach(off => off());
+  }, [base, key]); // eslint-disable-line react-hooks/exhaustive-deps
+  const pinned = [...ids].reverse().map(id => found[id]).filter((m): m is ChatMessage => !!m);
+  return { ids, pinned };
 };
 
 export const deleteMessage = async (base: string, m: ChatMessage) => {

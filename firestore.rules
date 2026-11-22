@@ -491,9 +491,11 @@ service cloud.firestore {
         || (isSignedIn() && (uid() in resource.data.memberIds || uid() in resource.data.teacherIds));
       allow create, delete: if isAdmin();
       // a class's teacher runs it, but only admins choose its teachers and put it in the archive (or bring it back)
-      allow update: if isAdmin()
+      // `topPins` (2026-11-22): up to seven of the chat's messages pinned on top — the class's teachers and admins
+      allow update: if (isAdmin()
         || (isTeacher() && uid() in existing().get('teacherIds', []) && !changed().hasAny(['teacherIds', 'teachers', 'archived', 'archivedAt']))
-        || leaving();
+        || leaving())
+        && (!changed().hasAny(['topPins']) || (incoming().topPins is list && incoming().topPins.size() <= 7));
 
       // Class chat: members and teachers read and post as themselves; the author or a teacher deletes
       match /messages/{messageId} {
@@ -749,7 +751,9 @@ service cloud.firestore {
       // administration chat only an admin answering it (the member only answers); either side ends it
       allow update: if isSignedIn() && (uid() in existing().members || staffOf(existing()))
         && changed().hasOnly(['classId', 'names', 'photos', 'lastAt', 'lastBy', 'lastText', 'read', 'callAt', 'callBy',
-             'callKind', 'callEnd'])
+             'callKind', 'callEnd', 'topPins'])
+        // up to seven messages pinned on top of the chat (2026-11-22) — either side
+        && (!changed().hasAny(['topPins']) || (incoming().topPins is list && incoming().topPins.size() <= 7))
         && linkOk(existing(), incoming().get('classId', ''))
         && incoming().get('read', {}).diff(existing().get('read', {})).affectedKeys()
              .hasOnly([staffOf(existing()) ? 'staff' : uid()])

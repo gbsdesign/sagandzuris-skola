@@ -1,11 +1,12 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useBackToClose } from '../../utils/backToClose';
 import { useNotes } from '../../context/NotesContext';
-import { MessageCircle, Music2, Mic, Paperclip, Send, Smile, Square, X, Trash2, Play, Pause, Loader2, Clock, Phone, CheckCheck, Plus, Camera, Image as ImageIcon, ChevronRight, ClipboardList } from 'lucide-react';
+import { MessageCircle, Music2, Mic, Paperclip, Send, Smile, Square, X, Trash2, Play, Pause, Loader2, Clock, Phone, CheckCheck, Plus, Camera, Image as ImageIcon, ChevronRight, ClipboardList, Pin, PinOff, Forward, ChevronDown } from 'lucide-react';
 import { useLongPress } from '../../hooks/useLongPress';
 import { FileBubble, PhotoBubble, QuickSheet, useQuickEmoji } from './ChatMedia';
 import {
   sendTextMessage, sendVoiceMessage, sendPhotoMessage, sendFileMessage, FILE_MAX, deleteMessage, loadVoiceUrl, toggleHeart, ChatMessage, ChatAuthor,
+  useTopPins, setTopPin, TOP_PINS_MAX, VOICE_TITLE_MAX,
 } from '../../hooks/useClassChat';
 import {
   startVoiceRecording, voiceRecordingSupported, VOICE_MAX_SECONDS, WAVE_BARS, VoiceRecording, VoiceTake,
@@ -17,6 +18,9 @@ import { ROOM_GAME_INFO, parseChatRoomRef } from '../../data/roomGames';
 import { ROOM_GAME_ICON } from '../games/roomGameIcons';
 import { DrawRiddle } from './DrawRiddle';
 import { Button, Press, RoundButton, Sheet } from '../ui2';
+
+// a voice message sent on into other chats (lazy: it lists my classes and private chats only when opened)
+const ForwardSheet = React.lazy(() => import('./ChatForward').then(m => ({ default: m.ForwardSheet })));
 
 // Messenger's ways (2026-11-22, the user: „როგორც მესენჯერს აქვს … სმს-ებზე დაგულების ფუნქცია … ემოჯის გაგზავნის ფუნქცია“; answers
 // „მხოლოდ გული ❤️ · დაჭერა + ორჯერ შეხება · პანელი + დიდი ❤️“): a ❤️ on a message (held long → „❤️“ under it, or two taps), the
@@ -283,6 +287,8 @@ export interface ChatPanelProps {
   onDelete?: (m: ChatMessage) => Promise<void>;
   /** a teacher's (an admin's) tap on a member's photo or name: their own page (null = not a member's message) */
   personOpener?: (m: ChatMessage) => (() => void) | null;
+  /** may pin messages on top of the chat (2026-11-22: a class's teachers and admins; either side of a private chat) */
+  canPin?: boolean;
 }
 
 /** A computer's quiet 🗑 beside a message one may delete; it shows when the pointer is over the message. */
@@ -315,6 +321,14 @@ const NEVER = () => false;
 
 /** the first name of a sender, as the line above a run of messages shows it */
 export const firstName = (name: string) => name.trim().split(/\s+/)[0] || name;
+
+/** a pinned message in one short line */
+const pinPreview = (m: ChatMessage) =>
+  m.kind === 'voice' ? `🎤 ${m.text || `ხმოვანი · ${Math.round(m.seconds)} წმ`}`
+  : m.kind === 'photo' ? '📷 ფოტო'
+  : m.kind === 'file' ? `📎 ${m.fileName || 'ფაილი'}`
+  : m.kind === 'draw' ? '🎨 ნახატი'
+  : m.text || '…';
 /** the whole name over a run of messages — the surname after the name (2026-11-22, the user: „გვარის ეწეროს სახელის მერე ჩათში“) */
 const senderName = (name: string) => name.trim().replace(/\s+/g, ' ') || name;
 /** a teacher's or an admin's line over their message: „გიორგი ბერიძე (ადმინი)“ (2026-11-21, the user: „სახელი ჩანდეს“) */
@@ -325,6 +339,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   base, author, messages, loading, error, header, isCall = NEVER, callTitle, onJoinCall, callLive = true, onCallBack, onOpenGame, canDelete,
   showNames = false, seenAt = null, onSent, listClassName = 'h-[56vh] min-h-[300px] max-h-[560px]', readOnly = false,
   staffLabel = 'მასწავლებელი', fill = false, chain = false, listTop, renderCard, onAttach, extraTool, onDelete, personOpener,
+  canPin = false,
 }) => {
   const [text, setText] = useState('');
   const [mode, setMode] = useState<Mode>({ k: 'idle' });
@@ -335,6 +350,38 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   useBackToClose(!!active, () => setActive(null));
   const [emojiOpen, setEmojiOpen] = useState(false);
   useBackToClose(emojiOpen, () => setEmojiOpen(false));
+  // the messages pinned on top (≤ 7, one compact line; a tap goes to the next one), my voice message being sent on, a voice take's title
+  const top = useTopPins(readOnly ? null : base);
+  const [pinAt, setPinAt] = useState(0);
+  const [pinsOpen, setPinsOpen] = useState(false);
+  const [forwarding, setForwarding] = useState<ChatMessage | null>(null);
+  const [note, setNote] = useState('');
+  const [voiceTitle, setVoiceTitle] = useState('');
+  const [lit, setLit] = useState<string | null>(null);
+  useEffect(() => {
+    if (!note) return;
+    const t = setTimeout(() => setNote(''), 2600);
+    return () => clearTimeout(t);
+  }, [note]);
+  const pinIds = top.ids;
+  const togglePin = (m: ChatMessage) => {
+    setActive(null);
+    const on = !pinIds.includes(m.id);
+    if (on && pinIds.length >= TOP_PINS_MAX) { setErr(`მიმაგრება ${TOP_PINS_MAX}-ზე მეტი არ შეიძლება — ჯერ ერთი მოხსენი.`); return; }
+    triggerHaptic(15);
+    setPinAt(0);
+    setTopPin(base, m.id, on).catch(e => { console.warn('pin: ', e?.code || e); setErr(on ? 'ვერ მიმაგრდა.' : 'ვერ მოიხსნა.'); });
+  };
+  // a pin's tap: the message in the list (lit a moment), else the list of pins; then the line shows the next pin
+  const goToPin = (m: ChatMessage) => {
+    const el = list.current?.querySelector<HTMLElement>(`[data-mid="${m.id}"]`);
+    if (el) {
+      stick.current = false;
+      el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      setLit(m.id);
+      window.setTimeout(() => setLit(l => (l === m.id ? null : l)), 1400);
+    } else setPinsOpen(true);
+  };
   // Messenger's row (2026-11-22): + (a file; a teacher's card too) · camera · gallery · voice, folded to one › while typing
   const [toolsOpen, setToolsOpen] = useState(false);
   // the finger is in the field: the small signs fold to one › so the field is wide
@@ -520,6 +567,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
 
   const discardTake = () => {
     if (mode.k === 'preview') URL.revokeObjectURL(mode.url);
+    setVoiceTitle('');
     setMode({ k: 'idle' });
   };
   // the phone's back while recording or listening to a take throws the take away (as its ✕) instead of leaving the chat
@@ -532,8 +580,9 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     setErr('');
     stick.current = true;
     try {
-      await sendVoiceMessage(base, author, take);
-      onSent?.('voice', '');
+      await sendVoiceMessage(base, author, take, voiceTitle);
+      onSent?.('voice', voiceTitle.trim());
+      setVoiceTitle('');
       URL.revokeObjectURL(url);
       setMode({ k: 'idle' });
       triggerHaptic(20);
@@ -603,6 +652,9 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
         const first = newDay || prev?.uid !== m.uid || (!!prev && isCall(prev) !== isCall(m));
         const canDel = !readOnly && canDelete(m);
         const heartable = !readOnly && !m.pending && !m.pinned && !isCall(m) && m.kind !== 'game';
+        const pinnable = canPin && heartable;
+        const isPinned = pinIds.includes(m.id);
+        const forwardable = heartable && mine && m.kind === 'voice';
         const hearts = m.hearts ?? [];
         const mineHeart = hearts.includes(author.uid);
         const pick = canDel || heartable ? holdToPick(m.id, heartable ? m : null) : {};
@@ -612,8 +664,9 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
         const dayLine = newDay && (
           <p className="my-3 text-center text-cap font-bold text-mut">{dayLabel(m.at!)}</p>
         );
+        const menuPill = 'h-icon px-3 rounded-full bg-surf shadow-lift text-meta font-semibold inline-flex items-center gap-1.5 cursor-pointer active:scale-95';
         const removeBtn = active === m.id && (heartable || canDel) && (
-          <div className="mt-1.5 flex items-center gap-1.5">
+          <div className={`mt-1.5 flex flex-wrap items-center gap-1.5 ${mine ? 'justify-end' : ''}`}>
             {heartable && (
               <button
                 type="button"
@@ -622,6 +675,16 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                 className={`h-icon px-3 rounded-full bg-surf shadow-lift text-meta font-semibold inline-flex items-center gap-1.5 cursor-pointer active:scale-95 ${mineHeart ? 'text-mut ring-1 ring-wine/30' : 'text-ink'}`}
               >
                 <span aria-hidden="true" className="text-lead leading-none">❤️</span>{mineHeart && 'მოხსნა'}
+              </button>
+            )}
+            {pinnable && (
+              <button type="button" onClick={() => togglePin(m)} className={`${menuPill} text-ink`}>
+                {isPinned ? <PinOff className="size-4" /> : <Pin className="size-4" />}{isPinned ? 'მოხსნა' : 'მიმაგრება'}
+              </button>
+            )}
+            {forwardable && (
+              <button type="button" onClick={() => { setActive(null); setForwarding(m); }} className={`${menuPill} text-ink`}>
+                <Forward className="size-4" />გადაგზავნა
               </button>
             )}
             {canDel && (
@@ -710,7 +773,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
         return (
           <React.Fragment key={m.id}>
             {dayLine}
-            <div className={`group flex items-end gap-1 ${mine ? 'justify-end' : 'justify-start'} ${first ? 'mt-3' : 'mt-1'}`}>
+            <div data-mid={m.id} className={`group flex items-end gap-1 rounded-tile transition-colors duration-500 ${lit === m.id ? 'bg-gold/20' : ''} ${mine ? 'justify-end' : 'justify-start'} ${first ? 'mt-3' : 'mt-1'}`}>
               {mine && canDel && <HoverDelete onClick={() => askRemove(m)} />}
               <div className={`${card ? 'w-[88%] max-w-[360px]' : 'max-w-[82%]'} flex flex-col ${mine ? 'items-end' : 'items-start'}`}>
                 {named && first && !mine && (
@@ -763,6 +826,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                     <FileBubble m={m} base={base} mine={mine} stamp={stamp} meta={sentAt(m)} />
                   ) : m.kind === 'voice' ? (
                     <div className="py-1">
+                      {m.text && <p className={`mb-1 max-w-[260px] break-words text-meta font-bold ${mine ? 'text-white' : 'text-ink'}`}>{m.text}</p>}
                       <VoicePlayer seconds={m.seconds} wave={m.wave} onDark={mine} getUrl={() => loadVoiceUrl(base, m)} meta={sentAt(m)} />
                     </div>
                   ) : big ? (
@@ -794,13 +858,36 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       })()}
       </>
   )), [messages, loading, error, listTop, active, seenId, lastCallId, callLive, callTitle, readOnly, showNames, staffLabel, onCallBack,
-    author.uid, base, isCall, canDelete, renderCard, personOpener, onOpenGame, onJoinCall, onDelete]); // eslint-disable-line react-hooks/exhaustive-deps
+    author.uid, base, isCall, canDelete, renderCard, personOpener, onOpenGame, onJoinCall, onDelete, canPin, pinIds, lit]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const pill = 'min-h-tap-lg rounded-full bg-surf flex items-center';
 
   return (
     <section className={`bg-page text-ink ${fill ? 'h-full flex flex-col' : 'rounded-card overflow-hidden'}`}>
       {header}
+
+      {top.pinned.length > 0 && (() => {
+        const i = pinAt % top.pinned.length;
+        const p = top.pinned[i];
+        return (
+          <div className="mx-2 mt-1 flex min-h-tap items-center gap-1 rounded-field bg-surf pl-3 pr-1 shadow-lift sm:mx-4">
+            <button
+              type="button"
+              onClick={() => { goToPin(p); setPinAt(i + 1); }}
+              aria-label={`მიმაგრებული ${i + 1} / ${top.pinned.length}: ${pinPreview(p)}`}
+              className="flex min-h-tap min-w-0 flex-1 cursor-pointer items-center gap-2 text-left"
+            >
+              <Pin className="size-4 shrink-0 text-wine" aria-hidden="true" />
+              {top.pinned.length > 1 && <span className="shrink-0 text-cap font-bold tabular-nums text-wine">{i + 1}/{top.pinned.length}</span>}
+              <span className="min-w-0 truncate text-meta font-semibold text-ink">{pinPreview(p)}</span>
+            </button>
+            <button type="button" onClick={() => setPinsOpen(true)} aria-label="ყველა მიმაგრებული"
+              className="flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-mut active:scale-95">
+              <ChevronDown className="size-5" />
+            </button>
+          </div>
+        );
+      })()}
 
       <div
         ref={list}
@@ -814,6 +901,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       </div>
 
       {err && <p className="px-5 pt-3 text-meta text-danger">{err}</p>}
+      {note && <p role="status" className="px-5 pt-3 text-meta font-semibold text-leaf">{note}</p>}
 
       {emojiOpen && !readOnly && mode.k === 'idle' && (
         <div className="px-3 pt-2 sm:px-4">
@@ -831,7 +919,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       {readOnly ? (
         <p className="px-5 py-4 text-center text-meta text-mut">მხოლოდ სანახავად</p>
       ) : (
-      <div className="px-2 py-2.5 sm:px-4 flex items-end gap-1.5">
+      <div className="px-2 py-2.5 sm:px-4 flex flex-wrap items-end gap-1.5">
         {mode.k === 'idle' && upload && (
           <div className={`${pill} flex-1 min-w-0 justify-center gap-2 px-4 text-meta text-mut`}>
             <Loader2 className="w-4 h-4 shrink-0 animate-spin" />
@@ -921,6 +1009,19 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
 
         {mode.k === 'preview' && (
           <>
+            {/* a title or an instruction over the voice message, before it goes (one quiet line; may stay empty) */}
+            <div className="basis-full px-1 pb-1.5">
+              <input
+                value={voiceTitle}
+                onChange={e => setVoiceTitle(e.target.value)}
+                maxLength={VOICE_TITLE_MAX}
+                enterKeyHint="send"
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); void sendTake(); } }}
+                placeholder="სათაური ან მითითება (არ არის აუცილებელი)"
+                aria-label="ხმოვანის სათაური"
+                className="block h-10 w-full rounded-full bg-surf px-4 text-meta text-ink placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-wine/35"
+              />
+            </div>
             <RoundButton size={48} label="წაშლა" onClick={discardTake} className="text-danger"><Trash2 /></RoundButton>
             <div className={`${pill} flex-1 min-w-0 px-1`}>
               <VoicePlayer seconds={mode.take.seconds} wave={mode.take.wave} getUrl={() => Promise.resolve(mode.url)} />
@@ -932,6 +1033,39 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       )}
 
       <QuickSheet open={quickOpen} quick={quick} onPick={setQuick} onClose={() => setQuickOpen(false)} />
+      {/* every pinned message: a voice plays right here; a tap on the rest goes to it; ✕ takes the pin off */}
+      <Sheet open={pinsOpen} onClose={() => setPinsOpen(false)} title={`მიმაგრებული · ${top.pinned.length}`}>
+        <ul className="flex flex-col gap-1.5 pb-1">
+          {top.pinned.map(p => (
+            <li key={p.id} className="flex items-center gap-2 rounded-field bg-surf py-1.5 pl-3 pr-1">
+              {p.kind === 'voice' ? (
+                <div className="min-w-0 flex-1">
+                  {p.text && <p className="truncate text-meta font-bold text-ink">{p.text}</p>}
+                  <VoicePlayer seconds={p.seconds} wave={p.wave} getUrl={() => loadVoiceUrl(base, p)} meta={senderName(p.name)} />
+                </div>
+              ) : (
+                <button type="button" onClick={() => { setPinsOpen(false); window.setTimeout(() => goToPin(p), 250); }}
+                  className="min-h-tap min-w-0 flex-1 cursor-pointer text-left">
+                  <span className="line-clamp-2 break-words text-lead text-ink">{pinPreview(p)}</span>
+                  <span className="block text-cap text-mut">{senderName(p.name)}{p.at ? ` · ${sentAt(p)}` : ''}</span>
+                </button>
+              )}
+              {canPin && (
+                <button type="button" onClick={() => togglePin(p)} aria-label="მიმაგრების მოხსნა"
+                  className="flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-mut active:scale-95">
+                  <PinOff className="size-[18px]" />
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      </Sheet>
+      {forwarding && (
+        <React.Suspense fallback={null}>
+          <ForwardSheet m={forwarding} fromBase={base} onClose={() => setForwarding(null)}
+            onDone={n => { setForwarding(null); setNote(n > 1 ? `გაიგზავნა ${n} ჩათში` : 'გაიგზავნა'); }} />
+        </React.Suspense>
+      )}
       {onAttach && (
         <Sheet open={plusOpen} onClose={() => setPlusOpen(false)} title="გაგზავნა">
           <div className="flex flex-col gap-2 pb-1">
