@@ -18,6 +18,7 @@ export type AdminStep =
   | { at: 'classes'; archive: boolean }
   | { at: 'teachers' }
   | { at: 'deleted' }
+  | { at: 'chants' }
   | { at: 'school'; part: SchoolPart | null };
 
 const SUBS: PersonSub[] = ['data', 'classes', 'role', 'access', 'note', 'albums', 'edit'];
@@ -28,6 +29,7 @@ export const stepOf = (item: string | null | undefined): AdminStep => {
   if (item === 'pick') return { at: 'pick' };
   if (item === 'teachers') return { at: 'teachers' };
   if (item === 'deleted') return { at: 'deleted' };
+  if (item === 'chants') return { at: 'chants' };
   if (item === 'classes' || item === 'classes~archive') return { at: 'classes', archive: item.endsWith('archive') };
   if (item === 'people' || item.startsWith('people~')) return { at: 'people', filter: (item.split('~')[1] || 'all') as Filter };
   if (item.startsWith('p/')) {
