@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, BookOpen, CalendarCheck, ChevronDown, Eye, EyeOff, Loader2, MessageCircle, PenLine, Search, X } from 'lucide-react';
+import { ArrowLeft, BookOpen, CalendarCheck, ChevronDown, EyeOff, Loader2, MessageCircle, Search, X } from 'lucide-react';
 import { Waiting } from '../../../components/shell/PageSkeleton';
 import { useAuth, useNavigation } from '../../../context';
 import { useMyClasses, useTeachingClasses, useAllClasses } from '../../../hooks/useClasses';
@@ -22,7 +22,7 @@ import { ClassLogo } from '../../../components/classes/ClassLogo';
 import { ClassChat } from '../../../components/classes/ClassChat';
 import { AdminAvatar } from '../../DirectChatPage';
 import {
-  Avatar, cx, Dot, Helper, PageHead, Press, RoundButton, Row, Rows, SectionLabel, Sheet,
+  Avatar, cx, Dot, FOCUS, Helper, PageHead, Press, RoundButton, Row, Rows, SectionLabel, Sheet,
 } from '../../../components/ui2';
 import { DmChat } from './DmChat';
 import { BirthdaysSoon } from '../../../components/home/BirthdaysSoon';
@@ -34,8 +34,8 @@ import { useLongPress } from '../../../hooks/useLongPress';
 import { TimetableSheet } from '../klasi/teacher/Timetable';
 import { usePearlTotals } from './usePearlTotals';
 
-// the psalter group, unfolded under the list's head (its round 📖 by the 👁) — loaded only when it opens
 const AttendanceSheet = React.lazy(() => import('../daswreba/AttendanceSheet').then(m => ({ default: m.AttendanceSheet })));
+// the psalter group, unfolded under the list's head (its „📖 ფს.ჯ.“ button) — loaded only when it opens
 const PsalterFold = React.lazy(() => import('../psalmuni/PsalterScreen').then(m => ({ default: m.PsalterFold })));
 
 // the class's program, unfolded under the class chat's head — loaded only when it opens
@@ -89,7 +89,8 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
   const known = isAdmin ? [...mine, ...everyClass.filter(c => !mine.some(m => m.id === c.id))] : mine;
 
   const { threads, loading } = useInbox(uid, isAdmin);
-  const [overview, setOverview] = useState(false);
+  // the 👁 (all chats, only to look) left the head (2026-11-22) — the view stays off
+  const [overview] = useState(false);
   const all = useAllThreads(isSuperAdmin && overview);
   const cards = useTeacherCards(!!uid);
   const kidsMode = useKidsMode();
@@ -488,17 +489,6 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
     <DmChat key={open} id={open} classes={known} wide={wide} onBack={handleGoBack} />
   );
 
-  const eye = isSuperAdmin && (
-    <RoundButton
-      label="ყველა ჩათი — მხოლოდ სანახავად"
-      tone={overview ? 'wine' : 'surf'}
-      aria-pressed={overview}
-      onClick={() => setOverview(v => !v)}
-    >
-      <Eye aria-hidden="true" />
-    </RoundButton>
-  );
-
   const list = (
     <div className="flex min-w-0 flex-col gap-3 pb-4 lg:min-h-0 lg:overflow-y-auto">
       {/* since 2026-11-21 the list has its „უკან“ (the phone's bottom menu is gone); a computer keeps its top bar */}
@@ -515,14 +505,24 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
             {leading.length > 0 && !overview && (
               <RoundButton label="დასწრება" onClick={() => setAttOpen(true)}><CalendarCheck aria-hidden="true" /></RoundButton>
             )}
+            {/* the 👁 and ✎ went; the psalter group's 📖 has „ფს.ჯ.“ beside it (2026-11-22, the user: „ეს ღილაკები მოხსენი ხოლო
+                იმას ფს.ჯ. დაუწერე გვერდთან“) */}
             {psalterOn && !overview && (
-              <RoundButton label={psalterOpen ? 'ფსალმუნთა ჯგუფის დაკეცვა' : 'ფსალმუნთა ჯგუფი'} tone={psalterOpen ? 'wine' : 'surf'}
-                aria-expanded={psalterOpen} onClick={() => setPsalterOpen(v => !v)}>
-                <BookOpen aria-hidden="true" />
-              </RoundButton>
+              <Press
+                aria-label={psalterOpen ? 'ფსალმუნთა ჯგუფის დაკეცვა' : 'ფსალმუნთა ჯგუფი'}
+                title={psalterOpen ? 'ფსალმუნთა ჯგუფის დაკეცვა' : 'ფსალმუნთა ჯგუფი'}
+                aria-expanded={psalterOpen}
+                onClick={() => setPsalterOpen(v => !v)}
+                className={cx(
+                  'flex h-tap shrink-0 cursor-pointer items-center gap-1.5 rounded-full pr-4 pl-3.5 select-none transition active:scale-95',
+                  psalterOpen ? 'bg-wine text-white active:bg-wine-deep' : 'bg-surf text-ink active:bg-soft',
+                  FOCUS,
+                )}
+              >
+                <BookOpen aria-hidden="true" className="size-5" />
+                <span className="text-body leading-none font-semibold whitespace-nowrap">ფს.ჯ.</span>
+              </Press>
             )}
-            {eye}
-            {!overview && <RoundButton label="ახალი წერილი" tone="wine" onClick={() => setWriting(true)}><PenLine aria-hidden="true" /></RoundButton>}
           </>
         )}
       />
