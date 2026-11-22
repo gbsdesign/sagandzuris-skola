@@ -102,6 +102,32 @@ const GroupScreen: React.FC<{ group: PsalterGroup; cls: Cls; canLead: boolean; g
   );
 };
 
+/** The group unfolded under the „სწავლა“ list's head (2026-11-22, the user: „ფსალმუნთა ჯგუფი … დაბლა შლიდეს მათთვის ვინც
+ *  ფსალმუნთა ჯგუფშია“): the page's Body without its bar; „ვინ რომელ კანონს“ and „ეს წრე“ open the page `psalter` on them. */
+export const PsalterFold: React.FC = () => {
+  const t = useGroupTarget();
+  if (!t.user || t.loading) return <Waiting field={false} rows={3} quiet />;
+  if (!t.group) return null;
+  return <FoldBody key={t.group.id} group={t.group} canLead={t.canLead} groups={t.groups} />;
+};
+
+const FoldBody: React.FC<{ group: PsalterGroup; canLead: boolean; groups: PsalterGroup[] }> = ({ group, canLead, groups }) => {
+  const { user } = useAuth();
+  const uid = user!.uid;
+  const g = useGroupNow(group, uid);
+  const { navigateTo, openMapItem } = useNavigation();
+  if (!g.cycle) return null;
+  const onPage = (item: string) => { navigateTo('psalter'); openMapItem(item); };
+  return (
+    <div className="flex flex-col gap-3">
+      {groups.length > 1 && (
+        <Chips label="ჯგუფი" items={groups.map(x => ({ id: x.id, label: x.name }))} value={group.id} onChange={openPsalterGroup} />
+      )}
+      <Body group={group} uid={uid} canLead={canLead} now={g} onDist={() => onPage(PSALTER_DIST)} onHistory={() => onPage(PSALTER_HISTORY)} />
+    </div>
+  );
+};
+
 type Now = ReturnType<typeof useGroupNow>;
 
 export const Body: React.FC<{ group: PsalterGroup; uid: string; canLead: boolean; now: Now; onDist: () => void; onHistory: () => void }> = ({

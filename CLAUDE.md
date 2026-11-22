@@ -2273,6 +2273,10 @@ Pending small tasks the user mentioned: remove the old Drive `ნოტები
   administration's side shows their pearls (`usePearlTotals`: items with a voice marked, each student's record read once in 3 min;
   a softly shining `PearlIcon` + the number, under the date). The private chat's head: the name and its small line on one line each;
   „ავტ.პროგ.“ is only its sign now — a round 👩‍🏫 button (the user picked that emoji), no words.
+- **The psalter group on the „სწავლა“ list (2026-11-22**, the user: „ამას მინდა დაბლა შლიდეს მათთვის ვინც ფსალმუნთა ჯგუფშია სწავლის
+  გვერდით“): a round 📖 before the 👁 (anyone in a group — `useMyPsalterGroups` —, while section `medavitneoba` is open) unfolds
+  `PsalterFold` (PsalterScreen.tsx: the page's `Body` without its bar, lazy) under the head; „ვინ რომელ კანონს“ / „ეს წრე“ open page
+  `psalter` on them.
 - **The whole path in the chat's fold (2026-11-21 night**, the user: „გზას რომ ჩახსნიდი … ჩამოსაშლელად პირდაპირ ჩათში“, answer „მთელი
   გზა, როგორც გზის გვერდზე“): `ChatPath` — the student's own side unfolds the whole „საგანძური“ page (`SagandzuriPage bare`, lazy: no
   bar, the ✎ by „ჩემი საგალობლები“; numbers, assignments, chips, flights, ოსტატობა); the teacher's side keeps its ჩათვლა / დამატება /
