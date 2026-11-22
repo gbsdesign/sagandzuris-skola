@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, ChevronDown, Eye, EyeOff, Loader2, MessageCircle, PenLine, Search, X } from 'lucide-react';
+import { ArrowLeft, BookOpen, ChevronDown, Eye, EyeOff, Loader2, MessageCircle, PenLine, Search, X } from 'lucide-react';
 import { Waiting } from '../../../components/shell/PageSkeleton';
 import { useAuth, useNavigation } from '../../../context';
 import { useMyClasses, useTeachingClasses, useAllClasses } from '../../../hooks/useClasses';
+import { useMyPsalterGroups } from '../../../hooks/usePsalter';
+import { useAccess } from '../../../hooks/useAccess';
 import type { SchoolClass } from '../../../hooks/useClasses';
 import { useKidsMode } from '../../../hooks/useAccess';
 import {
@@ -31,6 +33,9 @@ import { AssistantButton } from '../damkhmare/AssistantButton';
 import { useLongPress } from '../../../hooks/useLongPress';
 import { TimetableSheet } from '../klasi/teacher/Timetable';
 import { usePearlTotals } from './usePearlTotals';
+
+// the psalter group, unfolded under the list's head (its round 📖 by the 👁) — loaded only when it opens
+const PsalterFold = React.lazy(() => import('../psalmuni/PsalterScreen').then(m => ({ default: m.PsalterFold })));
 
 // the class's program, unfolded under the class chat's head — loaded only when it opens
 const ClassProgramFold = React.lazy(() => import('../klasi/ProgramTab').then(m => ({ default: m.ProgramTab })));
@@ -119,6 +124,11 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
   const [moreOf, setMoreOf] = useState<string | null>(null);
   // the class whose program is unfolded under its chat's head („პროგრამა“; another chat opens folded)
   const [programIn, setProgramIn] = useState('');
+  // the psalter group under the list's head: for those in a group, while its section is open
+  const access = useAccess();
+  const { groups: psalterGroups } = useMyPsalterGroups(uid);
+  const psalterOn = psalterGroups.length > 0 && access.section('medavitneoba') === 'open';
+  const [psalterOpen, setPsalterOpen] = useState(false);
   const nameHold = useLongPress(() => { if (moreFor) setMoreOf(moreFor); });
   const classUnread = (c: SchoolClass) => isClassUnread(lasts[c.id], seen[c.id], uid) && open !== CLASS_PREFIX + c.id;
   const dmUnread = (t: DirectThread) => isUnread(t, uid) && open !== t.id;
@@ -498,11 +508,22 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
         )}
         right={(
           <>
+            {psalterOn && !overview && (
+              <RoundButton label={psalterOpen ? 'ფსალმუნთა ჯგუფის დაკეცვა' : 'ფსალმუნთა ჯგუფი'} tone={psalterOpen ? 'wine' : 'surf'}
+                aria-expanded={psalterOpen} onClick={() => setPsalterOpen(v => !v)}>
+                <BookOpen aria-hidden="true" />
+              </RoundButton>
+            )}
             {eye}
             {!overview && <RoundButton label="ახალი წერილი" tone="wine" onClick={() => setWriting(true)}><PenLine aria-hidden="true" /></RoundButton>}
           </>
         )}
       />
+      {psalterOn && psalterOpen && !overview && (
+        <React.Suspense fallback={<Waiting field={false} rows={3} quiet />}>
+          <PsalterFold />
+        </React.Suspense>
+      )}
       {!brandNew && <SearchLine value={q} onChange={setQ} />}
       {!brandNew && chips.length > 0 && <div><ClassPick classes={chips} chip={chip} onPick={setChip} unreadIn={unreadIn} /></div>}
       {err && <p role="alert" className="px-1.5 text-body text-danger">{err}</p>}
