@@ -2324,7 +2324,8 @@ Pending small tasks the user mentioned: remove the old Drive `ნოტები
   bigger (22 px, `text-body`), and a tap on them opens that student's path page (`ChatRow onPearls` → `openStudent` + `studentItem
   …'gza'`). The field's signs (`ToolSign`) never take the focus on the way down — the keyboard closing under the finger used to
   lose the tap (the cog „did nothing“); the field lets go only once the tap has landed. The psalter card's 📖 and „წავიკითხე“
-  stand up beside the title before the ✎ (`Hero aside`, `HeroButton small`), the ✎ 20 % smaller (29 px).
+  stand up beside the title before the ✎ (`Hero aside`, `HeroButton small`), the ✎ 20 % smaller (29 px). The private chat (`DmChat`) has the same cog after
+  the microphone for teachers and admins (`extraTool`, `openAssistant({ classId, page: 'dm' })`); its 👩‍🏫 up top stays the day lesson.
 - **The whole path in the chat's fold (2026-11-21 night**, the user: „გზას რომ ჩახსნიდი … ჩამოსაშლელად პირდაპირ ჩათში“, answer „მთელი
   გზა, როგორც გზის გვერდზე“): `ChatPath` — the student's own side unfolds the whole „საგანძური“ page (`SagandzuriPage bare`, lazy: no
   bar, the ✎ by „ჩემი საგალობლები“; numbers, assignments, chips, flights, ოსტატობა); the teacher's side keeps its ჩათვლა / დამატება /
