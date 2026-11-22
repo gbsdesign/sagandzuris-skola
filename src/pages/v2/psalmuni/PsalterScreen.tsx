@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { BookOpen, Bell, CalendarDays, Check, LifeBuoy, LogOut, MoreHorizontal, PenLine, Pencil, Undo2, Users } from 'lucide-react';
+import { BookOpen, Bell, CalendarDays, Check, LifeBuoy, LogOut, PenLine, Pencil, Settings2, Undo2, Users } from 'lucide-react';
 import { useLongPress } from '../../../hooks/useLongPress';
 import { Waiting } from '../../../components/shell/PageSkeleton';
 import { useNavigation } from '../../../context';
@@ -75,7 +75,6 @@ const GroupScreen: React.FC<{ group: PsalterGroup; cls: Cls; canLead: boolean; g
   const uid = user!.uid;
   const { handleGoBack } = useNavigation();
   const g = useGroupNow(group, uid);
-  const [params, setParams] = useState(false);
   const { cycle } = g;
   const { openMapItem } = useNavigation();
 
@@ -89,16 +88,12 @@ const GroupScreen: React.FC<{ group: PsalterGroup; cls: Cls; canLead: boolean; g
         title="ფსალმუნთა ჯგუფი"
         sub={`${cls?.name || group.name} · ${group.memberIds.length} წევრი`}
         onBack={handleGoBack}
-        right={canLead ? <RoundButton label="ჯგუფის პარამეტრები" onClick={() => setParams(true)}><MoreHorizontal /></RoundButton> : undefined}
       />
       {groups.length > 1 && (
         <Chips label="ჯგუფი" items={groups.map(x => ({ id: x.id, label: x.name }))} value={group.id} onChange={openPsalterGroup} />
       )}
-      <Body group={group} uid={uid} canLead={canLead} now={g} onDist={() => openMapItem(PSALTER_DIST)} onHistory={() => openMapItem(PSALTER_HISTORY)} />
-      {canLead && (
-        <ParamsSheet open={params} onClose={() => setParams(false)} group={group} cls={cls}
-          onDistribute={() => { setParams(false); openMapItem(PSALTER_DIST); }} onDeleted={() => { setParams(false); handleGoBack(); }} />
-      )}
+      <Body group={group} uid={uid} canLead={canLead} now={g} onDist={() => openMapItem(PSALTER_DIST)} onHistory={() => openMapItem(PSALTER_HISTORY)}
+        cls={cls} onDeleted={handleGoBack} />
     </div>
   );
 };
@@ -131,8 +126,12 @@ const FoldBody: React.FC<{ group: PsalterGroup; canLead: boolean; groups: Psalte
 
 type Now = ReturnType<typeof useGroupNow>;
 
-export const Body: React.FC<{ group: PsalterGroup; uid: string; canLead: boolean; now: Now; onDist: () => void; onHistory: () => void }> = ({
-  group, uid, canLead, now, onDist, onHistory,
+export const Body: React.FC<{
+  group: PsalterGroup; uid: string; canLead: boolean; now: Now; onDist: () => void; onHistory: () => void;
+  /** the group's settings live behind the ✎ too (2026-11-22, the user: „ჯგუფის ყველა პარამეტრი … ფანქარში“) */
+  cls?: Cls; onDeleted?: () => void;
+}> = ({
+  group, uid, canLead, now, onDist, onHistory, cls, onDeleted,
 }) => {
   const { openPrayer } = useNavigation();
   const { cycle, slots, owners, mine, takenFromMe, helpWanted } = now;
@@ -144,6 +143,7 @@ export const Body: React.FC<{ group: PsalterGroup; uid: string; canLead: boolean
   const [pick, setPick] = useState<number | null | false>(false); // false = closed, null = open with nothing chosen
   const [leaving, setLeaving] = useState(false);
   const [more, setMore] = useState(false);
+  const [params, setParams] = useState(false);
   const isMember = group.memberIds.includes(uid);
   const read = readCount(slots);
   const othersHelp = helpWanted.filter(h => h.by !== uid);
@@ -292,6 +292,10 @@ export const Body: React.FC<{ group: PsalterGroup; uid: string; canLead: boolean
         <Rows>
           {rowDist}
           {rowCycle}
+          {canLead && (
+            <Row lead={<Dot icon={<Settings2 />} />} title="ჯგუფის პარამეტრები" sub="სახელი, წრე, შეხსენება, წაშლა"
+              onClick={() => { setMore(false); setParams(true); }} />
+          )}
           {isMember && helpable && focus !== undefined && (
             <ToggleRow lead={<Dot icon={<LifeBuoy />} />} title="ვერ ვკითხულობ" sub="ჯგუფს დახმარებას სთხოვ"
               on={!!slots[focus]?.help} disabled={actions.busy === focus}
@@ -309,6 +313,11 @@ export const Body: React.FC<{ group: PsalterGroup; uid: string; canLead: boolean
         </Rows>
         {isMember && !pushSupported() && <Note>ეს ბრაუზერი შეტყობინებებს ვერ მიიღებს. iPhone-ზე ჯერ დაამატე საიტი მთავარ ეკრანზე.</Note>}
       </Sheet>
+
+      {canLead && (
+        <ParamsSheet open={params} onClose={() => setParams(false)} group={group} cls={cls ?? undefined}
+          onDistribute={() => { setParams(false); onDist(); }} onDeleted={() => { setParams(false); onDeleted?.(); }} />
+      )}
 
       {isMember && !canLead && (
         <Press disabled={leaving} onClick={async () => {
