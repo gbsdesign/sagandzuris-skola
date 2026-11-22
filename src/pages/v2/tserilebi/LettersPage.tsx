@@ -32,6 +32,9 @@ import { useLongPress } from '../../../hooks/useLongPress';
 import { TimetableSheet } from '../klasi/teacher/Timetable';
 import { usePearlTotals } from './usePearlTotals';
 
+// the class's program, unfolded under the class chat's head — loaded only when it opens
+const ClassProgramFold = React.lazy(() => import('../klasi/ProgramTab').then(m => ({ default: m.ProgramTab })));
+
 const MONTHS = ['იან', 'თებ', 'მარ', 'აპრ', 'მაი', 'ივნ', 'ივლ', 'აგვ', 'სექ', 'ოქტ', 'ნოე', 'დეკ'];
 // today: the time; earlier: the day and a short month („10 ნოე“) — one short line at a row's end
 const when = (d: Date | null) => {
@@ -114,6 +117,8 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
   const [timesOf, setTimesOf] = useState<string | null>(null);
   // the open class chat: its „მეტი“ (the name held long) and the program's cog
   const [moreOf, setMoreOf] = useState<string | null>(null);
+  // the class whose program is unfolded under its chat's head („პროგრამა“; another chat opens folded)
+  const [programIn, setProgramIn] = useState('');
   const nameHold = useLongPress(() => { if (moreFor) setMoreOf(moreFor); });
   const classUnread = (c: SchoolClass) => isClassUnread(lasts[c.id], seen[c.id], uid) && open !== CLASS_PREFIX + c.id;
   const dmUnread = (t: DirectThread) => isUnread(t, uid) && open !== t.id;
@@ -426,11 +431,22 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
         fill
         timetable={false}
         under={(
-          <ClassChatTools
-            end={moreFor ? <AssistantButton classId={openCls.id} /> : undefined}
-            program={() => classOn(openCls.id, 'program')}
-            members={moreFor ? () => classOn(openCls.id, 'people') : undefined}
-          />
+          <>
+            <ClassChatTools
+              end={moreFor ? <AssistantButton classId={openCls.id} /> : undefined}
+              program={() => setProgramIn(programIn === openCls.id ? '' : openCls.id)}
+              programOpen={programIn === openCls.id}
+              members={moreFor ? () => classOn(openCls.id, 'people') : undefined}
+            />
+            {/* the program unfolds here, under the head, and scrolls inside (the chat stays below it) */}
+            {programIn === openCls.id && (
+              <div className="mt-1.5 flex max-h-[60dvh] flex-col gap-2.5 overflow-x-hidden overflow-y-auto overscroll-contain pb-1">
+                <React.Suspense fallback={<Waiting field={false} rows={3} quiet />}>
+                  <ClassProgramFold cls={openCls} canEdit={!!moreFor} />
+                </React.Suspense>
+              </div>
+            )}
+          </>
         )}
         title={
           <div className="flex min-w-0 flex-1 items-center gap-2.5">
