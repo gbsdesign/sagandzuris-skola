@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Bookmark, BookmarkCheck, CalendarDays, Check, ChevronLeft, GraduationCap, ListPlus, UserRound, Users } from 'lucide-react';
+import { Bookmark, BookmarkCheck, CalendarDays, Check, ChevronLeft, GraduationCap, ListPlus, Search, UserRound, Users } from 'lucide-react';
 import { FieldPath, deleteField, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../../firebase';
 import { useAuth, useChants } from '../../../context';
@@ -25,7 +25,7 @@ import { errorText } from '../../../utils/errorText';
 type Step = { at: 'main' } | { at: 'classes' } | { at: 'class'; cls: SchoolClass } | { at: 'loose' };
 /** a member's path: has it / hasn't / could not be read */
 type Has = 'yes' | 'no' | 'err';
-type Person = { uid: string; name: string; photo?: string };
+type Person = { uid: string; name: string; photo?: string; cls?: string };
 
 
 export const VersionMenu: React.FC<{ chant: ChantItem; variant: ChantVariant; hasNotes: boolean; onClose: () => void }> = ({ chant, variant, hasNotes, onClose }) => {
@@ -40,7 +40,8 @@ export const VersionMenu: React.FC<{ chant: ChantItem; variant: ChantVariant; ha
   const [busy, setBusy] = useState('');
   const [has, setHas] = useState<Record<string, Has>>({});
   const [find, setFind] = useState('');
-  const { people } = useDirectory(isAdmin && step.at === 'loose');
+  const q = find.trim().toLowerCase();
+  const { people } = useDirectory(isAdmin && (step.at === 'loose' || (step.at === 'classes' && !!q)));
 
   const id = variant.id;
   const title = versionTitle(chant, variant);
@@ -55,19 +56,35 @@ export const VersionMenu: React.FC<{ chant: ChantItem; variant: ChantVariant; ha
   const loose = useMemo<Person[]>(() => {
     if (step.at !== 'loose') return [];
     const inClass = new Set(classes.flatMap(c => [...c.memberIds, ...c.teacherIds]));
-    const q = find.trim().toLowerCase();
     return people
       .filter(p => !inClass.has(p.uid) && p.uid !== user?.uid)
       .map(p => ({ uid: p.uid, name: shownName(p), photo: p.photoURL }))
       .filter(p => !q || p.name.toLowerCase().includes(q));
-  }, [step.at, people, classes, find, user?.uid]);
+  }, [step.at, people, classes, q, user?.uid]);
+
+  // the magnifier on the class list (2026-11-22, the user: „წევრის ან კლასის მოძებნის ლუპა … პირდაპირ მივამაგრო“): classes by name,
+  // and members — of my classes, and for an admin everyone — each pinned right from the result
+  const foundClasses = step.at === 'classes' && q ? classes.filter(c => c.name.toLowerCase().includes(q)) : classes;
+  const found = useMemo<Person[]>(() => {
+    if (step.at !== 'classes' || !q) return [];
+    const byUid = new Map<string, Person>();
+    for (const c of classes) for (const m of c.members) {
+      if (!byUid.has(m.uid)) byUid.set(m.uid, { uid: m.uid, name: kaName(m.name), photo: m.photoURL, cls: c.name });
+    }
+    for (const p of people) {
+      if (!byUid.has(p.uid)) byUid.set(p.uid, { uid: p.uid, name: shownName(p), photo: p.photoURL });
+    }
+    byUid.delete(user?.uid ?? '');
+    return [...byUid.values()].filter(p => p.name.toLowerCase().includes(q)).slice(0, 30);
+  }, [step.at, q, classes, people, user?.uid]);
 
   // a class's members: whether each has this version on their path, read once the class opens
-  const classUids = step.at === 'class' ? step.cls.members.map(m => m.uid).join(',') : '';
+  const classUids = step.at === 'class' ? step.cls.members.map(m => m.uid).join(',') : step.at === 'classes' ? found.map(p => p.uid).join(',') : '';
   useEffect(() => {
     if (!classUids) return;
     let live = true;
     for (const uid of classUids.split(',')) {
+      if (has[uid] === 'yes' || has[uid] === 'no') continue;
       getDoc(doc(db, 'students', uid)).then(
         s => { if (live) setHas(h => ({ ...h, [uid]: (s.data()?.selectedChantVariants ?? {})[id] ? 'yes' : 'no' })); },
         () => { if (live) setHas(h => ({ ...h, [uid]: 'err' })); },
@@ -116,7 +133,8 @@ export const VersionMenu: React.FC<{ chant: ChantItem; variant: ChantVariant; ha
 
   const personRow = (p: Person) => {
     const h = has[p.uid];
-    const sub = busy === p.uid ? 'ინახება…' : h === 'yes' ? 'გზაზეა — შეხებით ამოვა' : h === 'no' ? 'შეხებით ჩაჯდება გზაზე' : h === 'err' ? 'ვერ წავიკითხე — შეხებით სცადე' : step.at === 'class' ? '…' : undefined;
+    const state = busy === p.uid ? 'ინახება…' : h === 'yes' ? 'გზაზეა — შეხებით ამოვა' : h === 'no' ? 'შეხებით ჩაჯდება გზაზე' : h === 'err' ? 'ვერ წავიკითხე — შეხებით სცადე' : step.at !== 'loose' ? '…' : undefined;
+    const sub = [p.cls, state].filter(Boolean).join(' · ') || undefined;
     return (
       <Row key={p.uid} lead={<Avatar name={p.name} photo={p.photo} size={40} />} title={p.name} sub={sub}
         right={h === 'yes' ? <Check className="size-5 shrink-0 text-leaf" aria-label="გზაზეა" /> : null}
@@ -160,8 +178,27 @@ export const VersionMenu: React.FC<{ chant: ChantItem; variant: ChantVariant; ha
         )}
 
         {step.at === 'classes' && (
+          <label className="flex h-[52px] shrink-0 items-center gap-2.5 rounded-full bg-surf px-[18px] focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-wine/60">
+            <Search className="size-5 shrink-0 text-mut" aria-hidden="true" />
+            <input type="search" value={find} onChange={e => setFind(e.target.value)} placeholder="კლასი ან წევრი"
+              aria-label="კლასის ან წევრის ძებნა" className="h-full w-full min-w-0 bg-transparent text-lead text-ink outline-none placeholder:text-faint" />
+          </label>
+        )}
+
+        {step.at === 'classes' && q && found.length > 0 && (
+          <>
+            <SectionLabel label={<span className="flex items-center gap-1.5"><UserRound className="size-4" aria-hidden="true" />წევრები — შეხებით გზაზე</span>} />
+            <Rows>{found.map(personRow)}</Rows>
+          </>
+        )}
+
+        {step.at === 'classes' && q && found.length === 0 && foundClasses.length === 0 && <Helper>ვერ მოიძებნა.</Helper>}
+
+        {step.at === 'classes' && q && foundClasses.length > 0 && <SectionLabel label="კლასები" />}
+
+        {step.at === 'classes' && (foundClasses.length > 0 || (isAdmin && !q)) && (
           <Rows>
-            {classes.map(cls => {
+            {foundClasses.map(cls => {
               const there = cls.program.some(p => p.id === id);
               return (
                 <Row key={cls.id} lead={<ClassLogo name={cls.name} logo={cls.logo} className="size-10 shrink-0" />} title={cls.name}
@@ -169,7 +206,7 @@ export const VersionMenu: React.FC<{ chant: ChantItem; variant: ChantVariant; ha
                   onClick={() => go({ at: 'class', cls })} />
               );
             })}
-            {isAdmin && (
+            {isAdmin && !q && (
               <Row lead={<Dot icon={<Users />} />} title="კლასის გარეშე წევრები" onClick={() => go({ at: 'loose' })} />
             )}
           </Rows>
