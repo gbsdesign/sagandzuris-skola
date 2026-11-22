@@ -13,5 +13,17 @@
         "CA:1D:78:08:5A:D0:61:D6:DC:BD:CB:85:F8:35:98:BD:52:F8:B2:77:8E:67:88:DC:80:60:A9:6B:D2:69:EA:B7"
       ]
     }
+  },
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "ge.sagandzureli.skola",
+      "sha256_cert_fingerprints": [
+        "F8:14:8D:9C:6B:93:D2:CC:87:17:29:C3:AF:22:28:41:0B:59:D8:00:ED:E3:6E:94:D6:3D:0F:35:70:EF:D1:E5"
+      ]
+    }
   }
 ]

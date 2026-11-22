@@ -4,12 +4,17 @@
 // phone's Chrome never thinks it is the app.
 
 export const APP_PACKAGE = 'ge.sagandzureli.app';
+/** the new Play app (2026-11-22: the old one's upload key was lost) — „საგანძურის სკოლა“ */
+export const NEW_APP_PACKAGE = 'ge.sagandzureli.skola';
+/** the package of the app this page runs in: the app says it (`sgApp.pkg`, since 1.2.0 code 7), the older ones are the old package */
+const appPackage = () =>
+  (typeof window !== 'undefined' && (window as unknown as { sgApp?: { pkg?: string } }).sgApp?.pkg) || APP_PACKAGE;
 const KEY = 'sg-android-app';
 
 /** called once before the first paint (main.tsx) */
 export const markAndroidApp = () => {
   try {
-    if (document.referrer.startsWith(`android-app://${APP_PACKAGE}`)) sessionStorage.setItem(KEY, '1');
+    if ([APP_PACKAGE, NEW_APP_PACKAGE].some((p) => document.referrer.startsWith(`android-app://${p}`))) sessionStorage.setItem(KEY, '1');
   } catch {
     /* storage off */
   }
@@ -27,5 +32,5 @@ export const isAndroidApp = () => {
 /** Hands `path` ("link?s=…", "silence?on=1") to the app's own screens (sagandzuri://…); they do their part and step back. */
 export const openInApp = (path: string) => {
   if (!isAndroidApp()) return;
-  window.location.href = `intent://${path}#Intent;scheme=sagandzuri;package=${APP_PACKAGE};end`;
+  window.location.href = `intent://${path}#Intent;scheme=sagandzuri;package=${appPackage()};end`;
 };

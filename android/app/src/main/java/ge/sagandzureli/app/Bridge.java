@@ -43,7 +43,7 @@ final class Bridge {
 
     /** put into every page of the site before its own scripts (MainActivity) */
     static String script() {
-        return SCRIPT.replace("%NAME%", NAME).replace("%VERSION%", BuildConfig.VERSION_NAME);
+        return SCRIPT.replace("%NAME%", NAME).replace("%VERSION%", BuildConfig.VERSION_NAME).replace("%PKG%", BuildConfig.APPLICATION_ID);
     }
 
     /**
@@ -58,7 +58,7 @@ final class Bridge {
         + "var call=function(fn,args){return new Promise(function(res,rej){var id=String(++n);wait[id]=[res,rej];"
         + "try{window.%NAME%.post(id,fn,JSON.stringify(args||{}));}catch(e){delete wait[id];rej(e);}});};\n"
         + "var perm='default';\n"
-        + "Object.defineProperty(window,'sgApp',{value:{call:call,platform:'android',version:'%VERSION%',setPermission:function(p){perm=p;}}});\n"
+        + "Object.defineProperty(window,'sgApp',{value:{call:call,platform:'android',version:'%VERSION%',pkg:'%PKG%',setPermission:function(p){perm=p;}}});\n"
         + "call('notifyState').then(function(p){perm=p;},function(){});\n"
         + "var urlOf=function(d){if(!d)return '';if(typeof d.url==='string')return d.url;"
         + "if(typeof d.prayerId==='string')return '/?prayer='+encodeURIComponent(d.prayerId);return '';};\n"
