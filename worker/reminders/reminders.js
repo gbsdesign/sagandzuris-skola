@@ -1762,7 +1762,7 @@ async function wipeAccount(env, uid) {
 // to Claude with the school's own key; only the owner and superadmins may spend it. Errors in words the app maps:
 // 402 no-credits (the month's credit is gone — it stops, nothing is charged), 429 busy, 503 setup (no key / a bad key).
 const LADO_MODEL = 'claude-sonnet-5-5';
-async function lado(request, env) {
+async function lado(request, env, ctx) {
   const body = await readJson(request);
   let claims;
   try {
@@ -1776,38 +1776,77 @@ async function lado(request, env) {
   const role = email && email !== OWNER_EMAIL ? (await fsGet(env, `admins/${email}`, ['role']))?.role : null;
   if (email !== OWNER_EMAIL && role !== 'superadmin') return [403, 'not a superadmin'];
   if (!env.ANTHROPIC_API_KEY) return [503, 'setup'];
-  const call = (version) => fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: { 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': version, 'content-type': 'application/json' },
-    body: JSON.stringify({
-      model: LADO_MODEL,
-      max_tokens: 4096,
-      system: 'You are the school app\'s assistant. Follow the instructions in the message exactly. Reply with the JSON object only — no code fences, no words around it.',
-      messages: [{ role: 'user', content: prompt }],
-    }),
+  // the talk to keep (damkhmare/history.ts): the answer is written into it here too, so it is kept even when the phone left
+  // the page before the answer came (the user: „ჩათიდან გასვლის მერე წყვეტს … არ მინდა“); the work runs under waitUntil
+  const keep = body?.keep && typeof body.keep.chat === 'string' && /^[a-z0-9]{6,40}$/.test(body.keep.chat)
+    && Array.isArray(body.keep.items) && body.keep.items.length <= 79 ? body.keep : null;
+  const work = async () => {
+    const call = (version) => fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': version, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        model: LADO_MODEL,
+        max_tokens: 1500,
+        system: 'You are the school app\'s assistant. Follow the instructions in the message exactly. Reply with the JSON object only — no code fences, no words around it.',
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    });
+    // the Console's own example names the newer version; the long-standing one is tried first
+    let res = await call('2023-06-01');
+    let data = await res.json().catch(() => null);
+    if (res.status === 400 && /version/i.test(String(data?.error?.message || ''))) {
+      res = await call('2026-10-21');
+      data = await res.json().catch(() => null);
+    }
+    if (!res.ok) {
+      const msg = String(data?.error?.message || '');
+      console.warn('lado:', res.status, msg.slice(0, 200));
+      if (res.status === 402 || /credit|balance|billing/i.test(msg)) return [402, 'no-credits'];
+      if (res.status === 429 || res.status === 529) return [429, 'busy'];
+      if (res.status === 401 || res.status === 403) return [503, 'setup'];
+      // the reason goes back (only superadmins get here), so a failure can be read on the phone
+      return [502, `failed ${res.status}: ${msg.slice(0, 160)}`];
+    }
+    const text = (data?.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('').trim();
+    return [200, JSON.stringify({ text }), 'application/json'];
+  };
+  const done = work().then(async (out) => {
+    if (keep) await keepLadoAnswer(env, claims.sub, keep, out).catch((e) => console.warn('lado keep:', e?.message));
+    return out;
   });
-  // the Console's own example names the newer version; the long-standing one is tried first
-  let res = await call('2023-06-01');
-  let data = await res.json().catch(() => null);
-  if (res.status === 400 && /version/i.test(String(data?.error?.message || ''))) {
-    res = await call('2026-10-21');
-    data = await res.json().catch(() => null);
-  }
-  if (!res.ok) {
-    const msg = String(data?.error?.message || '');
-    console.warn('lado:', res.status, msg.slice(0, 200));
-    if (res.status === 402 || /credit|balance|billing/i.test(msg)) return [402, 'no-credits'];
-    if (res.status === 429 || res.status === 529) return [429, 'busy'];
-    if (res.status === 401 || res.status === 403) return [503, 'setup'];
-    // the reason goes back (only superadmins get here), so a failure can be read on the phone
-    return [502, `failed ${res.status}: ${msg.slice(0, 160)}`];
-  }
-  const text = (data?.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('').trim();
-  return [200, JSON.stringify({ text }), 'application/json'];
+  if (ctx?.waitUntil) ctx.waitUntil(done.catch(() => undefined));
+  return await done;
+}
+
+// one item of the kept talk from Lado's answer (the app's own parser does the same with the HTTP answer)
+function ladoSay(text) {
+  const body = String(text || '').trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
+  let v = null;
+  try { v = JSON.parse(body); } catch { const m = /\{[\s\S]*\}/.exec(body); try { v = m ? JSON.parse(m[0]) : null; } catch { v = null; } }
+  if (!v || typeof v !== 'object') return '';
+  const say = typeof v.say === 'string' ? v.say.trim() : '';
+  return v.plan ? `${say} (გეგმა: არ დადასტურებულა)`.trim() : say;
+}
+async function keepLadoAnswer(env, uid, keep, out) {
+  const items = keep.items
+    .filter((i) => i && ['me', 'ai', 'note'].includes(i.k) && typeof i.t === 'string')
+    .map((i) => ({ k: i.k, t: i.t.slice(0, 4000) }));
+  const [status, text] = out;
+  let add = null;
+  if (status === 200) {
+    const say = ladoSay(JSON.parse(text).text);
+    add = say ? { k: 'ai', t: say.slice(0, 4000) } : { k: 'note', t: 'პასუხი ვერ მოვიდა — ცოტა ხანში კიდევ სცადე.' };
+  } else if (status === 402 || status === 429) add = { k: 'note', t: 'ავტომატური პროგრამა ახლა დაიღალა — ცოტა ხანში სცადე.' };
+  else add = { k: 'note', t: 'პასუხი ვერ მოვიდა — ცოტა ხანში კიდევ სცადე.' };
+  const all = [...items, add].slice(-80);
+  const title = (all.find((i) => i.k === 'me')?.t || 'საუბარი').replace(/\s+/g, ' ').slice(0, 60);
+  await fsCommit(env, [{
+    update: { name: docName(env, `assistantChats/${uid}/chats/${keep.chat}`), fields: { title: toValue(title), at: toValue(Date.now()), items: toValue(all) } },
+  }]);
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const origin = request.headers.get('Origin') || '';
     const headers = cors(origin);
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers });
@@ -1826,7 +1865,7 @@ export default {
       try {
         await migrateFromKv(env);
         await ensureSchema(env);
-        const [status, text, type] = await handler(request, env);
+        const [status, text, type] = await handler(request, env, ctx);
         return new Response(text, { status, headers: type ? { ...headers, 'Content-Type': type } : headers });
       } catch (e) {
         return new Response('error', { status: 500, headers });

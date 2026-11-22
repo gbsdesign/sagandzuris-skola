@@ -2025,7 +2025,7 @@
   Closing the window does not stop an ask (the user: „ჩათიდან გასვლის მერე წყვეტს მუშაობას … არ მინდა“): the module's `running` map
   (`uid:chatId` → the ask's task) keeps it; its answer is shown if the window is still open on that talk, else written straight into
   the kept talk (`deliver` → `saveChat`), and a window opened on that talk waits for it (busy) and then loads it. Closing also saves
-  the talk at once. A plan that arrives while closed is kept as text only. The app itself closed = the ask is lost.
+  the talk at once. A plan that arrives while closed is kept as text only. **The server keeps it too (2026-11-22)**: `askLado` sends `keep {chat, items}`, the Worker's `/lado` runs under `ctx.waitUntil` and writes the answer into the talk itself (`keepLadoAnswer`; max_tokens 1500 so it fits), and a window opened on a talk whose last line is a question under 2 min old waits for it (`watchChat`).
 - Not built yet: the other „AI“ words in the app (~70 files; „AI მასწავლებელი“ → „ავტომატური მასწავლებელი“), memory, photos and files, the students' program, layout by words. Don't raise Google's under-18 rule again (the user: „მე
   ვიდარდებ“).
 
