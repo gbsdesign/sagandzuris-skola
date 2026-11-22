@@ -1,17 +1,17 @@
 import React, { useState } from 'react';
-import { Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, Search, UserPlus, X } from 'lucide-react';
+import { CalendarCheck, ChevronDown, ChevronRight, Search, UserPlus, X } from 'lucide-react';
 import { useAuth, useNavigation } from '../../../context';
-import { Avatar, Button, Card, Field, Press, RoundButton, Row, Rows, SectionLabel, Small, Two } from '../../../components/ui2';
+import { Avatar, Button, Field, Press, RoundButton, Row, Rows, SectionLabel, Small, Two } from '../../../components/ui2';
 import { cx } from '../../../components/ui2/cx';
 import type { ClassMember, SchoolClass } from '../../../hooks/useClasses';
-import { localIso, useClassStudents } from '../../../hooks/useTeaching';
+import { useClassStudents } from '../../../hooks/useTeaching';
 import { useSyncAttendanceShares } from '../../../hooks/useAttendanceShare';
 import { openThread, type Person } from '../../../hooks/useDirectChat';
 import { useClassAttendance, type ClassAttendance } from '../../../components/teacher/AttendancePanel';
 import { classFigures, summarize } from '../../../components/teacher/StudentsOverview';
-import { MONTHS_GE, WEEKDAYS_GE } from '../../../utils/dateNames';
-import { triggerHaptic } from '../../../utils/haptics';
 import { AddMemberSheetV2 } from './teacher/AddMember';
+
+const AttendanceSheet = React.lazy(() => import('../daswreba/AttendanceSheet').then(m => ({ default: m.AttendanceSheet })));
 
 /** Writing privately inside the class: a member to one of its teachers, a teacher to a member (the old page's `writeTo`). */
 export const useWriteTo = (cls: SchoolClass) => {
@@ -40,60 +40,6 @@ export const useWriteTo = (cls: SchoolClass) => {
   };
   return { writeTo, opening, error };
 };
-
-// ‹ › over the class's lesson days: the next such day before / after the given one, never in the future
-const stepDay = (cls: SchoolClass, iso: string, dir: 1 | -1): string => {
-  const days = new Set(cls.schedule.map(s => s.day));
-  const [y, m, d] = iso.split('-').map(Number);
-  const at = new Date(y, m - 1, d);
-  const today = localIso();
-  for (let i = 0; i < 21; i++) {
-    at.setDate(at.getDate() + dir);
-    const next = localIso(at);
-    if (next > today) return iso;
-    if (!days.size || days.has(at.getDay())) return next;
-  }
-  return iso;
-};
-const dayWords = (iso: string) => {
-  const [y, m, d] = iso.split('-').map(Number);
-  const wd = new Date(y, m - 1, d).getDay();
-  return `${WEEKDAYS_GE[wd].slice(0, 3)}, ${d} ${MONTHS_GE[m - 1]}`;
-};
-
-/** x-tsevrebi — the attendance card (the class's teachers and admins). */
-const AttendanceCard: React.FC<{ cls: SchoolClass; a: ClassAttendance }> = ({ cls, a }) => {
-  const total = cls.members.length;
-  const all = total > 0 && a.present.length >= total;
-  const newest = a.date >= localIso();
-  return (
-    <Card className="flex flex-col gap-3">
-      <div className="flex items-center gap-2">
-        <RoundButton label="წინა გაკვეთილი" onClick={() => a.setDate(stepDay(cls, a.date, -1))}><ChevronLeft /></RoundButton>
-        <div className="flex min-w-0 flex-1 flex-col items-center text-center">
-          <span className="text-meta text-mut">დასწრება{a.marked ? ` · ${a.present.length} / ${total}` : ''}</span>
-          <span className="max-w-full truncate text-lead font-bold">{a.date === localIso() ? 'დღეს' : dayWords(a.date)}</span>
-        </div>
-        <RoundButton label="შემდეგი გაკვეთილი" disabled={newest} onClick={() => a.setDate(stepDay(cls, a.date, 1))}><ChevronRight /></RoundButton>
-      </div>
-      <Button full kind={all ? 'ghost' : 'primary'} icon={all ? <X /> : <CheckCheck />} onClick={() => (all ? a.clear() : a.allCame())}>
-        {all ? 'მონიშვნის მოხსნა' : 'ყველა მოვიდა'}
-      </Button>
-      <p className="text-center text-meta text-mut">ან მონიშნე სათითაოდ სახელის გასწვრივ</p>
-      {a.msg.flash && <p role="alert" className={cx('text-center text-meta', a.msg.flash.type === 'error' ? 'text-danger' : 'text-leaf-ink')}>{a.msg.flash.text}</p>}
-    </Card>
-  );
-};
-
-/** The round at a member's right for the chosen day: green once they came. */
-const CameButton: React.FC<{ on: boolean; name: string; onToggle: () => void }> = ({ on, name, onToggle }) => (
-  <Press aria-pressed={on} aria-label={`${name} — მოვიდა`} title={on ? 'მოვიდა' : 'მონიშნე: მოვიდა'} onClick={onToggle}
-    className="flex size-tap shrink-0 cursor-pointer items-center justify-center rounded-full transition active:scale-95 focus-visible:outline-2 focus-visible:outline-wine/60">
-    <span className={cx('flex size-[30px] items-center justify-center rounded-full', on ? 'bg-leaf text-white' : 'border-[1.5px] border-dim')}>
-      {on && <Check className="size-[58%]" strokeWidth={2.6} aria-hidden="true" />}
-    </span>
-  </Press>
-);
 
 type Roll = { att: ClassAttendance; line: string; voiceOf: (uid: string) => string };
 
@@ -129,6 +75,7 @@ const MembersView: React.FC<{ cls: SchoolClass; canEdit: boolean; roll?: Roll }>
   const [finding, setFinding] = useState(false);
   const [q, setQ] = useState('');
   const [adding, setAdding] = useState(false);
+  const [attOpen, setAttOpen] = useState(false);
   const me = user?.uid;
   const needle = q.trim().toLowerCase();
   const found = finding && needle ? cls.members.filter(m => (m.name || '').toLowerCase().includes(needle)) : cls.members;
@@ -149,14 +96,25 @@ const MembersView: React.FC<{ cls: SchoolClass; canEdit: boolean; roll?: Roll }>
           className="flex min-h-row min-w-0 flex-1 cursor-pointer items-center gap-2.5 py-2 pl-4 text-left transition-colors active:bg-soft">
           {body}
         </Press>
-        {roll && <CameButton on={roll.att.present.includes(m.uid)} name={m.name} onToggle={() => { triggerHaptic(10); roll.att.toggle(m.uid); }} />}
       </div>
     );
   };
 
   return (
     <div className="flex flex-col gap-2.5">
-      {canEdit && roll && <AttendanceCard cls={cls} a={roll.att} />}
+      {/* the old card (date ‹ ›, „ყველა მოვიდა“ and a round on every name) was a riddle (2026-11-22, the user: „ეს გაუგებარია“):
+          one row opens the attendance window — marking and the numbers */}
+      {canEdit && roll && (
+        <Rows>
+          <Row lead={<span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-tint text-wine"><CalendarCheck className="size-5" aria-hidden="true" /></span>}
+            title="დასწრება" sub="მონიშვნა და სტატისტიკა" onClick={() => setAttOpen(true)} />
+        </Rows>
+      )}
+      {attOpen && (
+        <React.Suspense fallback={null}>
+          <AttendanceSheet classes={[cls]} open onClose={() => setAttOpen(false)} />
+        </React.Suspense>
+      )}
 
       <div className="flex items-center gap-2 px-1.5 pt-1">
         <h2 className="min-w-0 flex-1 truncate text-head font-bold">წევრები · {cls.members.length}</h2>

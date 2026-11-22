@@ -110,7 +110,7 @@ const DAY_SHORT = ['კვ', 'ორშ', 'სამ', 'ოთხ', 'ხუთ',
 
 export const ClassTimes: React.FC<{ slots: LessonSlot[]; onEdit?: () => void }> = ({ slots, onEdit }) => {
   const lp = useLongPress(() => onEdit?.());
-  if (!slots.length) return null;
+  if (!slots.length && !onEdit) return null;
   const next = nextLesson(slots)?.slot;
   // the row's own long press (its menu) and swipe stay off while the finger is on the times
   const own = onEdit ? {
@@ -123,9 +123,22 @@ export const ClassTimes: React.FC<{ slots: LessonSlot[]; onEdit?: () => void }> 
     onClickCapture: lp.onClickCapture,
     title: 'შესაცვლელად დიდხანს დააჭირე',
   } : {};
+  // the calendar sign is a button of its own on every class the person leads (2026-11-22, the user: „ეს კალენდრის ნიშანი ყველა
+  // ჩათს ქონდეს რომ ზედ დაჭერით შემეძლოს გაკვეთილის დანიშვნა შეცვლა“): a tap opens the timetable — a class with none yet says
+  // „გაკვეთილის დანიშვნა“ beside it. It sits inside the row's button, so it is a span that keeps the tap to itself.
+  const edit = (e: React.SyntheticEvent) => { e.stopPropagation(); e.preventDefault(); triggerHaptic(8); onEdit?.(); };
+  const sign = onEdit ? (
+    <span role="button" tabIndex={0} aria-label={slots.length ? 'გაკვეთილის საათების შეცვლა' : 'გაკვეთილის დანიშვნა'}
+      onPointerDown={e => e.stopPropagation()} onClick={edit}
+      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') edit(e); }}
+      className="-my-1.5 -ml-1 flex h-9 shrink-0 cursor-pointer items-center gap-1 rounded-full px-1 text-wine transition active:scale-95 active:bg-soft focus-visible:outline-2 focus-visible:outline-wine/60">
+      <CalendarClock aria-hidden="true" className="size-5 shrink-0" strokeWidth={2} />
+      {!slots.length && <span className="text-cap font-bold">გაკვეთილის დანიშვნა</span>}
+    </span>
+  ) : <CalendarClock aria-hidden="true" className="size-4 shrink-0 text-wine" strokeWidth={2} />;
   return (
     <span {...own} aria-label="გაკვეთილები" className="mt-1 flex flex-wrap items-center gap-1 select-none [-webkit-touch-callout:none]">
-      <CalendarClock aria-hidden="true" className="size-4 shrink-0 text-wine" strokeWidth={2} />
+      {sign}
       {sortSlots(slots).map((s, i) => (
         <span key={i} className={cx(
           'inline-flex h-6 items-center rounded-full px-2 text-cap leading-none font-bold whitespace-nowrap tabular-nums',

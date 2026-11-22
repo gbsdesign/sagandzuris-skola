@@ -23,7 +23,8 @@ export interface ChatMessage {
   // 'call': a private call was started (the teacher's "ზარი" button); 'game': an invitation into a class's game room;
   // 'draw': a drawing to guess („ნახატობანა“); 'note' / 'work': a teacher's card for one member — a comment or an
   // assignment (hooks/useChatPins.ts; in a class's chat it lives apart, in classes/{id}/pins, so only they see it)
-  kind: 'text' | 'voice' | 'call' | 'game' | 'draw' | 'note' | 'work';
+  // 'photo' / 'file' (2026-11-22, as Messenger's): the picture or the file in parts below, as a voice message's MP3
+  kind: 'text' | 'voice' | 'call' | 'game' | 'draw' | 'note' | 'work' | 'photo' | 'file';
   text: string;
   /** a 'game' message's room (classes/{id}/games/{room}) */
   room: string;
@@ -51,12 +52,19 @@ export interface ChatMessage {
    *  talked, `missed` = nobody answered) — the call's own first message then steps aside (ChatPanel) */
   end?: boolean;
   missed?: boolean;
+  /** a 'photo': a small JPEG (data URL) shown in the chat, the full one's size; a 'file': its name, size and type */
+  thumb?: string;
+  w?: number;
+  h?: number;
+  fileName?: string;
+  size?: number;
+  mime?: string;
   /** who put a ❤️ on it (2026-11-22, the user: „სმს-ებზე დაგულების ფუნქცია … როგორც მესენჯერს აქვს“) */
   hearts?: string[];
 }
 
 const str = (v: unknown) => (typeof v === 'string' ? v : '');
-const KINDS = ['voice', 'call', 'game', 'draw', 'note', 'work'] as const;
+const KINDS = ['voice', 'call', 'game', 'draw', 'note', 'work', 'photo', 'file'] as const;
 
 /** A message (or a class's pin) as the chat shows it. */
 export const toChatMessage = (d: QueryDocumentSnapshot, pinned = false): ChatMessage => {
@@ -89,6 +97,12 @@ export const toChatMessage = (d: QueryDocumentSnapshot, pinned = false): ChatMes
     pinned,
     end: m.end === true,
     missed: m.missed === true,
+    thumb: str(m.thumb),
+    w: typeof m.w === 'number' ? m.w : 0,
+    h: typeof m.h === 'number' ? m.h : 0,
+    fileName: str(m.fname),
+    size: typeof m.size === 'number' ? m.size : 0,
+    mime: str(m.mime),
     hearts: Array.isArray(m.hearts) ? m.hearts.filter((x: unknown): x is string => typeof x === 'string') : [],
   };
 };
@@ -306,6 +320,47 @@ export const sendVoiceMessage = async (base: string, author: ChatAuthor, { mp3, 
 export const toggleHeart = (base: string, m: ChatMessage, uid: string) =>
   updateDoc(doc(messagesOf(base), m.id), { hearts: (m.hearts ?? []).includes(uid) ? arrayRemove(uid) : arrayUnion(uid) });
 
+// a photo or a file (2026-11-22, the user: „ფოტოს ატვირთვა, გადაღება, ვოისი და ფაილი … როგორც მესენჯერში“): its bytes in the
+// same parts as a voice message's (≤ 700 KB each), a few parts a write so a 10 MB file stays under Firestore's request
+// limit, the message itself with the last ones — it shows only once the whole file is there
+export const FILE_MAX = 10 * 1024 * 1024;
+const PARTS_A_WRITE = 8;
+const sendWithParts = async (base: string, author: ChatAuthor, bytes: Uint8Array, fields: Record<string, unknown>, onPct?: (p: number) => void) => {
+  const ref = doc(messagesOf(base));
+  const n = Math.max(1, Math.ceil(bytes.length / PART_BYTES));
+  let batch = writeBatch(db);
+  let inBatch = 0;
+  for (let i = 0; i < n; i++) {
+    batch.set(voicePart(base, ref.id, i), { uid: author.uid, data: Bytes.fromUint8Array(bytes.subarray(i * PART_BYTES, (i + 1) * PART_BYTES)) });
+    if (++inBatch === PARTS_A_WRITE && i < n - 1) {
+      await batch.commit();
+      onPct?.((i + 1) / n);
+      batch = writeBatch(db);
+      inBatch = 0;
+    }
+  }
+  batch.set(ref, { ...stamp(author), ...fields, parts: n });
+  await batch.commit();
+  onPct?.(1);
+  void notifyChat(base, ref.id);
+};
+
+export const sendPhotoMessage = async (base: string, author: ChatAuthor, file: File, onPct?: (p: number) => void) => {
+  const { preparePhoto } = await import('../utils/chatPhoto');
+  const p = await preparePhoto(file);
+  const bytes = new Uint8Array(await p.full.arrayBuffer());
+  await sendWithParts(base, author, bytes, { kind: 'photo', text: '📷 ფოტო', thumb: p.thumb, w: p.w, h: p.h, mime: 'image/jpeg' }, onPct);
+};
+
+export const sendFileMessage = async (base: string, author: ChatAuthor, file: File, onPct?: (p: number) => void) => {
+  if (file.size > FILE_MAX) throw new Error('too big');
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const name = (file.name || 'ფაილი').slice(0, 200);
+  await sendWithParts(base, author, bytes, {
+    kind: 'file', text: `📎 ${name}`, fname: name, size: file.size, mime: (file.type || 'application/octet-stream').slice(0, 100),
+  }, onPct);
+};
+
 export const deleteMessage = async (base: string, m: ChatMessage) => {
   const batch = writeBatch(db);
   for (let n = 0; n < m.parts; n++) batch.delete(voicePart(base, m.id, n));
@@ -316,7 +371,10 @@ export const deleteMessage = async (base: string, m: ChatMessage) => {
 // message id -> object URL of its MP3, kept for the session so a replay doesn't download again
 const voiceUrls = new Map<string, Promise<string>>();
 
-export const loadVoiceUrl = (base: string, m: ChatMessage): Promise<string> => {
+export const loadVoiceUrl = (base: string, m: ChatMessage): Promise<string> => loadPartsUrl(base, m, 'audio/mpeg');
+
+/** A message's parts put back together (a voice message's MP3, a photo, a file), kept for the session. */
+export const loadPartsUrl = (base: string, m: ChatMessage, type: string): Promise<string> => {
   let url = voiceUrls.get(m.id);
   if (!url) {
     url = Promise.all(Array.from({ length: m.parts }, (_, n) => getDoc(voicePart(base, m.id, n)))).then(snaps => {
@@ -325,7 +383,7 @@ export const loadVoiceUrl = (base: string, m: ChatMessage): Promise<string> => {
         if (!data) throw new Error('voice part missing');
         return data.toUint8Array() as BlobPart;
       });
-      return URL.createObjectURL(new Blob(pieces, { type: 'audio/mpeg' }));
+      return URL.createObjectURL(new Blob(pieces, { type }));
     });
     url.catch(() => voiceUrls.delete(m.id));
     voiceUrls.set(m.id, url);

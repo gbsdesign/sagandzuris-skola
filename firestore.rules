@@ -28,6 +28,12 @@ service cloud.firestore {
     function existing() { return resource.data; }
     function changed() { return incoming().diff(existing()).affectedKeys(); }
     // a ❤️ on a chat message (2026-11-22): one adds or takes back only one's own uid in its `hearts`
+    // a chat's photo carries its small picture, a file its name, size and type (the bytes are in the message's parts)
+    function mediaFields(d) {
+      return (d.kind != 'photo' || (d.thumb is string && d.thumb.size() <= 60000 && d.parts is int && d.parts >= 1 && d.parts <= 16))
+        && (d.kind != 'file' || (d.fname is string && d.fname.size() <= 200 && d.size is int && d.size <= 10485760
+          && d.mime is string && d.mime.size() <= 100 && d.parts is int && d.parts >= 1 && d.parts <= 16));
+    }
     function heartOnly() {
       return changed().hasOnly(['hearts'])
         && incoming().hearts is list && incoming().hearts.size() <= 300
@@ -496,8 +502,9 @@ service cloud.firestore {
           && incoming().uid == uid()
           && (incoming().teacher == false || teachesClass() || isAdmin())
           && incoming().createdAt == request.time
-          && incoming().kind in ['text', 'voice', 'game', 'draw']
+          && incoming().kind in ['text', 'voice', 'game', 'draw', 'photo', 'file']
           && incoming().text is string && incoming().text.size() <= 2000
+          && mediaFields(incoming())
           // an invitation into a game room of the class (its card leads into the room)
           && (incoming().kind != 'game' || (incoming().room is string && incoming().room.size() <= 40))
           // a drawing to guess („ნახატობანა“): its lines, its word folded, its theme
@@ -759,12 +766,13 @@ service cloud.firestore {
           && incoming().uid == uid()
           && incoming().teacher == speaksAsStaff()
           && incoming().createdAt == request.time
-          && (incoming().kind in ['text', 'voice']
+          && (incoming().kind in ['text', 'voice', 'photo', 'file']
               || (incoming().kind == 'call' && (kindOf(thread()) != 'admin' || staffOf(thread())))
               // a teacher's (an admin's) card for the student of this chat
               || (incoming().kind in ['note', 'work'] && incoming().teacher == true && kindOf(thread()) != 'peer'
                   && incoming().to in thread().members && incoming().to != uid() && pinCard(incoming())))
-          && incoming().text is string && incoming().text.size() <= 2000;
+          && incoming().text is string && incoming().text.size() <= 2000
+          && mediaFields(incoming());
         allow update: if inThread() && stillLinked() && heartOnly();
         allow delete: if isSuperAdmin() || (isSignedIn() && existing().uid == uid());
       }
