@@ -251,6 +251,16 @@ service cloud.firestore {
       }
     }
 
+    // „ავტომატური პროგრამა“'s talks (pages/v2/damkhmare/history.ts, 2026-11-22; the user: „ისტორია უნდა იყოს … + ღილაკით“):
+    // each person's own only. { title, at: ms, items: [{ k: 'me' | 'ai' | 'note', t }] ≤ 80 }
+    match /assistantChats/{userId}/chats/{chatId} {
+      allow read, delete: if isSignedIn() && uid() == userId;
+      allow create, update: if isSignedIn() && uid() == userId
+        && incoming().keys().hasOnly(['title', 'at', 'items'])
+        && incoming().title is string && incoming().title.size() <= 120
+        && incoming().at is int && incoming().items is list && incoming().items.size() <= 80;
+    }
+
     // The app's error log (src/utils/errorLog.ts, ⚙ „სკოლა“ → „შეცდომების ჟურნალი“): a signed-in person's app adds what
     // broke — no name and no uid. One document a distinct error (its id is the error's fingerprint); the same error
     // again only counts up and moves `last`. Admins read and clear it.

@@ -1,19 +1,20 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, ChevronRight, Eye, EyeOff, LayoutGrid, Loader2, Mic, Pencil } from 'lucide-react';
+import { Check, ChevronRight, Eye, EyeOff, History, LayoutGrid, Loader2, Mic, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useAuth, useNavigation } from '../../../context';
-import { Button, Dot, Duo, Helper, Note, Press, RoundButton, Seg, TopBar, cx } from '../../../components/ui2';
+import { Button, Dot, Duo, Helper, Note, Press, RoundButton, Rows, Seg, Sheet, TopBar, cx } from '../../../components/ui2';
 import { triggerHaptic } from '../../../utils/haptics';
 import { aiGate } from '../../../utils/aiRules';
 import { AiTeacherError } from '../../../utils/aiTeacher';
 import { checkPlan, draftOf, planFromAi, type Answer, type AssistantScope, type CheckedPlan, type PlanPerson, type Turn } from '../../../utils/aiAssistant';
 import { useVoiceSearch, voiceSupported } from '../../shell/voiceSearch';
-import { ASSISTANT_PROBLEM_TEXT, askAssistant } from './ask';
+import { ASSISTANT_PROBLEM_TEXT, askAssistant, whyOf } from './ask';
 import { makeClass, sendLetters, sendToClass, type Me } from './act';
 import { PlanCard, type PlanState } from './PlanCard';
 import { useAssistantScope } from './useScope';
 import { GearSpark } from './GearSpark';
 import { setFabShown } from './fabPref';
 import { setEngine, useEngine, type Engine } from './enginePref';
+import { chatTime, lastChatId, listChats, loadChat, newChatId, removeChat, saveChat, setLastChatId, type ChatHead, type Saved } from './history';
 import { offerUndo } from '../../../components/ui/kit';
 import { nextSteps, noticedIn, offersFor, pageName } from '../../../utils/programOffers';
 
@@ -74,7 +75,7 @@ export const AssistantScreen: React.FC<{
     gate: aiGate, ask: (uid, sc, h, t) => askAssistant(uid, sc, h, t, engine), letters: sendLetters, toClass: sendToClass, makeClass, openClass,
   }), [openClass, engine]);
   return <AssistantPanel scope={scope} me={me} ready={ready} deps={deps} pageId={page} mini={mini} onClose={onClose}
-    engine={isSuperAdmin ? engine : undefined} />;
+    engine={isSuperAdmin ? engine : undefined} keep />;
 };
 
 export const AssistantPanel: React.FC<{
@@ -88,8 +89,10 @@ export const AssistantPanel: React.FC<{
   mini?: boolean;
   /** the engine switch (superadmins only): shown under the head when given */
   engine?: Engine;
+  /** keep the talks (history.ts): the last one comes back on opening, „+“ starts a new one, 🕘 lists the old ones */
+  keep?: boolean;
   onClose: (then?: () => void) => void;
-}> = ({ scope, me, ready, deps, pageId, mini, engine, onClose }) => {
+}> = ({ scope, me, ready, deps, pageId, mini, engine, keep, onClose }) => {
   const [items, setItems] = useState<Item[]>([]);
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
@@ -104,6 +107,63 @@ export const AssistantPanel: React.FC<{
   const add = (it: NewItem) => setItems(list => [...list, { ...it, id: nextId.current++ } as Item]);
   const patchPlan = (id: number, p: Partial<Extract<Item, { kind: 'plan' }>>) =>
     setItems(list => list.map(it => (it.id === id && it.kind === 'plan' ? { ...it, ...p } : it)));
+
+  // ——— the kept talks ———
+  const [chatId, setChatId] = useState('');
+  const [listOpen, setListOpen] = useState(false);
+  const [heads, setHeads] = useState<ChatHead[] | null>(null);
+  const started = useRef(false);
+  const fromSaved = (list: Saved[]): Item[] => list.map(i => (i.k === 'note'
+    ? { id: nextId.current++, kind: 'note' as const, text: i.t, tone: 'mut' as const }
+    : { id: nextId.current++, kind: i.k, text: i.t }));
+  const toSaved = (list: Item[]): Saved[] => list.flatMap<Saved>(it =>
+    it.kind === 'me' ? [{ k: 'me', t: it.text }]
+    : it.kind === 'ai' ? [{ k: 'ai', t: it.text }]
+    : it.kind === 'note' ? [{ k: 'note', t: it.text }]
+    : [{ k: 'ai', t: `${it.say} (გეგმა: ${it.state === 'done' ? 'გაკეთდა' : it.state === 'dropped' ? 'გაუქმდა' : 'არ დადასტურებულა'})` }]);
+  const openChat = (id: string) => {
+    setChatId(id);
+    setLastChatId(me.uid, id);
+    setItems([]);
+    setEditing(false);
+    loadChat(me.uid, id).then(saved => setItems(cur => (cur.length ? cur : fromSaved(saved))), () => undefined);
+  };
+  const newChat = () => {
+    if (busy) return;
+    const id = newChatId();
+    setChatId(id);
+    setLastChatId(me.uid, id);
+    setItems([]);
+    setEditing(false);
+    setText('');
+  };
+  useEffect(() => {
+    if (!keep || !me.uid || started.current) return;
+    started.current = true;
+    const last = lastChatId(me.uid);
+    if (last) openChat(last);
+    else { const id = newChatId(); setChatId(id); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [keep, me.uid]);
+  useEffect(() => {
+    if (!keep || !me.uid || !chatId || !items.length) return;
+    const t = window.setTimeout(() => {
+      setLastChatId(me.uid, chatId);
+      saveChat(me.uid, chatId, toSaved(items)).catch(e => console.warn('assistant history:', e));
+    }, 800);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items, keep, me.uid, chatId]);
+  const showList = () => {
+    setHeads(null);
+    setListOpen(true);
+    listChats(me.uid).then(setHeads, () => setHeads([]));
+  };
+  const dropChat = (id: string) => {
+    setHeads(h => (h ? h.filter(c => c.id !== id) : h));
+    removeChat(me.uid, id).catch(() => undefined);
+    if (id === chatId) newChat();
+  };
 
   // the school's rules first: the kids' mode and the month's budget keep the assistant quiet
   useEffect(() => { if (me.uid) deps.gate(me.uid).then(setGate, () => undefined); }, [me.uid, deps]);
@@ -146,7 +206,10 @@ export const AssistantPanel: React.FC<{
     } catch (e) {
       const kind = e instanceof AiTeacherError ? e.kind : 'failed';
       if (kind === 'kids' || kind === 'budget') setGate(kind);
-      else add({ kind: 'note', text: ASSISTANT_PROBLEM_TEXT[kind], tone: 'danger' });
+      else {
+        const why = whyOf(e);
+        add({ kind: 'note', text: why ? `${ASSISTANT_PROBLEM_TEXT[kind]}\n(${why})` : ASSISTANT_PROBLEM_TEXT[kind], tone: 'danger' });
+      }
     } finally {
       setBusy(false);
     }
@@ -221,7 +284,7 @@ export const AssistantPanel: React.FC<{
           it.tone === 'leaf' ? 'bg-leaf-tint text-leaf-ink' : it.tone === 'danger' ? 'bg-surf text-danger' : 'bg-surf text-mut',
         )}>
           {it.tone === 'leaf' && <Check aria-hidden="true" className="size-[18px] shrink-0" />}
-          <span className="min-w-0 flex-1 wrap-break-word">{it.text}</span>
+          <span className="min-w-0 flex-1 whitespace-pre-wrap wrap-break-word">{it.text}</span>
           {it.classId && (
             <Press onClick={() => onClose(() => deps.openClass(it.classId!))}
               className="flex h-tap shrink-0 cursor-pointer items-center gap-0.5 text-meta font-bold text-wine">
@@ -259,18 +322,56 @@ export const AssistantPanel: React.FC<{
         {mini && <div aria-hidden="true" className="mx-auto mt-2 h-1 w-10 rounded-full bg-line" />}
         <TopBar title="ავტომატური პროგრამა" sub="პროგრამაა, არა ადამიანი · შეიძლება შეცდეს" onBack={() => onClose()}
           className={mini ? 'pt-1.5' : undefined}
-          right={mini ? (
-            // the floating cog is in the way: off it goes (back on in „პარამეტრები“, or by „დაბრუნება“ at once)
-            <RoundButton label="კბილანას დამალვა" onClick={() => onClose(() => {
-              setFabShown(false);
-              offerUndo('კბილანა დაიმალა. ჩართვა: პარამეტრები', () => setFabShown(true));
-            })}>
-              <EyeOff aria-hidden="true" strokeWidth={1.75} />
-            </RoundButton>
+          right={(keep || mini) ? (
+            <div className="flex shrink-0 items-center gap-1.5">
+              {keep && (
+                <RoundButton label="წინა საუბრები" onClick={showList}>
+                  <History aria-hidden="true" strokeWidth={1.75} />
+                </RoundButton>
+              )}
+              {keep && (
+                <RoundButton label="ახალი საუბარი" onClick={newChat} disabled={busy}>
+                  <Plus aria-hidden="true" strokeWidth={1.75} />
+                </RoundButton>
+              )}
+              {mini && (
+                // the floating cog is in the way: off it goes (back on in „პარამეტრები“, or by „დაბრუნება“ at once)
+                <RoundButton label="კბილანას დამალვა" onClick={() => onClose(() => {
+                  setFabShown(false);
+                  offerUndo('კბილანა დაიმალა. ჩართვა: პარამეტრები', () => setFabShown(true));
+                })}>
+                  <EyeOff aria-hidden="true" strokeWidth={1.75} />
+                </RoundButton>
+              )}
+            </div>
           ) : undefined} />
         {engine && (
           <Seg label="რომელი პროგრამა" className="mb-2" value={engine} onChange={setEngine}
             items={[{ id: 'google', label: 'გუგლის პროგრამა' }, { id: 'lado', label: 'ლადოს პროგრამა' }]} />
+        )}
+        {keep && (
+          <Sheet open={listOpen} title="წინა საუბრები" onClose={() => setListOpen(false)}>
+            {heads === null ? (
+              <p className="py-6 text-center text-body text-mut">იტვირთება…</p>
+            ) : heads.length === 0 ? (
+              <p className="py-6 text-center text-body text-mut">ჯერ საუბარი არ გაქვს.</p>
+            ) : (
+              <Rows>
+                {heads.map(c => (
+                  <div key={c.id} className={cx('flex items-center gap-2 px-4 py-2', c.id === chatId && 'bg-tint')}>
+                    <Press onClick={() => { setListOpen(false); if (c.id !== chatId) openChat(c.id); }}
+                      className="flex min-h-tap min-w-0 flex-1 cursor-pointer flex-col justify-center text-left">
+                      <span className="line-clamp-2 text-body font-semibold text-ink">{c.title}</span>
+                      <span className="text-meta text-mut">{chatTime(c.at)}{c.id === chatId ? ' · ახლა ღიაა' : ''}</span>
+                    </Press>
+                    <RoundButton label="საუბრის წაშლა" onClick={() => dropChat(c.id)}>
+                      <Trash2 aria-hidden="true" strokeWidth={1.75} />
+                    </RoundButton>
+                  </div>
+                ))}
+              </Rows>
+            )}
+          </Sheet>
         )}
       </div>
 
