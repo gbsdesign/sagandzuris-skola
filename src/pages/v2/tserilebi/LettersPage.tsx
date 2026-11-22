@@ -481,19 +481,26 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
         title={
           <div className="flex min-w-0 flex-1 items-center gap-2.5">
             {!wide && <RoundButton label="უკან" onClick={handleGoBack}><ArrowLeft aria-hidden="true" strokeWidth={1.75} /></RoundButton>}
-            {/* the class page (program, members) opens from the chat's head — the home lost its classes (2026-11-22) */}
-            {/* held long: the class page's „მეტი“ (the user: „მეტი ფუნქციები სახელზე დიდხანს დაჭერისას იხსნებოდეს“) */}
-            <Press {...(moreFor ? nameHold : {})} onClick={() => openClass(openCls.id)} aria-label={`${openCls.name} — კლასის გვერდი`}
-              title={moreFor ? 'დიდხანს დააჭირე — მეტი' : undefined}
-              className="flex min-w-0 flex-1 cursor-pointer items-center gap-2.5 rounded-field text-left select-none [-webkit-touch-callout:none]">
-              {/* a compact head, the whole name in view (2026-11-22, the user: „სახელი უფრო კომპაქტური … მთლიანად ეტეოდეს …
-                  დააპატარავე 50%“); the lesson times moved out to the list's row */}
-              <ClassLogo name={openCls.name} logo={openCls.logo} className="size-8 shrink-0 text-meta" />
-              <span className="flex min-w-0 flex-col">
-                <span className="line-clamp-2 text-body leading-tight font-bold break-words">{openCls.name}</span>
-                <span className="truncate text-cap leading-tight text-mut">{`${openCls.members.length} წევრი · გვერდი ›`}</span>
-              </span>
-            </Press>
+            {/* the head no longer opens the class page (2026-11-22 evening, the user: „ჩათის სათაურზე დაჭერისას იხსნება შიგნით
+                გვერდი … არ მინდა“); held long it still opens the class's „მეტი“ for its teachers and admins */}
+            {(() => {
+              const face = (
+                <>
+                  {/* a compact head, the whole name in view (the user: „სახელი უფრო კომპაქტური … მთლიანად ეტეოდეს“) */}
+                  <ClassLogo name={openCls.name} logo={openCls.logo} className="size-8 shrink-0 text-meta" />
+                  <span className="flex min-w-0 flex-col">
+                    <span className="line-clamp-2 text-body leading-tight font-bold break-words">{openCls.name}</span>
+                    <span className="truncate text-cap leading-tight text-mut">{`${openCls.members.length} წევრი`}</span>
+                  </span>
+                </>
+              );
+              const box = 'flex min-w-0 flex-1 items-center gap-2.5 rounded-field text-left select-none [-webkit-touch-callout:none]';
+              return moreFor ? (
+                <Press {...nameHold} aria-label={`${openCls.name} — დიდხანს დააჭირე, მეტი`} title="დიდხანს დააჭირე — მეტი" className={box}>
+                  {face}
+                </Press>
+              ) : <div className={box}>{face}</div>;
+            })()}
           </div>
         }
       />

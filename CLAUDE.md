@@ -2316,7 +2316,8 @@ Pending small tasks the user mentioned: remove the old Drive `ნოტები
   fold`) that shows only its members' chats under the classes, none open = all (the user: „ჩამოსაშლელი ისარი … კლასების
   გადამრთველები მოხსენი“); the lesson's window (`klasi/teacher/Timetable.tsx`) = seven round days in one row, the times and the
   place in boxes, „მზადაა“ then a quiet red „წაშლა“ (the user: „ეს პანელი ძალიან უაზროდ არის დახვეწე“); the home bar's 🔔 stands
-  right by the logo, before the name (`HomeBar`, the user's mark). And the class rows on the list are tighter (`ChatRow group`: 40px logo, less padding, 20px
+  right by the logo, before the name (`HomeBar`, the user's mark); the open class chat's head no longer opens the class page (only
+  its long press → „მეტი“ for leaders; the small line is „N წევრი“ — the user: „ჩათის სათაურზე დაჭერისას … გვერდი … არ მინდა“). And the class rows on the list are tighter (`ChatRow group`: 40px logo, less padding, 20px
   time pills; a class nobody wrote in yet shows its times in the second line — the user: „უფრო კომპაქტური … ბევრი არაფერი არ ჩაერიო“).
 - **The whole path in the chat's fold (2026-11-21 night**, the user: „გზას რომ ჩახსნიდი … ჩამოსაშლელად პირდაპირ ჩათში“, answer „მთელი
   გზა, როგორც გზის გვერდზე“): `ChatPath` — the student's own side unfolds the whole „საგანძური“ page (`SagandzuriPage bare`, lazy: no
