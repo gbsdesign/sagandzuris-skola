@@ -62,6 +62,18 @@ export const PhoneRingSetup: React.FC = () => {
     } else setDone(true);
   };
 
+  // the Android app's first opening asks the phone itself: once allowed, bind at once and drop the card
+  useEffect(() => {
+    if (!uid) return;
+    const changed = () => {
+      if (!pushSupported() || Notification.permission !== 'granted') return;
+      setAsk(false);
+      void bindChatDevice(false);
+    };
+    window.addEventListener('sg-notify-perm', changed);
+    return () => window.removeEventListener('sg-notify-perm', changed);
+  }, [uid]);
+
   // the permission window could not open (the Android app, 2026-11-06): the person gives it in the phone's settings
   // and comes back — the card then binds the phone by itself
   useEffect(() => {

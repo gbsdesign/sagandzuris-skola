@@ -53,7 +53,11 @@ final class SignIn {
 
                 @Override
                 public void onError(GetCredentialException e) {
-                    if (e instanceof GetCredentialCancellationException) done.fail("cancelled");
+                    // Google answers a key it does not know as a „cancel“ too ([16] Account reauth failed) — that one must
+                    // show its error, not end in silence (2026-11-23: the account was picked and nothing happened)
+                    String m = String.valueOf(e.getMessage());
+                    if (e instanceof GetCredentialCancellationException && !m.contains("16") && !m.toLowerCase().contains("reauth"))
+                        done.fail("cancelled");
                     else done.fail("not-ready");
                 }
             });
