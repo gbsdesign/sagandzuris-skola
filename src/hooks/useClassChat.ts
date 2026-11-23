@@ -35,6 +35,8 @@ export interface ChatMessage {
   theme: string;
   seconds: number;
   wave: string;
+  /** a voice message played on the chat's keyboard: its notes (utils/melody.ts `encodeMelody`, 2026-11-23) */
+  mel?: string;
   parts: number;
   at: Date | null;
   pending: boolean;
@@ -69,8 +71,9 @@ export interface ChatMessage {
 export interface ChatReply { id: string; name: string; text: string }
 
 /** a message in one short line (the pinned bar, a reply's quote, the chat lists) */
-export const messagePreview = (m: Pick<ChatMessage, 'kind' | 'text' | 'seconds' | 'fileName'>) =>
-  m.kind === 'voice' ? `🎤 ${m.text || `ხმოვანი · ${Math.round(m.seconds)} წმ`}`
+export const messagePreview = (m: Pick<ChatMessage, 'kind' | 'text' | 'seconds' | 'fileName' | 'mel'>) =>
+  m.kind === 'voice' && m.mel ? `🎹 ${m.text || `მელოდია · ${Math.round(m.seconds)} წმ`}`
+  : m.kind === 'voice' ? `🎤 ${m.text || `ხმოვანი · ${Math.round(m.seconds)} წმ`}`
   : m.kind === 'photo' ? '📷 ფოტო'
   : m.kind === 'file' ? `📎 ${m.fileName || 'ფაილი'}`
   : m.kind === 'draw' ? '🎨 ნახატი'
@@ -99,6 +102,7 @@ export const toChatMessage = (d: QueryDocumentSnapshot, pinned = false): ChatMes
     theme: str(m.theme),
     seconds: m.seconds || 0,
     wave: m.wave || '',
+    mel: str(m.mel),
     parts: m.parts || 0,
     at: m.createdAt?.toDate?.() || null,
     pending: d.metadata.hasPendingWrites,
@@ -325,7 +329,7 @@ export const sendCallEndMessage = async (base: string, author: ChatAuthor, o: { 
 /** a voice message's title (an instruction written above it before it is sent — 2026-11-22) */
 export const VOICE_TITLE_MAX = 200;
 
-export const sendVoiceMessage = async (base: string, author: ChatAuthor, { mp3, seconds, wave }: VoiceTake, title = '', re?: ChatReply | null) => {
+export const sendVoiceMessage = async (base: string, author: ChatAuthor, { mp3, seconds, wave }: VoiceTake, title = '', re?: ChatReply | null, mel = '') => {
   const bytes = new Uint8Array(await mp3.arrayBuffer());
   const ref = doc(messagesOf(base));
   const batch = writeBatch(db);
@@ -333,7 +337,7 @@ export const sendVoiceMessage = async (base: string, author: ChatAuthor, { mp3, 
   for (let i = 0; i < bytes.length; i += PART_BYTES, parts++) {
     batch.set(voicePart(base, ref.id, parts), { uid: author.uid, data: Bytes.fromUint8Array(bytes.subarray(i, i + PART_BYTES)) });
   }
-  batch.set(ref, { ...stamp(author), kind: 'voice', text: title.trim().slice(0, VOICE_TITLE_MAX), seconds: Math.round(seconds * 10) / 10, wave, parts, ...reField(re) });
+  batch.set(ref, { ...stamp(author), kind: 'voice', text: title.trim().slice(0, VOICE_TITLE_MAX), seconds: Math.round(seconds * 10) / 10, wave, parts, ...(mel ? { mel } : {}), ...reField(re) });
   await batch.commit();
   void notifyChat(base, ref.id);
 };
@@ -395,7 +399,7 @@ export const forwardMessage = async (fromBase: string, m: ChatMessage, toBase: s
   const url = m.kind === 'voice' ? await loadVoiceUrl(fromBase, m) : await loadPartsUrl(fromBase, m, m.mime || 'application/octet-stream');
   const bytes = new Uint8Array(await (await fetch(url)).arrayBuffer());
   const fields = m.kind === 'voice'
-    ? { kind: 'voice', text: m.text.slice(0, VOICE_TITLE_MAX), seconds: m.seconds, wave: m.wave }
+    ? { kind: 'voice', text: m.text.slice(0, VOICE_TITLE_MAX), seconds: m.seconds, wave: m.wave, ...(m.mel ? { mel: m.mel } : {}) }
     : m.kind === 'photo'
       ? { kind: 'photo', text: '📷 ფოტო', thumb: m.thumb || '', w: m.w || 0, h: m.h || 0, mime: m.mime || 'image/jpeg' }
       : { kind: 'file', text: m.text, fname: (m.fileName || 'ფაილი').slice(0, 200), size: m.size || bytes.length, mime: (m.mime || 'application/octet-stream').slice(0, 100) };

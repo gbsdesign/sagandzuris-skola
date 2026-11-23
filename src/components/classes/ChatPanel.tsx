@@ -1,7 +1,7 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useBackToClose } from '../../utils/backToClose';
 import { useNotes } from '../../context/NotesContext';
-import { MessageCircle, Music2, Mic, Paperclip, Send, Smile, Square, X, Trash2, Play, Pause, Loader2, Clock, Phone, CheckCheck, Plus, Camera, Image as ImageIcon, ChevronRight, ClipboardList, Pin, PinOff, Forward, ChevronDown, Reply, Link2 } from 'lucide-react';
+import { MessageCircle, Music2, Mic, Paperclip, Send, Smile, Square, X, Trash2, Play, Pause, Loader2, Clock, Phone, CheckCheck, Plus, Camera, Image as ImageIcon, ChevronRight, ClipboardList, Pin, PinOff, Forward, ChevronDown, Reply, Link2, Download, Piano } from 'lucide-react';
 import { useLongPress } from '../../hooks/useLongPress';
 import { FileBubble, PhotoBubble, QuickSheet, useQuickEmoji } from './ChatMedia';
 import {
@@ -18,9 +18,22 @@ import { ROOM_GAME_INFO, parseChatRoomRef } from '../../data/roomGames';
 import { ROOM_GAME_ICON } from '../games/roomGameIcons';
 import { DrawRiddle } from './DrawRiddle';
 import { Button, Press, RoundButton, Sheet } from '../ui2';
+import { saveBlob } from '../../utils/chantSynth';
+import { decodeMelody } from '../../utils/melody';
+import { MelodyBubble } from './synth/MelodyBubble';
+import { SpeedPill } from './synth/SpeedPill';
 
 // a voice message sent on into other chats (lazy: it lists my classes and private chats only when opened)
 const ForwardSheet = React.lazy(() => import('./ChatForward').then(m => ({ default: m.ForwardSheet })));
+// the keyboard that rises from the field's 🎹 (lazy: only when opened)
+const SynthPanel = React.lazy(() => import('./synth/SynthPanel'));
+
+/** a voice message's file name when saved: „ხმოვანი — გიორგი ბერიძე, 23 ნოემბერი 18-40“ */
+const voiceFileName = (m: ChatMessage) => {
+  const d = m.at;
+  const when = d ? `, ${d.getDate()} ${MONTHS_GE[d.getMonth()]} ${String(d.getHours()).padStart(2, '0')}-${String(d.getMinutes()).padStart(2, '0')}` : '';
+  return `${m.mel ? 'მელოდია' : 'ხმოვანი'} — ${m.name || 'წევრი'}${when}`;
+};
 
 // Messenger's ways (2026-11-22, the user: „როგორც მესენჯერს აქვს … სმს-ებზე დაგულების ფუნქცია … ემოჯის გაგზავნის ფუნქცია“; answers
 // „მხოლოდ გული ❤️ · დაჭერა + ორჯერ შეხება · პანელი + დიდი ❤️“): a ❤️ on a message (held long → „❤️“ under it, or two taps), the
@@ -92,11 +105,29 @@ const SILENCE = 'data:audio/mpeg;base64,//NAxAAAAANIAAAAAExBTUUDAAkIAAQAAAAAAAAA
 // only one voice message plays at a time
 let nowPlaying: HTMLAudioElement | null = null;
 
-const VoicePlayer: React.FC<{ seconds: number; wave: string; getUrl: () => Promise<string>; onDark?: boolean; meta?: React.ReactNode }> = ({ seconds, wave, getUrl, onDark, meta }) => {
+// every voice message (2026-11-23, the user: „ყველა ვოისს … რაც არ უნდა იყოს და ვისიც არ უნდა იყოს სიჩქარის და ჩამოტვირთვის
+// ფუნქციები“): its pace „1×“ (the voice keeps its pitch) and ⬇ MP3 — given `fileName`
+const VoicePlayer: React.FC<{ seconds: number; wave: string; getUrl: () => Promise<string>; onDark?: boolean; meta?: React.ReactNode; fileName?: string }> = ({ seconds, wave, getUrl, onDark, meta, fileName }) => {
   const audio = useRef<HTMLAudioElement | null>(null);
   const ready = useRef(false);
   const [state, setState] = useState<'idle' | 'loading' | 'playing' | 'paused' | 'error'>('idle');
   const [pos, setPos] = useState(0);
+  const [rate, setRate] = useState(1);
+  const [saving, setSaving] = useState(false);
+  const rateRef = useRef(1);
+  const changeRate = (r: number) => {
+    rateRef.current = r;
+    setRate(r);
+    const a = audio.current;
+    if (a && ready.current) { a.preservesPitch = true; a.playbackRate = r; }
+  };
+  const download = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (saving || !fileName) return;
+    setSaving(true);
+    try { saveBlob(await (await fetch(await getUrl())).blob(), `${fileName}.mp3`); } catch (err) { console.warn('voice save: ', err); }
+    setSaving(false);
+  };
 
   useEffect(() => () => { audio.current?.pause(); }, []);
 
@@ -125,6 +156,9 @@ const VoicePlayer: React.FC<{ seconds: number; wave: string; getUrl: () => Promi
       a.onpause = () => setState(s => (s === 'playing' ? 'paused' : s));
       a.onended = () => { setState('idle'); setPos(0); };
       a.src = url;
+      a.preservesPitch = true;
+      a.playbackRate = rateRef.current;
+      a.defaultPlaybackRate = rateRef.current;
       ready.current = true;
       if (nowPlaying && nowPlaying !== a) nowPlaying.pause();
       nowPlaying = a;
@@ -149,7 +183,7 @@ const VoicePlayer: React.FC<{ seconds: number; wave: string; getUrl: () => Promi
   const active = state === 'playing' || state === 'paused';
 
   return (
-    <div className="flex items-center gap-2.5 w-[232px] max-w-full" onClick={e => e.stopPropagation()}>
+    <div className={`flex items-center gap-2.5 ${fileName ? 'w-[260px]' : 'w-[232px]'} max-w-full`} onClick={e => e.stopPropagation()}>
       <button
         type="button"
         onClick={toggle}
@@ -176,10 +210,21 @@ const VoicePlayer: React.FC<{ seconds: number; wave: string; getUrl: () => Promi
             />
           ))}
         </div>
-        <p className={`flex justify-between items-center gap-2 text-cap tabular-nums leading-none mt-0.5 ${onDark ? 'text-white/80' : 'text-mut'}`}>
-          <span>{state === 'error' ? 'ვერ ჩაიტვირთა' : active ? `${clock(pos)} / ${clock(seconds)}` : clock(seconds)}</span>
-          {meta}
-        </p>
+        <div className={`flex items-center justify-between gap-2 text-cap tabular-nums leading-none ${fileName ? 'mt-1' : 'mt-0.5'} ${onDark ? 'text-white/80' : 'text-mut'}`}>
+          <span className="flex min-w-0 items-center gap-1.5">
+            <span className="truncate">{state === 'error' ? 'ვერ ჩაიტვირთა' : active ? `${clock(pos)} / ${clock(seconds)}` : clock(seconds)}</span>
+            {fileName && <span className="shrink-0">{meta}</span>}
+          </span>
+          {fileName ? (
+            <span className="flex shrink-0 items-center gap-1">
+              <SpeedPill value={rate} onChange={changeRate} dark={onDark} />
+              <button type="button" onClick={download} aria-label="ჩამოტვირთვა MP3" title="ჩამოტვირთვა MP3"
+                className={`relative flex size-9 cursor-pointer items-center justify-center rounded-full transition active:scale-90 [&_svg]:size-[18px] ${onDark ? 'bg-white/20 text-white' : 'bg-soft text-wine'}`}>
+                {saving ? <Loader2 className="animate-spin" /> : <Download />}
+              </button>
+            </span>
+          ) : meta}
+        </div>
       </div>
     </div>
   );
@@ -410,6 +455,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   // the finger is in the field: the small signs fold to one › so the field is wide
   const [typing, setTyping] = useState(false);
   const [plusOpen, setPlusOpen] = useState(false);
+  // the keyboard (🎹) risen over the field
+  const [synthOpen, setSynthOpen] = useState(false);
   const [quickOpen, setQuickOpen] = useState(false);
   const [quick, setQuick] = useQuickEmoji();
   const quickHold = useLongPress(() => setQuickOpen(true));
@@ -618,6 +665,14 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       setErr('ხმოვანი შეტყობინება ვერ გაიგზავნა. სცადეთ თავიდან.');
       setMode({ k: 'preview', take, url });
     }
+  };
+
+  // a melody from the keyboard: a voice message carrying its notes (it throws to the panel, which says it failed)
+  const sendMelody = async (take: VoiceTake & { mel: string }) => {
+    stick.current = true;
+    await sendVoiceMessage(base, author, take, '', replyTo, take.mel);
+    setReplyTo(null);
+    onSent?.('text', '🎹 მელოდია');
   };
 
   // a computer's 🗑 beside the message (shown on hover) asks first; a phone's „წაშლა“ under it was already a second tap
@@ -866,7 +921,12 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                   ) : m.kind === 'voice' ? (
                     <div className="py-1">
                       {m.text && <p className={`mb-1 max-w-[260px] break-words text-meta font-bold ${mine ? 'text-white' : 'text-ink'}`}>{m.text}</p>}
-                      <VoicePlayer seconds={m.seconds} wave={m.wave} onDark={mine} getUrl={() => loadVoiceUrl(base, m)} meta={sentAt(m)} />
+                      {(() => {
+                        const mel = decodeMelody(m.mel);
+                        return mel
+                          ? <MelodyBubble mel={mel} wave={m.wave} onDark={mine} getUrl={() => loadVoiceUrl(base, m)} meta={sentAt(m)} fileName={voiceFileName(m)} />
+                          : <VoicePlayer seconds={m.seconds} wave={m.wave} onDark={mine} getUrl={() => loadVoiceUrl(base, m)} meta={sentAt(m)} fileName={voiceFileName(m)} />;
+                      })()}
                     </div>
                   ) : big ? (
                     <>
@@ -939,7 +999,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                         {q.kind === 'voice' ? (
                           <>
                             {q.text && <p className="truncate text-meta font-bold text-ink">{q.text}</p>}
-                            <VoicePlayer seconds={q.seconds} wave={q.wave} getUrl={() => loadVoiceUrl(base, q)} />
+                            <VoicePlayer seconds={q.seconds} wave={q.wave} getUrl={() => loadVoiceUrl(base, q)} fileName={voiceFileName(q)} />
                           </>
                         ) : (
                           <button type="button" onClick={() => { setPinsOpen(false); window.setTimeout(() => goToPin(q), 150); }}
@@ -1010,6 +1070,10 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
 
       {readOnly ? (
         <p className="px-5 py-4 text-center text-meta text-mut">მხოლოდ სანახავად</p>
+      ) : synthOpen ? (
+        <React.Suspense fallback={<div className="flex h-24 items-center justify-center text-mut"><Loader2 className="size-5 animate-spin" /></div>}>
+          <SynthPanel onClose={() => setSynthOpen(false)} onSend={sendMelody} />
+        </React.Suspense>
       ) : (
       <div className="px-2 py-2.5 sm:px-4 flex flex-wrap items-end gap-1.5">
         {mode.k === 'idle' && upload && (
@@ -1037,6 +1101,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                 <ToolSign label="ფოტოს გადაღება" onClick={() => camIn.current?.click()}><Camera /></ToolSign>
                 <ToolSign label="ფოტო გალერეიდან" onClick={() => galIn.current?.click()}><ImageIcon /></ToolSign>
                 {canRecord && <ToolSign label="ხმოვანი შეტყობინების ჩაწერა" onClick={startRecording}><Mic /></ToolSign>}
+                <ToolSign label="სინთეზატორი — მელოდიის დაკვრა და გაგზავნა" onClick={() => { setEmojiOpen(false); setSynthOpen(true); }}><Piano /></ToolSign>
                 {extraTool && <ToolSign label={extraTool.label} onClick={extraTool.onClick}>{extraTool.icon}</ToolSign>}
               </div>
             )}

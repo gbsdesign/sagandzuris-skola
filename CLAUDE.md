@@ -796,6 +796,17 @@
   this device's marks reach `useChatSeen` at once; `useChat` keeps an arrived message's object (and the list when nothing
   changed); `ChatPanel` draws the messages in a `useMemo` (`listBody`), so typing and the recording clock do not redraw them —
   give it stable props (a default like `isCall` is the module's `NEVER`); a drawing in the chat stays still until ↺.
+- **The chat's synthesizer (2026-11-23**, the user: „სინთეზატორი … კლავიატურა … ტონი … სიჩქარე … ჩაწერა … ყველა ვოისს სიჩქარის და
+  ჩამოტვირთვის ფუნქციები“ + ideas 3 and 4): the field's 🎹 (`ToolSign` after the mic) puts `components/classes/synth/SynthPanel.tsx`
+  (lazy) in place of the field row: sound chips (პიანინო · ორღანი · სალამური · ჩონგური, `sg-synth-instr`), ტონი −12…+12 and სიჩქარე
+  50–200 % steppers, `Keyboard.tsx` (C2–C7, ten white keys to the width, ‹ › an octave, fingers slide, several at once), „ჩაწერა“
+  (starts at the first key, ≤ 5 min / 800 notes) → hear / 🗑 / send. It goes as an ordinary voice message (MP3 rendered offline,
+  so every phone plays it) with its notes baked into the chosen tone and pace in the message's `mel` (`utils/melody.ts`
+  `encodeMelody` + test; no rules change — voice messages' fields are not listed). A message with `mel` = `MelodyBubble`: plays from
+  the notes (`utils/melodyPlay.ts`), ტონი − +, the pace pill, ⬇ MP3 (the stored one, or rendered in the tone and pace set), 🎹 →
+  `MelodyKeys` sheet: keys lit as it plays, „მიყევი“ (the next key in a gold ring, `.sg-key-target`), a part picked by its first and
+  last note, „გამეორება“ loops it. Every voice message's `VoicePlayer` (given `fileName`) has the pace pill `SpeedPill` (1 · 1.25 · 1.5
+  · 2 · 0.5 · 0.75, pitch kept) and ⬇ MP3 (`saveBlob`).
 - **Calls and messages on the phone with the app closed (2026-11-05, the user: „ზარი შედიოდეს ტელზე, როგორც მესენჯერი“)**:
   the reminders Worker's `POST /ring { token, base, end? }` (the caller's own call of the last minute in `dms/{id}` — callBy,
   callAt — or `classes/{id}/call/state` — by, at; `end` within two minutes = „გამოტოვებული ზარი“, sent by the caller's app only
