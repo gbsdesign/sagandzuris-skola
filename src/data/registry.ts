@@ -79,6 +79,8 @@ export const getRegistryItemById = (id: string): DataRegistryItem | undefined =>
 export const isValidRegistryId = (id: string): boolean => {
   const map = getAllRegistryItems();
   if (map.has(id)) return true;
+  // a film, a book or an admission piece pinned from its section (2026-11-23)
+  if (/^(v|b|a):./.test(id)) return true;
   const instrumentPrefixes = ['chonguri', 'fanduri', 'doli', 'garmoni', 'chuniri', 'changi'];
   return instrumentPrefixes.some((prefix) => id === prefix || id.startsWith(prefix));
 };

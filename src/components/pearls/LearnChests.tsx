@@ -37,6 +37,9 @@ export const usePathPearls = () => {
 export const chestIdOf = (id: string): string => {
   const kind = categoryOf(id);
   if (kind === 'mtkmeli') return 'poems';
+  if (kind === 'video') return 'videos';
+  if (kind === 'wigni') return 'books';
+  if (kind === 'abituri') return 'abituri';
   if (kind !== 'galoba') return 'songs';
   const v = findVersion(id);
   const service = v && v.service !== 'სიმღერა' ? v.service : null;
@@ -54,6 +57,8 @@ export const usePathChests = () => {
     for (const [id, it] of Object.entries(filterValidVariants(selectedChantVariants))) {
       if (pearlOf(it as Parameters<typeof pearlOf>[0], confirmed[id]) === 'new') continue;
       const kind = categoryOf(id);
+      // films, books and admission pieces have no chest of their own here (films fill the medallions by „ნანახია“)
+      if (kind === 'video' || kind === 'wigni' || kind === 'abituri') continue;
       if (kind !== 'galoba') { items.push({ kind }); continue; }
       const v = findVersion(id);
       items.push({ kind, service: v && v.service !== 'სიმღერა' ? v.service : null, school: v?.variant.code ?? (it as { code?: string }).code ?? null });

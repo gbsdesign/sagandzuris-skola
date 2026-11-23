@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Bookmark, BookmarkCheck, BookText, ChevronDown, ExternalLink, Feather, Mic, ScrollText } from 'lucide-react';
 import { Card, Dot, Note, Press, Row, Rows, Small, TopBar, cx, FOCUS } from '../../../components/ui2';
+import { AttachButton, type AttachEntry } from '../../../components/attach/AttachButton';
 import type { FolkRegion } from '../../../data/songsData';
 import { authorsInRegion, type LiteraryWork, type MtkmeliAuthor, type WorkKind } from '../../../data/mtkmeliData';
 import { CENTRE_RECITERS } from '../../../data/centreOther';
@@ -35,6 +36,16 @@ const useWorkText = (work: LiteraryWork, open: boolean) => {
     return () => { alive = false; };
   }, [open, work.hasText, work.id, text]);
   return { text, failed };
+};
+
+// the path's record of a poem, as „ჩემს სიაში“ writes it (handleTogglePoem)
+const poemEntry = (work: MtkmeliAuthor['works'][number], author: MtkmeliAuthor, region: FolkRegion): AttachEntry => {
+  const where = poetRegionName(region);
+  const name = `${work.title} - ${author.name} (${where})`;
+  return {
+    id: work.id, title: `${work.title} — ${author.name}`, code: region.regionCode,
+    item: () => ({ variantId: work.id, chantId: work.id, chantName: name, code: region.regionCode, label: where, fullTitle: name, isLearned: false, voices: [] }),
+  };
 };
 
 type Toggle = (poemId: string, poemTitle: string, author: string, regionCode: string, regionName: string) => void;
@@ -84,6 +95,7 @@ const Work: React.FC<{ work: MtkmeliAuthor['works'][number]; author: MtkmeliAuth
               <ExternalLink aria-hidden="true" className="size-4" />{work.link.label}
             </a>
           </div>
+          <AttachButton entry={poemEntry(work, author, region)} />
         </div>
       )}
     </div>

@@ -68,6 +68,7 @@ const FirstMeeting = later(() => import('./components/onboarding/FirstMeeting'),
 const KanonGate = later(() => import('./components/psalter/KanonGate'), 'KanonGate');
 const KanonGateV2 = later(() => import('./pages/v2/psalmuni/KanonGate'), 'KanonGateV2');
 const LearnedMoment = later(() => import('./pages/v2/barati/LearnedMoment'), 'LearnedMoment');
+const FilmHost = later(() => import('./components/attach/FilmHost'), 'FilmHost');
 const CallLayer = later(() => import('./components/calls/CallLayer'), 'CallLayer');
 const PhoneRingSetup = later(() => import('./components/calls/PhoneRingSetup'), 'PhoneRingSetup');
 const GameInvites = later(() => import('./components/games/GameInvites'), 'GameInvites');
@@ -385,6 +386,7 @@ function AppContent() {
         <Suspense fallback={null}>{membership.can('classes') && (newLook ? <KanonGateV2 /> : <KanonGate />)}</Suspense>
         {/* a chant newly learned: the moment + its share card (stage 4e, boards x-idea-barati) */}
         <Suspense fallback={null}>{newLook && <LearnedMoment />}</Suspense>
+        <Suspense fallback={null}><FilmHost /></Suspense>
       </ErrorBoundary>
 
       {/* "პირველი გაცნობა": name, voice and goal, once */}

@@ -17,7 +17,7 @@ export interface LearnedItem {
   voiced: boolean;
 }
 
-const KIND_WORD: Record<PathCategory, string> = { galoba: '', simghera: 'სიმღერა', mtkmeli: 'მთქმელი', sakravebi: 'საკრავი' };
+const KIND_WORD: Record<PathCategory, string> = { galoba: '', simghera: 'სიმღერა', mtkmeli: 'მთქმელი', sakravebi: 'საკრავი', video: 'ვიდეო', wigni: 'წიგნი', abituri: 'აბიტური' };
 
 /** An item's card data from its stored path record. */
 export const learnedItemOf = (id: string, rec: { chantName?: string; label?: string }, voices: VoiceId[]): LearnedItem => {

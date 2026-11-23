@@ -7,6 +7,7 @@ import { useChants } from '../../../context';
 import {
   Card, Dot, Note, Num, Row, Rows, RoundButton, SectionLabel, Sheet, Small, ToggleRow, TopBar,
 } from '../../../components/ui2';
+import { AttachRow } from '../../../components/attach/AttachButton';
 import { songDocUrl, soundcloudEmbedUrl, type FolkRegion, type FolkSong } from '../../../data/songsData';
 import { TakePlayer, openSongPage, type SongTake } from '../../../components/maps/SongPage';
 import { SongWords } from '../../../components/maps/SongWords';
@@ -101,6 +102,10 @@ export const SongScreenV2: React.FC<{
           <Row lead={<Dot icon={<GraduationCap />} />} title="ისწავლე ხმა-ხმად" sub="ნაწილ-ნაწილ: მოსმენა წრეზე, ნელა, შენი სიმღერა" wrap
             onClick={() => { triggerHaptic(10); onLearn(); }} />
         )}
+        <AttachRow entry={{
+          id: song.id, title: `${song.title} (${region.nameGe})`, code: region.regionCode,
+          item: () => ({ variantId: song.id, chantId: song.id, chantName: `${song.title} (${region.nameGe})`, code: region.regionCode, label: region.nameGe, fullTitle: `${song.title} (${region.nameGe})`, isLearned: false, voices: [] }),
+        }} />
         {(song.docs ?? []).map(doc => (
           <Row key={doc.id} lead={<Dot icon={<FileText />} />} title={doc.name} wrap href={songDocUrl(doc)} target="_blank" />
         ))}
