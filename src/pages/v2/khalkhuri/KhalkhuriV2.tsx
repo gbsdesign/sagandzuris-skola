@@ -55,11 +55,13 @@ export const KhalkhuriV2: React.FC<{ startTab?: 'instruments' }> = ({ startTab }
   // a song picked in the one search: its region, the song's page over it; a region's home button („r:<region>“): the region
   useOpenRequest('simghera', id => {
     if (id.startsWith('r:')) { openMapItem(id.slice(2)); return; }
-    const song = FOLK_SONGS.find(s => s.id === id);
+    // „<song>~<take>“ = a recording a teacher pinned (2026-11-23)
+    const [songId, takeAt] = id.split('~');
+    const song = FOLK_SONGS.find(s => s.id === songId);
     if (!song) return;
     openMapItem(getFolkRegion(song.region).id);
     // the song's page listens once it is on screen
-    window.setTimeout(() => openSongPage(id, 0), 0);
+    window.setTimeout(() => openSongPage(songId, Number(takeAt) || 0), 0);
   });
 
   const item = mapItem ?? '';

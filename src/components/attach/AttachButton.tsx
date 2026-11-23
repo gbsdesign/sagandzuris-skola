@@ -19,6 +19,8 @@ export interface AttachEntry {
   code?: string;
   /** the path's record of it */
   item: () => PathItem;
+  /** a song's one recording (its place in the takes) — the pin then opens the song on it */
+  take?: number;
 }
 
 /** An entry for a thing with no voices of its own to mark (a film, a book, an admission piece) or any simple one. */
@@ -70,3 +72,11 @@ export const AttachRow: React.FC<{ entry: AttachEntry; above?: boolean }> = ({ e
     </>
   );
 };
+
+/** The window alone, for a place that opens it its own way (a recording's long press). */
+export const AttachSheet: React.FC<{ entry: AttachEntry | null; onClose: () => void; above?: boolean }> = ({ entry, onClose, above }) =>
+  entry ? (
+    <Sheet open above={above} title={entry.title} onClose={onClose}>
+      <Suspense fallback={null}><AttachFlow entry={entry} /></Suspense>
+    </Sheet>
+  ) : null;

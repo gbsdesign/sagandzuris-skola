@@ -315,13 +315,13 @@ export const SagandzuriPage: React.FC<{ onBack?: () => void; onMastery: () => vo
         it,
         id,
         name: it.chantName,
-        sub: c.id === 'galoba' ? it.code || '' : KIND_WORD[c.id] ?? '',
+        sub: c.id === 'galoba' ? it.code || '' : it.take !== undefined && it.label ? `${KIND_WORD[c.id]} · ${it.label}` : KIND_WORD[c.id] ?? '',
         token: c.id === 'galoba' || c.id === 'abituri' ? 'pearl' : c.id === 'mtkmeli' || c.id === 'wigni' ? 'scroll' : c.id === 'video' ? 'medallion' : 'grape',
         pearl: pearlOf(it, ok),
         voiced,
         marks: (voiced ? (['1', '2', '3'] as Voice[]) : (['1'] as Voice[])).map((v): VoiceMark => (ok.includes(v) ? 'ok' : have.includes(v) ? 'on' : 'off')),
         chip: chestIdOf(id),
-        onOpen: openerOf(id, it.chantName) ?? undefined,
+        onOpen: openerOf(id, it.chantName, it.take) ?? undefined,
       };
     })), [stats, confirmed, openerOf]);
 

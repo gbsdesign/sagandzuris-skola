@@ -18,6 +18,8 @@ export interface ProgramItem {
   title: string;
   code?: string;
   note?: string;
+  /** a song's recording chosen when it was pinned (its place in the song's takes), 2026-11-23 */
+  take?: number;
 }
 
 // One lesson in the class timetable: weekday (0 = Sunday, as Date.getDay) and time.
