@@ -245,7 +245,7 @@ export const ProgramTab: React.FC<{ cls: SchoolClass; canEdit: boolean; compact?
         <ItemSheet
           p={open}
           onClose={() => setShown(null)}
-          go={openerOf(open.id, open.title)}
+          go={openerOf(open.id, open.title, open.take)}
           piece={learnPieceOf(open.id)}
           onLearn={piece => { setShown(null); openLearning(piece); }}
           onStudio={studioPiece(open.id) && (iAmMember || canEdit) ? () => { setShown(null); setStudio(open.id); } : null}

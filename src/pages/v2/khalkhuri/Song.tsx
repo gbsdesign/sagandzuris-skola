@@ -7,7 +7,8 @@ import { useChants } from '../../../context';
 import {
   Card, Dot, Note, Num, Row, Rows, RoundButton, SectionLabel, Sheet, Small, ToggleRow, TopBar,
 } from '../../../components/ui2';
-import { AttachRow } from '../../../components/attach/AttachButton';
+import { AttachRow, AttachSheet, useCanAttach, type AttachEntry } from '../../../components/attach/AttachButton';
+import { useLongPress } from '../../../hooks/useLongPress';
 import { songDocUrl, soundcloudEmbedUrl, type FolkRegion, type FolkSong } from '../../../data/songsData';
 import { TakePlayer, openSongPage, type SongTake } from '../../../components/maps/SongPage';
 import { SongWords } from '../../../components/maps/SongWords';
@@ -20,6 +21,31 @@ import { triggerHaptic } from '../../../utils/haptics';
 // words and „ისწავლე ხმა-ხმად“ (the
 // learning mode). ⬇ MP3, ☁ offline, sharing, „ჩემს სიაში“ and an admin's „გადატანა“ live in ⋯. The page itself — its history
 // step, the learning mode, the move — is components/maps/SongPage.tsx's.
+
+/** the path's record of a song (as „ჩემს სიაში“ writes it); with `take`, one recording of it */
+const songEntry = (song: FolkSong, region: FolkRegion, one?: { take: number; label: string }): AttachEntry => {
+  const name = `${song.title} (${region.nameGe})`;
+  return {
+    id: song.id,
+    title: one ? `${song.title} — ${one.label}` : name,
+    code: region.regionCode,
+    take: one?.take,
+    item: () => ({
+      variantId: song.id, chantId: song.id, chantName: name, code: region.regionCode,
+      label: one ? `${region.nameGe} · ${one.label}` : region.nameGe, fullTitle: name, isLearned: false, voices: [],
+      ...(one ? { take: one.take } : {}),
+    }),
+  };
+};
+
+/** a recording's row: a tap plays it, a long press (teachers) pins it */
+const TakeRow: React.FC<{ n: number; on: boolean; take: SongTake; onGo: () => void; onLong?: () => void }> = ({ n, on, take, onGo, onLong }) => {
+  const press = useLongPress(() => onLong?.());
+  return (
+    <Row lead={<Num n={n} on={on} />} title={take.label} sub={take.sub} wrap aria-current={on ? 'true' : undefined} onClick={onGo}
+      {...(onLong ? press : {})} className={onLong ? 'select-none [-webkit-touch-callout:none]' : undefined} />
+  );
+};
 
 export const SongScreenV2: React.FC<{
   song: FolkSong;
@@ -38,6 +64,9 @@ export const SongScreenV2: React.FC<{
   const [showWords, setShowWords] = useState(false);
   useEffect(() => { setShowWords(false); }, [song.id]);
   const go = (i: number) => { triggerHaptic(10); openSongPage(song.id, i); };
+  // a recording held long: „კლასს ან მოსწავლეს მიმაგრება“ of that very recording (2026-11-23, the user's screenshot)
+  const canAttach = useCanAttach();
+  const [pin, setPin] = useState<AttachEntry | null>(null);
   const place = [region.nameGe, song.area, song.municipality].filter(Boolean).join(' · ');
   const canLearn = !!take && !take.embed && take.media.tracks.some(Boolean);
 
@@ -88,8 +117,8 @@ export const SongScreenV2: React.FC<{
           <SectionLabel label={`ჩანაწერები · ${takes.length}`} className="mt-1" />
           <Rows>
             {takes.map((t, i) => (
-              <Row key={i} lead={<Num n={i + 1} on={i === takeIdx} />} title={t.label} sub={t.sub} wrap
-                aria-current={i === takeIdx ? 'true' : undefined} onClick={() => go(i)} />
+              <TakeRow key={i} n={i + 1} on={i === takeIdx} take={t} onGo={() => go(i)}
+                onLong={canAttach ? () => setPin(songEntry(song, region, { take: i, label: t.label })) : undefined} />
             ))}
           </Rows>
         </>
@@ -102,10 +131,7 @@ export const SongScreenV2: React.FC<{
           <Row lead={<Dot icon={<GraduationCap />} />} title="ისწავლე ხმა-ხმად" sub="ნაწილ-ნაწილ: მოსმენა წრეზე, ნელა, შენი სიმღერა" wrap
             onClick={() => { triggerHaptic(10); onLearn(); }} />
         )}
-        <AttachRow entry={{
-          id: song.id, title: `${song.title} (${region.nameGe})`, code: region.regionCode,
-          item: () => ({ variantId: song.id, chantId: song.id, chantName: `${song.title} (${region.nameGe})`, code: region.regionCode, label: region.nameGe, fullTitle: `${song.title} (${region.nameGe})`, isLearned: false, voices: [] }),
-        }} />
+        <AttachRow entry={songEntry(song, region)} />
         {(song.docs ?? []).map(doc => (
           <Row key={doc.id} lead={<Dot icon={<FileText />} />} title={doc.name} wrap href={songDocUrl(doc)} target="_blank" />
         ))}
@@ -115,6 +141,7 @@ export const SongScreenV2: React.FC<{
       {showWords && <div className="sg-in"><SongWords songId={song.id} words={words} scroller={scroller} /></div>}
 
       <MoreSheet open={more} onClose={() => setMore(false)} song={song} region={region} take={take} onMove={onMove} />
+      <AttachSheet entry={pin} onClose={() => setPin(null)} />
     </div>
   );
 };

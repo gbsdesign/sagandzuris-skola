@@ -14,7 +14,7 @@ import { openFilm } from '../components/attach/openFilm';
 export const usePathItemOpener = () => {
   const { openNotes } = useNotes();
   const { navigateTo } = useNavigation();
-  return (id: string, title?: string): (() => void) | null => {
+  return (id: string, title?: string, take?: number): (() => void) | null => {
     const kind = categoryOf(id);
     // pinned from the other sections (2026-11-23): a film plays in its window, a book opens in the library, a life over the
     // page, an admission piece on its list
@@ -30,7 +30,7 @@ export const usePathItemOpener = () => {
       return v && canOpenNotes(v.chant, v.variant) ? () => { triggerHaptic(10); openNotes(id, 'bookmark'); } : null;
     }
     if (kind === 'simghera' && FOLK_SONGS.some(x => x.id === id)) {
-      return () => { triggerHaptic(10); requestOpen('simghera', id); navigateTo('simghera'); };
+      return () => { triggerHaptic(10); requestOpen('simghera', take ? `${id}~${take}` : id); navigateTo('simghera'); };
     }
     return null;
   };

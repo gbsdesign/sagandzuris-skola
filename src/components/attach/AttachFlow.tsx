@@ -79,12 +79,15 @@ export const AttachFlow: React.FC<{ entry: AttachEntry; onExit?: () => void }> =
   }, [shownUids, id]);
 
   const toggleClass = async (cls: SchoolClass) => {
-    const there = cls.program.some(p => p.id === id);
+    const old = cls.program.find(p => p.id === id);
+    // another recording of the same song already there: it is swapped for this one, not taken off
+    const swap = !!old && entry.take !== undefined && old.take !== entry.take;
+    const made = { id, title: entry.title, ...(entry.code ? { code: entry.code } : {}), ...(entry.take !== undefined ? { take: entry.take } : {}) };
     setBusy(cls.id);
     try {
-      const next = there ? cls.program.filter(p => p.id !== id) : [...cls.program, { id, title: entry.title, ...(entry.code ? { code: entry.code } : {}) }];
+      const next = swap ? cls.program.map(p => (p.id === id ? { ...p, ...made } : p)) : old ? cls.program.filter(p => p.id !== id) : [...cls.program, made];
       const why = await saveClassProgram(cls, next);
-      if (why) { setNote(''); setErr(String(why)); } else said(there ? 'კლასის პროგრამიდან ამოვიდა' : 'კლასის პროგრამაში ჩაჯდა');
+      if (why) { setNote(''); setErr(String(why)); } else said(swap ? 'ჩანაწერი შეიცვალა' : old ? 'კლასის პროგრამიდან ამოვიდა' : 'კლასის პროგრამაში ჩაჯდა');
     } catch (e) { failed(e); }
     setBusy('');
   };
@@ -93,12 +96,15 @@ export const AttachFlow: React.FC<{ entry: AttachEntry; onExit?: () => void }> =
     setBusy(p.uid);
     try {
       const ref = doc(db, 'students', p.uid);
-      let now = has[p.uid];
-      if (now !== 'yes' && now !== 'no') {
-        const snap = await getDoc(ref);
-        now = (snap.data()?.selectedChantVariants ?? {})[id] ? 'yes' : 'no';
-      }
-      if (now === 'yes') {
+      const snap = await getDoc(ref);
+      const had = (snap.data()?.selectedChantVariants ?? {})[id] as { take?: number } | undefined;
+      const now: Has = had ? 'yes' : 'no';
+      if (had && entry.take !== undefined && had.take !== entry.take) {
+        // another recording of the song is on the path: this one takes its place, the marks stay
+        await setDoc(ref, { selectedChantVariants: { [id]: { take: entry.take, label: entry.item().label } } }, { merge: true });
+        setHas(h => ({ ...h, [p.uid]: 'yes' }));
+        said(`${p.name} — ჩანაწერი შეიცვალა`);
+      } else if (now === 'yes') {
         await updateDoc(ref, new FieldPath('selectedChantVariants', id), deleteField());
         setHas(h => ({ ...h, [p.uid]: 'no' }));
         said(`${p.name} — გზიდან ამოვიდა`);

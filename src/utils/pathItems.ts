@@ -20,6 +20,7 @@ export interface PathItem {
   voices?: Voice[];
   order?: number;          // position set by the teacher
   assignedByClass?: string; // class id that put this item on the path
+  take?: number;           // a song's recording the teacher pinned (its place in the song's takes)
 }
 
 export type PathCategory = 'galoba' | 'simghera' | 'mtkmeli' | 'sakravebi' | 'video' | 'wigni' | 'abituri';
