@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { BookOpen, CalendarDays, ChevronDown, ChevronLeft, ChevronRight, History, Library, List, ScanText, ScrollText } from 'lucide-react';
+import { OfflineButton } from '../../../components/offline/OfflineButton';
 import { Button, Card, Chips, Dot, Helper, Hero, Note, Num, Pill, Press, RoundButton, Row, Rows, SectionLabel, TopBar, cx } from '../../../components/ui2';
 import { useNavigation } from '../../../context';
 import { WIGNEBI_COLLECTIONS, WIGNEBI_SHELVES, type WignebiCollection } from '../../../data/wignebi';
@@ -98,7 +99,7 @@ const ShelfView: React.FC<{ id: string; open: Open; back: () => void }> = ({ id,
   if (!shelf) return null;
   return (
     <Page>
-      <TopBar title={shelf.title} sub="საღვთისმსახურო წიგნები" onBack={back} />
+      <TopBar title={shelf.title} sub="საღვთისმსახურო წიგნები" onBack={back} right={<OfflineButton kind="wignebi" />} />
       <Rows>
         {shelf.collections.map((cid, i) => {
           const c = WIGNEBI_COLLECTIONS[cid];
@@ -165,7 +166,7 @@ const CollectionView: React.FC<{ c: WignebiCollection; open: Open; back: () => v
   const lastN = Number((readLast()[c.id] ?? '').split(':')[0]);
   return (
     <Page>
-      <TopBar title={c.title} sub={isBible ? 'ბიბლია' : undefined} onBack={back} />
+      <TopBar title={c.title} sub={isBible ? 'ბიბლია' : undefined} onBack={back} right={<OfflineButton kind="wignebi" />} />
       <ResumeHero c={c} open={open} />
       {grid && (
         <NumberGrid
@@ -190,7 +191,7 @@ const CollectionView: React.FC<{ c: WignebiCollection; open: Open; back: () => v
 // „დამატებითი წიგნები“: the books in their groups
 const ExtraList: React.FC<{ open: Open; back: () => void }> = ({ open, back }) => (
   <Page>
-    <TopBar title={EXTRA.title} sub="წიგნები, რომლებიც ზედა თაროებზე არ არის" onBack={back} />
+    <TopBar title={EXTRA.title} sub="წიგნები, რომლებიც ზედა თაროებზე არ არის" onBack={back} right={<OfflineButton kind="wignebi" />} />
     {EXTRA_GROUPS.map(g => {
       const books = EXTRA_BOOKS.filter(b => b.g === g.id);
       if (!books.length) return null;
@@ -332,7 +333,7 @@ const CalendarView: React.FC<{ c: WignebiCollection; back: () => void }> = ({ c,
   const showsToday = yearNum === today.y && month === today.m && days.some(x => x.d === today.d);
   return (
     <Page>
-      <TopBar title={c.title} sub="საღვთისმსახურო წიგნები" onBack={back} />
+      <TopBar title={c.title} sub="საღვთისმსახურო წიგნები" onBack={back} right={<OfflineButton kind="wignebi" />} />
       <Chips label="წელი" items={years.map(x => ({ id: String(x.n), label: String(x.y) }))} value={String(year)}
         onChange={v => { const x = years.find(y => String(y.n) === v)!; triggerHaptic(8); setYear(x.n); setMonth(x.y === today.y ? today.m : 0); }} />
       <div role="group" aria-label="თვე" className="grid grid-cols-3 gap-1 rounded-tile bg-surf p-1 min-[480px]:grid-cols-4">

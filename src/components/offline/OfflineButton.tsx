@@ -18,6 +18,7 @@ const LABEL: Record<OfflineKind, string> = {
   simghera: 'ოფლაინ: სიმღერები',
   abituri: 'ოფლაინ: აბიტურიენტს',
   library: 'ოფლაინ: ბიბლიოთეკა',
+  wignebi: 'ოფლაინ: საღვთისმსახურო წიგნები',
 };
 
 export const OfflineButton: React.FC<{ kind: OfflineKind }> = ({ kind }) => {

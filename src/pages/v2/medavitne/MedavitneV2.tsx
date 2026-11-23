@@ -1,5 +1,6 @@
 import React from 'react';
 import { BookOpen, GraduationCap, Play } from 'lucide-react';
+import { OfflineButton } from '../../../components/offline/OfflineButton';
 import { Dot, Hero, Row, Rows, SectionLabel, TopBar } from '../../../components/ui2';
 import { useNavigation } from '../../../context';
 import { LESSONS, lessonById } from '../../../data/medavitneLessons';
@@ -30,7 +31,7 @@ const Front: React.FC<{ done: string[] }> = ({ done }) => {
   const learned = `ნასწავლი ${count} / ${LESSONS.length}`;
   return (
     <Page>
-      <TopBar title="ღვთისმსახურება" onBack={handleGoBack} right={<PinRound id="section:medavitneobaTopic" />} />
+      <TopBar title="ღვთისმსახურება" onBack={handleGoBack} right={<><PinRound id="section:medavitneobaTopic" /><OfflineButton kind="wignebi" /></>} />
       <WorshipSwitch value="medavitne" />
       {brief ? (
         <Hero

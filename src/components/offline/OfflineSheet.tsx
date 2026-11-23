@@ -16,6 +16,7 @@ import { triggerHaptic } from '../../utils/haptics';
 import { SECTIONS } from '../../pages/galoba/ServiceTabs';
 import { SERVICE_CHANTS } from '../../pages/galoba/chantSearch';
 import { useRecordingTools } from '../../hooks/useRecordingTools';
+import { WIGNEBI_COLLECTIONS, WIGNEBI_SHELVES } from '../../data/wignebi';
 
 // „ოფლაინ რეჟიმი“ split by list (2026-11-08, the user: „ჩამოტვირთვის ლოგო დავშალოთ … სიების თავში ღრუბლის ლოგოზე
 // დაჭერისას ამომხტარ ფანჯარაში კომპაქტურად“): a list's round ☁ (OfflineButton.tsx) opens this window with only that
@@ -23,13 +24,14 @@ import { useRecordingTools } from '../../hooks/useRecordingTools';
 // library: the saints' lives + the chant albums. The automatic part (app, notes' data, prayers…) is no longer shown
 // anywhere: it downloads by itself in the background (startOffline in main.tsx). Turning off what is on the phone asks.
 
-export type OfflineKind = 'galoba' | 'simghera' | 'abituri' | 'library';
+export type OfflineKind = 'galoba' | 'simghera' | 'abituri' | 'library' | 'wignebi';
 
 export const KIND_TITLE: Record<OfflineKind, string> = {
   galoba: 'ოფლაინ: ნოტები და გალობა',
   simghera: 'ოფლაინ: სიმღერები',
   abituri: 'ოფლაინ: აბიტურიენტს',
   library: 'ოფლაინ: ბიბლიოთეკა',
+  wignebi: 'ოფლაინ: საღვთისმსახურო წიგნები',
 };
 
 const MB = 1024 * 1024;
@@ -121,6 +123,29 @@ const PackRow: React.FC<{ s: OfflineState; p: PackInfo; title: string; count?: s
     </div>
   );
 };
+
+/** Several packs under one switch (all the books, the day service's books): on = every one of them. */
+const PacksRow: React.FC<{ s: OfflineState; packs: PackInfo[]; title: string; count: string }> = ({ s, packs, title, count }) => {
+  const on = packs.length > 0 && packs.every(p => isKept(s, p.id));
+  const done = on && packs.every(p => s.stored[p.id]?.complete);
+  const total = packs.reduce((a, p) => a + p.b, 0);
+  const turn = async (v: boolean) => {
+    const kept = packs.reduce((a, p) => a + (s.stored[p.id]?.bytes ?? 0), 0);
+    if (v || await sureToRemove(`„${title}“`, kept)) void setPacks(packs.map(p => p.id), v);
+  };
+  return (
+    <div className="flex min-h-14 items-center gap-2.5 py-2 pr-3 pl-4">
+      <RowText title={title} line={done ? `ჩამოწერილია · ${size(total)}` : `${count} · ${size(total)}`} done={done} />
+      <Toggle on={on} onChange={turn} label={`${title} — ოფლაინ`} />
+    </div>
+  );
+};
+
+// the liturgical books' order on the shelves; the day service reads these collections (utils/dayOffline.ts, serviceTexts)
+const WIGNEBI_ORDER = [...WIGNEBI_SHELVES.flatMap(sh => sh.collections), 'x'];
+const DAY_BOOKS = ['jamni', 'paraklitoni', 'zatiki', 'davitni', 'mgalobeltatvis', 'kondaki', 'kurtxevani', 'tveni', 'wardgoma', 'kriteli', 'x'];
+const collOf = (p: PackInfo) => p.id.slice('wignebi-'.length);
+const collTitle = (c: string) => (c === 'x' ? 'დამატებითი წიგნები' : WIGNEBI_COLLECTIONS[c]?.title.replace(/\u00ad/g, '') ?? c);
 
 /** A group of recordings: its switch = all of them; the name unfolds its recordings, each with its own switch. */
 const GroupRow: React.FC<{ s: OfflineState; g: RecGroup; est: (url: string) => number }> = ({ s, g, est }) => {
@@ -280,7 +305,7 @@ const ServiceRow: React.FC = () => {
   );
 };
 
-const SECTION_OF: Record<Exclude<OfflineKind, 'library'>, RecSection> = { galoba: 'galoba', simghera: 'simghera', abituri: 'abituri' };
+const SECTION_OF: Record<Exclude<OfflineKind, 'library' | 'wignebi'>, RecSection> = { galoba: 'galoba', simghera: 'simghera', abituri: 'abituri' };
 
 export const OfflineSheet: React.FC<{ kind: OfflineKind; onClose: () => void }> = ({ kind, onClose }) => {
   const s = useOffline();
@@ -308,6 +333,24 @@ export const OfflineSheet: React.FC<{ kind: OfflineKind; onClose: () => void }> 
             </Part>
           )}
           {albums.length > 0 && <Part title="ჩანაწერები · ალბომები"><Groups s={s} groups={albums} est={est} /></Part>}
+        </>
+      );
+    }
+    if (kind === 'wignebi') {
+      const books = s.packs
+        .filter(p => p.id.startsWith('wignebi-'))
+        .sort((a, b) => (WIGNEBI_ORDER.indexOf(collOf(a)) + 1 || 99) - (WIGNEBI_ORDER.indexOf(collOf(b)) + 1 || 99));
+      if (!books.length) return <p className="text-body text-mut">სია იტვირთება…</p>;
+      const day = books.filter(p => DAY_BOOKS.includes(collOf(p)));
+      return (
+        <>
+          <Part title="ერთად">
+            <PacksRow s={s} packs={books} title="ყველა წიგნი" count={`${books.length} წიგნი`} />
+            <PacksRow s={s} packs={day} title="დღის მსახურებისთვის" count="ჟამნი, პარაკლიტონი, ზატიკი…" />
+          </Part>
+          <Part title="წიგნები">
+            {books.map(p => <PackRow key={p.id} s={s} p={p} title={collTitle(collOf(p))} est={est} />)}
+          </Part>
         </>
       );
     }
