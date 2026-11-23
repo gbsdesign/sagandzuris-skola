@@ -169,7 +169,7 @@ export const DayPlan: React.FC<{ d: DayServiceState }> = ({ d }) => {
       {msg && (
         <Note>
           {msg.text}
-          {msg.why && <span className="mt-0.5 block text-[12px] text-faint">{msg.why}</span>}
+          {msg.why && <span className="mt-0.5 block text-meta text-faint">{msg.why}</span>}
         </Note>
       )}
       <Rows aria-label="საგალობლები">
@@ -208,7 +208,7 @@ export const DayPlan: React.FC<{ d: DayServiceState }> = ({ d }) => {
                       return (
                         <div key={v.id} className="flex items-center gap-1 pr-2 pl-3">
                           <Press onClick={() => flipPick(id, v.id)} disabled={!user} aria-pressed={on}
-                            className="flex min-h-tap min-w-0 flex-1 cursor-pointer items-center gap-2.5 rounded-xl py-1.5 pl-1 text-left active:bg-soft disabled:cursor-default">
+                            className="flex min-h-tap min-w-0 flex-1 cursor-pointer items-center gap-2.5 rounded-tile py-1.5 pl-1 text-left active:bg-soft disabled:cursor-default">
                             <Check on={on} size={26} />
                             <span className="flex min-w-0 flex-1 flex-col">
                               <span className={cx('text-body leading-snug font-bold wrap-break-word', on && 'text-wine')}>{versionLabel(v)}</span>

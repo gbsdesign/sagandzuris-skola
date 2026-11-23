@@ -108,7 +108,7 @@ export const FIX = {
     ? J(n, 'მარხვის მუხლები', { find: /^ხოლო უკუეთუ მარხვაჲ იყოს/, count: 3 })
     : J(n, 'მარხვის მუხლები', { find: /^წმიდაო ღმერთო\. ყოვლად-წმიდაო\. მამაო ჩუენო/, until: /^უფალო,? შეგ(?:ჳ|ვი)წყალენ 40/, noHead: true })),
   /** matins: the alleluia's four verses, the tone's hymns to the Trinity and their endings by the weekday */
-  alleluiaVerses: J(4, '„ალილუია“ — მუხლები', { find: /^ალილუია 3-ზის\. მუხლი ა/, count: 4 }),
+  alleluiaVerses: J(4, '„ალილუია“ — მუხლები', { find: /^ალილუია 3-(?:გ)?ზის\. მუხლი ა/, count: 4 }),
   triadic: (tone: number) => J(4, `სამების საგალობლები — ხმა ${tone}`, { find: new RegExp(`^გალობა წმიდისა არსისა, ხმა ${TRIADIC_TONE[tone - 1]}\\.`), count: 3 }),
   triadicEnds: J(4, 'ბოლო სიტყვები — დღეების მიხედვით', { find: /^უწყებულ იყავნ, რამეთუ წმიდა-არსისა გალობითა/, count: 6 }),
   lentPhotagogikon: (tone: number) => J(4, `განმანათლებელი — ხმა ${tone}`, { find: new RegExp(`^განმანათლებელი, ხმა ${PHOTA_TONE[tone - 1]}\\.`), count: 1 }),
@@ -248,7 +248,7 @@ export const menaion = (kind: number, seg: MenaionSeg): TextSrc | null =>
   kind ? { coll: 'tveni', n: kind, part: 0, ...MENAION_SEG[seg], label: `საზიარო განგება — ${SAINT_KINDS[kind - 1]}` } : null;
 
 // ---------- the rest ----------
-const NUM = ['', 'ა', 'ბ', 'გ', 'დ', 'ე', 'ვ', 'ზ', '[ჱწ]', 'თ', 'ი', 'ია'];
+const NUM = ['', 'ა', 'ბ', 'გ', 'დ', 'ე', 'ვ', 'ზ', '(?:[ჱწ]|8)', 'თ', 'ი', 'ია'];
 /** a Sunday's exapostilarion and its gospel sticheron, by the matins Gospel's number (1–11) */
 export const sundayExapost = (gospel: number): TextSrc | null =>
   gospel >= 1 && gospel <= 11

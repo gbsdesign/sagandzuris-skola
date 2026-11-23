@@ -175,11 +175,21 @@ final class Bridge {
         String state = JSONObject.quote(noticeState());
         for (String id : waitingNotices) reply(id, true, state);
         waitingNotices.clear();
+        tellPermission();
     }
 
     /** back on screen: notifications may have been turned on in the phone's settings meanwhile */
     void resumed() {
         if (!waitingNotices.isEmpty()) noticesAnswered();
+        else tellPermission();
+    }
+
+    /** the page's Notification.permission follows the phone's answer at once (the first opening's ask, the settings);
+     *  `sg-notify-perm` lets the site bind the phone for calls and messages by itself (PhoneRingSetup) */
+    private void tellPermission() {
+        String js = "window.sgApp&&window.sgApp.setPermission&&(window.sgApp.setPermission(" + JSONObject.quote(noticeState())
+            + "),window.dispatchEvent(new Event('sg-notify-perm')))";
+        main.post(() -> web.evaluateJavascript(js, null));
     }
 
     private String noticeState() {

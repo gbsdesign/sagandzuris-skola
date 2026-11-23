@@ -8,6 +8,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
@@ -130,6 +131,18 @@ public class MainActivity extends ComponentActivity {
 
         if (saved != null) web.restoreState(saved);
         else web.loadUrl(urlOf(getIntent()));
+        askNoticesOnce();
+    }
+
+    /** the first opening asks for notifications at once (Android 13+ starts with them off), so calls and messages ring
+     *  from the start (the user, 2026-11-23: „თავიდანვე ჩართული ქონდეს“); asked once — later the site's own card asks */
+    private void askNoticesOnce() {
+        if (Build.VERSION.SDK_INT < 33) return;
+        if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) return;
+        android.content.SharedPreferences sg = getSharedPreferences("sg", 0);
+        if (sg.getBoolean("first-ask-notices", false)) return;
+        sg.edit().putBoolean("first-ask-notices", true).putBoolean("asked-notices", true).apply();
+        requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, Bridge.ASK_NOTICES);
     }
 
     @Override
