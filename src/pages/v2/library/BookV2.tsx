@@ -1,6 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { BookOpen, Check as CheckIcon, ChevronLeft, ChevronRight, List } from 'lucide-react';
 import { Button, Check, Hero, Num, RoundButton, Row, Rows, ToggleRow, TopBar } from '../../../components/ui2';
+import { useNavigation } from '../../../context';
+import { AttachRow, simpleEntry } from '../../../components/attach/AttachButton';
+import { PATH_PREFIX } from '../../../utils/pathPrefix';
 import { hideNav } from '../../../design/newLook';
 import { bookReadId, chapterReadId, useBooksRead } from '../../../hooks/useBooksRead';
 import { triggerHaptic } from '../../../utils/haptics';
@@ -75,6 +78,8 @@ export const BookV2: React.FC<{
   const [book, setBook] = useState<Book | null>(null);
   const [failed, setFailed] = useState(false);
   const chapter = Number(nav.part) || null;
+  // the library's step of this book's contents: what a path's pin opens again
+  const { mapItem } = useNavigation();
   const [last, setLast] = useState<number | null>(() => lastChapter(place)?.n ?? null);
   const [font, setFont] = useReaderFont('sg-book-font');
   const textRef = useRef<HTMLDivElement>(null);
@@ -181,6 +186,7 @@ export const BookV2: React.FC<{
           onChange={() => { triggerHaptic(18); read.toggle(wholeId); }}
           wrap
         />
+        {mapItem && <AttachRow entry={simpleEntry(`${PATH_PREFIX.wigni}${mapItem}`, title ?? book.book, 'წიგნი')} />}
       </Rows>
     </Page>
   );

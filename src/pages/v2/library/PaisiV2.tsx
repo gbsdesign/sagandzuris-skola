@@ -1,6 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight, ExternalLink, Play } from 'lucide-react';
 import { Button, CheckButton, Duo, Hero, Note, Press, Rows, Seg, Sheet, Small, TopBar, cx, FOCUS_IN } from '../../../components/ui2';
+import { AttachButton, simpleEntry } from '../../../components/attach/AttachButton';
+import { PATH_PREFIX } from '../../../utils/pathPrefix';
 import { triggerHaptic } from '../../../utils/haptics';
 import { useWatchedVideos } from '../../../hooks/useWatchedVideos';
 import { PAISI_PARTS, PaisiPart } from '../../../data/paisiVideos';
@@ -72,6 +74,7 @@ const Player: React.FC<{ open?: string; onMove: (id: string) => void; onClose: (
       <Button kind={seen ? 'soft' : 'primary'} full aria-pressed={seen} onClick={() => { triggerHaptic(seen ? 8 : 15); watched.toggle(open); }}>
         {seen ? 'ნანახია ✓' : 'ნანახად მონიშვნა'}
       </Button>
+      <AttachButton entry={simpleEntry(`${PATH_PREFIX.video}${open}`, ep ? `${ep.part.label} · სერია ${ep.n}` : 'ვიდეო', 'ვიდეო', 'წმინდა პაისი')} />
       <Button kind="quiet" full icon={<ExternalLink aria-hidden="true" />} href={watchOf(open)} target="_blank">YouTube-ზე გახსნა</Button>
     </Sheet>
   );

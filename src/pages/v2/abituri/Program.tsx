@@ -3,6 +3,8 @@ import { BookOpen, Check as CheckIcon, ChevronDown, CirclePlay, Ear, ExternalLin
 import {
   Bar, Button, Card, CheckButton, Chips, Dot, Duo, H2, Note, Press, Row, Rows, Seg, Sheet, Small, ToggleRow, TopBar, cx, FOCUS_IN,
 } from '../../../components/ui2';
+import { AttachRow, simpleEntry, useCanAttach } from '../../../components/attach/AttachButton';
+import { PATH_PREFIX } from '../../../utils/pathPrefix';
 import { ChantPlayer } from '../../../components/ChantPlayer';
 import { askSignIn } from '../../../components/access/SignInPrompt';
 import { useNavigation } from '../../../context';
@@ -48,6 +50,7 @@ type Open = { item: ProgramItem; key?: string } | null;
 /** a piece's window: its notes, the recordings by voices, the links, and „ვიცი“ */
 const PieceSheet: React.FC<{ open: Open; known: boolean; onKnown?: () => void; onClose: () => void }> = ({ open, known, onKnown, onClose }) => {
   const canListen = useCanListen();
+  const canAttach = useCanAttach();
   const { openNotes } = useNotes();
   const [takeIdx, setTakeIdx] = useState(0);
   const [embedUrl, setEmbedUrl] = useState<string | null>(null);
@@ -70,6 +73,11 @@ const PieceSheet: React.FC<{ open: Open; known: boolean; onKnown?: () => void; o
               onClick={() => { triggerHaptic(10); onClose(); openNotes(notesVid, 'list'); }} />
           )}
           {onKnown && <ToggleRow lead={<Dot icon={<CheckIcon />} color={known ? 'wine' : 'tint'} />} title="ვიცი" sub="ჩაითვლება „ჩემ მომზადებაში“" on={known} onChange={onKnown} />}
+        </Rows>
+      )}
+      {open?.key && canAttach && (
+        <Rows>
+          <AttachRow entry={simpleEntry(`${PATH_PREFIX.abituri}${open.key}`, item.title, 'აბიტური', item.sub || 'აბიტური')} />
         </Rows>
       )}
 

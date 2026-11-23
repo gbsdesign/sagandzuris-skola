@@ -4,6 +4,8 @@ import { BackBtn } from '../ui/kit';
 import { AutoScrollButton, SizePill } from '../views/ReadingTools';
 import { ReadButton } from '../../pages/library/ReadButton';
 import { lifeReadId } from '../../hooks/useBooksRead';
+import { AttachButton, simpleEntry } from '../attach/AttachButton';
+import { PATH_PREFIX } from '../../utils/pathPrefix';
 
 import { triggerHaptic } from '../../utils/haptics';
 import { GrapeBunch } from '../home/PlateOrnaments';
@@ -295,6 +297,7 @@ export const SaintLifeOverlay: React.FC = () => {
             {name || <span className="inline-block h-6 w-56 max-w-full rounded bg-[#e8dcc8]/70 animate-pulse align-middle" />}
           </h1>
           {note && <p className="mt-1 text-[13px] font-semibold text-[#8a7a6a]">({note})</p>}
+          {shown && life && <div className="mx-auto mt-4 max-w-sm"><AttachButton above entry={simpleEntry(`${PATH_PREFIX.wigni}life:${shown}`, name || title, 'წიგნი', 'წმინდანის ცხოვრება')} /></div>}
           <div className="mx-auto mt-4 mb-7 flex items-center justify-center gap-2" aria-hidden>
             <span className="h-px w-14 bg-gradient-to-r from-transparent to-[#d9c6a8]" />
             <GrapeBunch color="#c4262e" className="w-4 h-4 opacity-80" />

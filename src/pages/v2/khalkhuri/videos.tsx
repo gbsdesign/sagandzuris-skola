@@ -3,6 +3,8 @@ import { ChevronLeft, ChevronRight, ExternalLink, Play } from 'lucide-react';
 import { Button, CheckButton, Duo, Note, Press, Rows, Sheet, cx, FOCUS_IN } from '../../../components/ui2';
 import { triggerHaptic } from '../../../utils/haptics';
 import { useWatchedVideos } from '../../../hooks/useWatchedVideos';
+import { AttachButton, simpleEntry } from '../../../components/attach/AttachButton';
+import { PATH_PREFIX } from '../../../utils/pathPrefix';
 import { ETNOFORI_CHANNEL, clock, embedOf, loadEtnofori, thumbOf, watchOf, type EtnoData } from '../../../data/etnofori';
 import { MONASTERY_FILMS } from '../../../data/monasteryVideos';
 import { PillRow, usePaged } from './parts';
@@ -131,6 +133,7 @@ export const VideoPlayer: React.FC<{ films: VFilm[]; open?: string; onMove: (id:
       <Button kind={seen ? 'soft' : 'primary'} full aria-pressed={seen} onClick={() => { triggerHaptic(seen ? 8 : 15); watched.toggle(open); }}>
         {seen ? 'ნანახია ✓' : 'ნანახად მონიშვნა'}
       </Button>
+      <AttachButton entry={simpleEntry(`${PATH_PREFIX.video}${open}`, film?.title ?? 'ვიდეო', 'ვიდეო', film?.sub || 'ვიდეო')} />
       <Button kind="quiet" full icon={<ExternalLink aria-hidden="true" />} href={watchOf(open)} target="_blank">YouTube-ზე გახსნა</Button>
     </Sheet>
   );

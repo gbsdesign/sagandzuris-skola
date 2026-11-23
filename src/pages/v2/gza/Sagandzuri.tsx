@@ -33,7 +33,7 @@ import { learnedItemOf } from '../barati/useLearned';
 // ✎ swaps the voices for ✕ to take items off the path.
 
 export type VoiceMark = 'off' | 'on' | 'ok';
-export type TokenKind = 'pearl' | 'grape' | 'scroll';
+export type TokenKind = 'pearl' | 'grape' | 'scroll' | 'medallion';
 
 export interface TreasureItem {
   id: string;
@@ -274,7 +274,7 @@ export const SagandzuriView: React.FC<{
   );
 };
 
-const KIND_WORD: Record<string, string> = { simghera: 'სიმღერა', mtkmeli: 'მთქმელი', sakravebi: 'საკრავი' };
+const KIND_WORD: Record<string, string> = { simghera: 'სიმღერა', mtkmeli: 'მთქმელი', sakravebi: 'საკრავი', video: 'ვიდეო', wigni: 'წიგნი', abituri: 'აბიტური' };
 
 /** „საგანძური“ with the member's own path (a guest's device path too). */
 export const SagandzuriPage: React.FC<{ onBack?: () => void; onMastery: () => void; bare?: boolean }> = ({ onBack, onMastery, bare }) => {
@@ -316,12 +316,12 @@ export const SagandzuriPage: React.FC<{ onBack?: () => void; onMastery: () => vo
         id,
         name: it.chantName,
         sub: c.id === 'galoba' ? it.code || '' : KIND_WORD[c.id] ?? '',
-        token: c.id === 'galoba' ? 'pearl' : c.id === 'mtkmeli' ? 'scroll' : 'grape',
+        token: c.id === 'galoba' || c.id === 'abituri' ? 'pearl' : c.id === 'mtkmeli' || c.id === 'wigni' ? 'scroll' : c.id === 'video' ? 'medallion' : 'grape',
         pearl: pearlOf(it, ok),
         voiced,
         marks: (voiced ? (['1', '2', '3'] as Voice[]) : (['1'] as Voice[])).map((v): VoiceMark => (ok.includes(v) ? 'ok' : have.includes(v) ? 'on' : 'off')),
         chip: chestIdOf(id),
-        onOpen: openerOf(id) ?? undefined,
+        onOpen: openerOf(id, it.chantName) ?? undefined,
       };
     })), [stats, confirmed, openerOf]);
 

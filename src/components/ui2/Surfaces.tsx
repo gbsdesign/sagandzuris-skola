@@ -179,7 +179,9 @@ export const Sheet: React.FC<{
   children: React.ReactNode;
   className?: string;
   back?: boolean;
-}> = ({ open, title, onClose, children, className, back = true }) => {
+  /** over a full-screen layer that stands above the sheets (a saint's life, z 85) */
+  above?: boolean;
+}> = ({ open, title, onClose, children, className, back = true, above = false }) => {
   const box = useRef<HTMLElement>(null);
   const titleId = useId();
   // the latest onClose without restarting the effect when the caller makes a new one each render
@@ -245,7 +247,7 @@ export const Sheet: React.FC<{
 
   if (!open) return null;
   return createPortal(
-    <div className="fixed inset-0 z-[80] flex items-end justify-center sm:items-center sm:p-4">
+    <div className={cx('fixed inset-0 flex items-end justify-center sm:items-center sm:p-4', above ? 'z-[90]' : 'z-[80]')}>
       <div aria-hidden="true" className="sg-in absolute inset-0 bg-ink/40" onClick={() => close.current()} />
       <section
         ref={box}

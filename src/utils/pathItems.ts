@@ -5,6 +5,7 @@ import { versionTitle } from '../data/tsirvaChants';
 import { FOLK_SONGS, getFolkRegion } from '../data/songsData';
 import { MTKMELI_AUTHORS } from '../data/mtkmeliData';
 import { INSTRUMENTS_LIST } from '../data/instrumentsData';
+import { PATH_PREFIX } from './pathPrefix';
 
 export type Voice = '1' | '2' | '3';
 
@@ -21,13 +22,18 @@ export interface PathItem {
   assignedByClass?: string; // class id that put this item on the path
 }
 
-export type PathCategory = 'galoba' | 'simghera' | 'mtkmeli' | 'sakravebi';
+export type PathCategory = 'galoba' | 'simghera' | 'mtkmeli' | 'sakravebi' | 'video' | 'wigni' | 'abituri';
+
+export { PATH_PREFIX } from './pathPrefix';
 
 export const CATEGORY_LABEL: Record<PathCategory, string> = {
   galoba: 'გალობა',
   simghera: 'სიმღერა',
   mtkmeli: 'მთქმელი',
   sakravebi: 'საკრავები',
+  video: 'ვიდეოთეკა',
+  wigni: 'წიგნები',
+  abituri: 'აბიტური',
 };
 
 const CATALOG_ORDER: Record<string, number> = {};
@@ -38,6 +44,9 @@ const INSTRUMENT_IDS = INSTRUMENTS_LIST.map(i => i.id);
 
 // same rules GzaView has always used
 export const categoryOf = (id: string): PathCategory => {
+  if (id.startsWith(PATH_PREFIX.video)) return 'video';
+  if (id.startsWith(PATH_PREFIX.wigni)) return 'wigni';
+  if (id.startsWith(PATH_PREFIX.abituri)) return 'abituri';
   if (id.startsWith('tsirva_') || CATALOG_ORDER[id] !== undefined) return 'galoba';
   if (id.includes('_p') || id.startsWith('abk_p') || id.startsWith('sam_p')) return 'mtkmeli';
   if (INSTRUMENT_IDS.some(p => id.startsWith(p))) return 'sakravebi';

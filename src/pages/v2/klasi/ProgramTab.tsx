@@ -245,7 +245,7 @@ export const ProgramTab: React.FC<{ cls: SchoolClass; canEdit: boolean; compact?
         <ItemSheet
           p={open}
           onClose={() => setShown(null)}
-          go={openerOf(open.id)}
+          go={openerOf(open.id, open.title)}
           piece={learnPieceOf(open.id)}
           onLearn={piece => { setShown(null); openLearning(piece); }}
           onStudio={studioPiece(open.id) && (iAmMember || canEdit) ? () => { setShown(null); setStudio(open.id); } : null}
@@ -293,7 +293,8 @@ const ItemSheet: React.FC<{
   const list = voicedList(voiced);
   const who = list.map(v => ({ v, people: knowers(v) }));
   const everyone = new Map(who.flatMap(w => w.people.map(k => [k.m.uid, k.m] as const)));
-  const goLabel = song ? 'სიმღერა' : 'ნოტები';
+  const kind = categoryOf(p.id);
+  const goLabel = song ? 'სიმღერა' : kind === 'video' ? 'ვიდეო' : kind === 'wigni' ? 'წიგნი' : kind === 'abituri' ? 'გახსნა' : 'ნოტები';
   const openGo = go ? () => { onClose(); go(); } : null;
   return (
     <Sheet open onClose={onClose} title={lines.title}>
