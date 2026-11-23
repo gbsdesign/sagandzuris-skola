@@ -29,6 +29,9 @@ const packOf = (path, books) => {
   if (top === 'prayers' || top === 'bible') return 'auto-prayers';
   if (top === 'mtkmeli') return 'auto-mtkmeli';
   if (top === 'lives') return 'lives';
+  // the liturgical books (მედავითნეობა): a pack a collection, turned on in its ☁ (2026-11-23)
+  if (top === 'wignebi' && sub) return `wignebi-${folder}`;
+  if (top === 'wignebi-x') return 'wignebi-x';
   return null;
 };
 
@@ -47,7 +50,7 @@ export function buildOfflinePacks(publicDir) {
     }
   }
   const lists = {};
-  for (const top of ['notes', 'hymn', 'prayers', 'bible', 'mtkmeli', 'lives']) {
+  for (const top of ['notes', 'hymn', 'prayers', 'bible', 'mtkmeli', 'lives', 'wignebi', 'wignebi-x']) {
     for (const path of walk(publicDir, top).sort()) {
       const id = packOf(path, books);
       if (!id) continue;
