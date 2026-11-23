@@ -14,6 +14,12 @@ export interface AppNews {
 
 export const APP_NEWS: AppNews[] = [
   {
+    id: 'play-invite-2026-11-23',
+    date: '2026-11-23',
+    title: 'აპი Google Play-ზე 📱',
+    text: 'Android-ის ბრაუზერში შემოსულს, ვისაც აპი ჯერ არ აქვს, საიტი თავად შესთავაზებს „საგანძურის სკოლის“ ჩამოწერას Google Play-დან.',
+  },
+  {
     id: 'chat-synth-2026-11-23',
     date: '2026-11-23',
     title: 'ჩატში სინთეზატორი 🎹',

@@ -142,6 +142,12 @@ export default defineConfig(() => {
           background_color: '#fcf9f5',
           display: 'standalone',
           start_url: '/',
+          // the Play app, so Chrome on Android can tell the site it is on the phone (components/app/PlayInvite)
+          related_applications: [
+            { platform: 'play', id: 'ge.sagandzureli.skola', url: 'https://play.google.com/store/apps/details?id=ge.sagandzureli.skola' },
+            { platform: 'play', id: 'ge.sagandzureli.app', url: 'https://play.google.com/store/apps/details?id=ge.sagandzureli.app' },
+          ],
+          prefer_related_applications: false,
           // the Android app's „გაზიარება → საგანძური“: a recording or a text into a class chat (public/prayer-notify-sw.js)
           share_target: {
             action: '/share-target',

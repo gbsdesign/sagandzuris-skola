@@ -71,6 +71,7 @@ const LearnedMoment = later(() => import('./pages/v2/barati/LearnedMoment'), 'Le
 const FilmHost = later(() => import('./components/attach/FilmHost'), 'FilmHost');
 const CallLayer = later(() => import('./components/calls/CallLayer'), 'CallLayer');
 const PhoneRingSetup = later(() => import('./components/calls/PhoneRingSetup'), 'PhoneRingSetup');
+const PlayInvite = later(() => import('./components/app/PlayInvite'), 'PlayInvite');
 const GameInvites = later(() => import('./components/games/GameInvites'), 'GameInvites');
 const ClassMarksSync = later(() => import('./components/app/ClassMarksSync'), 'ClassMarksSync');
 const ProgramAutoOffline = later(() => import('./components/classes/ProgramAutoOffline'), 'ProgramAutoOffline');
@@ -416,6 +417,11 @@ function AppContent() {
           {membership.can('messages') && <CallLayer logoUrl={currentLogo} />}
           {(membership.can('messages') || membership.can('classes')) && <PhoneRingSetup />}
         </Suspense>
+      </ErrorBoundary>
+
+      {/* an Android phone's browser without the Play app: a window asks to get it (components/app/PlayInvite) */}
+      <ErrorBoundary>
+        <Suspense fallback={null}><PlayInvite /></Suspense>
       </ErrorBoundary>
     </div>
   );
