@@ -26,7 +26,7 @@ test('a private chat: the other one, named by the writer', () => {
 test('the administration: the member hears the founder by name, the staff hear the member', () => {
   const dm = { kind: 'admin', members: ['m1'], names: { m1: 'გიორგი' } };
   const staff = ['s1', 's2'];
-  assert.deepEqual(chatTargets('dms', dm, 's1', staff), { to: ['m1'], title: 'მურთაზი გაბუნია', group: false });
+  assert.deepEqual(chatTargets('dms', dm, 's1', staff), { to: ['m1'], title: 'გიორგი გაბუნია', group: false });
   assert.deepEqual(chatTargets('dms', dm, 'm1', staff), { to: ['s1', 's2'], title: 'გიორგი', group: false });
   assert.equal(chatTargets('dms', dm, 'x', staff), null);
 });
