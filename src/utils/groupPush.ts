@@ -271,6 +271,11 @@ export const chatBoundFresh = (uid: string) => {
   return w.sgApp || w.sgIOS ? boundNow === uid : chatBoundToday(uid);
 };
 
+/** how many phones of each person ring for calls with the app closed, and of what kind (a teacher's or an admin's look —
+ *  worker/reminders `/phones`; null: not staff, offline, or an older Worker) */
+export interface PhonesOf { phones: number; kinds: string[] }
+export const phonesOf = (uids: string[]) => postJson<Record<string, PhonesOf>>('/phones', { uids });
+
 // ---- this phone's own check (settings → „შეტყობინებები“ → „ზარები ამ ტელეფონზე“, 2026-11-24) --------------------------
 
 /** a test ring's outcome as the server saw it: whether the push service took it, its word when not, the phone's kind */

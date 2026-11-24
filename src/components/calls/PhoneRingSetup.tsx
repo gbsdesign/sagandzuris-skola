@@ -7,20 +7,36 @@ import { bindChatDevice, chatBoundFresh, pushSupported } from '../../utils/group
 import { Btn } from '../ui/kit';
 import { useNewLook } from '../../design/newLook';
 import { RingAsk } from '../../pages/v2/shetkobinebebi/RingAsk';
+import { iosCall, isIphoneApp } from '../../utils/iosApp';
 
 // Calls and messages on this phone even with the app closed (worker/reminders /ring and /chat-notify, 2026-11-05).
 // Where notifications are already allowed the phone is bound quietly (again once a day, so a renewed subscription stays
 // in place). Where the browser has not been asked yet, a small card at the bottom asks once — a few seconds after the
 // app opens, never during a service (the notes, the program, church mode) or a call; „მოგვიანებით“ = again in a week.
 
+// the iPhone app without its push parts (null: not asked yet)
+let iphoneNoPush: boolean | null = null;
+
 const LATER = 'sg-ring-ask-later';
-const WEEK = 7 * 86400_000;
-const askedLately = () => {
-  try { return Date.now() - Number(localStorage.getItem(LATER) || 0) < WEEK; } catch { return false; }
+const DAY = 86400_000;
+// a student is asked again the next day until the phone rings for calls (2026-11-24, the user: „ზარი არ შედის არავისთან“ —
+// the week's pause left most phones unbound); the staff keep the week (2026-11-12, the user: „წარამარა ამას მწერ“)
+const askedWithin = (gap: number) => {
+  try { return Date.now() - Number(localStorage.getItem(LATER) || 0) < gap; } catch { return false; }
+};
+const appCan = (what: string) => {
+  const w = window as unknown as { sgApp?: { can?: string[]; call?: (fn: string, a?: unknown) => Promise<unknown> } };
+  return Array.isArray(w.sgApp?.can) && w.sgApp!.can!.includes(what);
+};
+/** the Play app (1.2.2+) opens its own notification settings */
+const openNoticeSettings = () => {
+  const w = window as unknown as { sgApp?: { call: (fn: string, a?: unknown) => Promise<unknown> } };
+  w.sgApp?.call('ringFix', { what: 'notices' }).catch(() => {});
 };
 
 export const PhoneRingSetup: React.FC = () => {
-  const { user } = useAuth();
+  const { user, isTeacher } = useAuth();
+  const askedLately = () => askedWithin(isTeacher ? 7 * DAY : DAY);
   const { notes, programOpen, church } = useNotes();
   const call = useCall();
   // the new look draws the card of board x-zarebi-baneri over the bottom menu
@@ -46,13 +62,28 @@ export const PhoneRingSetup: React.FC = () => {
 
   useEffect(() => {
     if (!uid || !pushSupported()) return;
-    if (Notification.permission === 'granted') {
-      if (!chatBoundFresh(uid)) void bindChatDevice(false);
-      return;
-    }
-    if (Notification.permission !== 'default' || askedLately()) return;
-    const t = window.setTimeout(() => setAsk(true), 4000);
-    return () => window.clearTimeout(t);
+    let live = true;
+    let t = 0;
+    void (async () => {
+      // the iPhone app rings only once its push is set up (GoogleService-Info.plist + the APNs key): no card it cannot keep
+      if (isIphoneApp() && iphoneNoPush === null) {
+        const info = await iosCall<{ firebase?: boolean }>('info').catch(() => null);
+        iphoneNoPush = !info?.firebase;
+      }
+      if (!live || (isIphoneApp() && iphoneNoPush)) return;
+      if (Notification.permission === 'granted') {
+        if (chatBoundFresh(uid)) return;
+        // allowed but not bound: say why it failed (at most once a day for a student, a week for the staff)
+        const e = await bindChatDevice(false);
+        if (live && e && !askedLately()) { setErr(e); setAsk(true); }
+        return;
+      }
+      // not asked yet, or blocked in the phone's settings: the card says what to do
+      if (askedLately()) return;
+      t = window.setTimeout(() => { if (live) setAsk(true); }, 4000);
+    })();
+    return () => { live = false; window.clearTimeout(t); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uid]);
 
   // the card leaves by itself a moment after „ჩართულია“
@@ -63,6 +94,8 @@ export const PhoneRingSetup: React.FC = () => {
   }, [done]);
 
   const turnOn = async () => {
+    // blocked: only the phone's settings can turn it on (the Play app opens them; elsewhere the card says the way)
+    if (pushSupported() && Notification.permission === 'denied' && appCan('ringFix')) { openNoticeSettings(); return; }
     setBusy(true);
     setErr('');
     const e = await bindChatDevice(true);
@@ -105,8 +138,12 @@ export const PhoneRingSetup: React.FC = () => {
     setAsk(false);
   };
 
+  const blocked = pushSupported() && Notification.permission === 'denied';
   if (nl) {
-    return <RingAsk done={done} busy={busy} err={err} overNav={false} onLater={later} onTurnOn={() => void turnOn()} />;
+    return (
+      <RingAsk done={done} busy={busy} err={err} overNav={false} onLater={later} onTurnOn={() => void turnOn()}
+        blocked={blocked} canOpen={appCan('ringFix')} />
+    );
   }
   return (
     <div

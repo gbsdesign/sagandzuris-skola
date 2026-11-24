@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CalendarCheck, ChevronDown, ChevronRight, Search, UserPlus, X } from 'lucide-react';
+import { CalendarCheck, ChevronDown, ChevronRight, PhoneOff, Search, UserPlus, X } from 'lucide-react';
 import { useAuth, useNavigation } from '../../../context';
 import { Avatar, Button, Field, Press, RoundButton, Row, Rows, SectionLabel, Small, Two } from '../../../components/ui2';
 import { cx } from '../../../components/ui2/cx';
@@ -11,6 +11,7 @@ import { useClassAttendance, type ClassAttendance } from '../../../components/te
 import { classFigures, summarize } from '../../../components/teacher/StudentsOverview';
 import { AddMemberSheetV2 } from './teacher/AddMember';
 import { kaName } from '../../../utils/georgianName';
+import { usePhonesOn } from '../../../hooks/usePhonesOn';
 
 const AttendanceSheet = React.lazy(() => import('../daswreba/AttendanceSheet').then(m => ({ default: m.AttendanceSheet })));
 
@@ -83,11 +84,19 @@ const MembersView: React.FC<{ cls: SchoolClass; canEdit: boolean; roll?: Roll }>
   const iAmMember = !!me && cls.memberIds.includes(me);
   // a big class's roll (the class's leaders): folded by voices, so marking who came stays short (x-savse-klasi)
   const big = canEdit && !!roll && !needle && cls.members.length > BIG_CLASS;
+  // whose phone rings for the class's call with the app closed (2026-11-24): the leaders see who has calls off
+  const phonesOn = usePhonesOn(cls.members.map(m => m.uid), canEdit);
+  const callsOff = (uid: string) => !!phonesOn && (phonesOn[uid]?.phones ?? 0) === 0;
+  const ringing = phonesOn ? cls.members.filter(m => !callsOff(m.uid)).length : null;
   const memberRow = (m: ClassMember) => {
+    const off = callsOff(m.uid);
+    const sub = m.uid === me ? 'შენ'
+      : off ? <span className="inline-flex items-center gap-1 text-danger"><PhoneOff className="size-3.5 shrink-0" aria-hidden="true" />ზარები ტელეფონზე გამორთული აქვს</span>
+      : undefined;
     const body = (
       <>
         <Avatar name={m.name} photo={m.photoURL} />
-        <Two title={m.name} sub={m.uid === me ? 'შენ' : undefined} wrap />
+        <Two title={m.name} sub={sub} wrap />
       </>
     );
     if (!canEdit) return <div key={m.uid} className="flex min-h-row w-full items-center gap-2.5 py-2 pr-3 pl-4 text-ink">{body}</div>;
@@ -127,6 +136,11 @@ const MembersView: React.FC<{ cls: SchoolClass; canEdit: boolean; roll?: Roll }>
         {canEdit && <RoundButton label="წევრის დამატება" size={36} onClick={() => setAdding(true)}><UserPlus /></RoundButton>}
       </div>
       {roll && <p className="px-1.5 text-meta text-mut">{roll.line}</p>}
+      {ringing !== null && cls.members.length > 0 && (
+        <p className="px-1.5 text-meta text-mut wrap-break-word">
+          ზარი ტელეფონზე დაურეკავს {ringing} / {cls.members.length}-ს{ringing < cls.members.length && ' · ვისაც გამორთული აქვს, აპში ჩართოს: პარამეტრები → შეტყობინებები → ჩართვა'}
+        </p>
+      )}
       {finding && <Field label="ძებნა სახელით" value={q} onChange={setQ} type="search" autoFocus placeholder="სახელი…" />}
       {error && <p role="alert" className="px-1.5 text-meta text-danger">{error}</p>}
 
