@@ -66,23 +66,34 @@ export const BirthdaysSoon: React.FC<{ className?: string; compact?: boolean; ro
   // the classes card's first row (2026-11-22, the user: „დაბადების დღეები კლასებს თავში გამოჩნდეს“): a pale gold line
   // with the classes' look — a round cake, the name and when, „+N“ when more are coming
   if (row) {
-    const first = coming[0];
+    // a line a person, so each birthday gets its own chat (2026-11-24, the user: „2 იუბილარია მათ ცალკ-ცალკე ჩათი უნდა შეიქმნას“);
+    // three at most, the rest as „+N“ on the last
+    const shown = coming.slice(0, 3);
     return (
-      <button
-        type="button"
-        onClick={() => { triggerHaptic(8); if (onPick && !first.name) onPick({ uid: first.b.uid, name: first.b.name }); else navigateTo('birthdays'); }}
-        aria-label={onPick && !first.name ? `${first.b.name}-ის ჩათი (მის გარეშე)` : 'დაბადების დღეები'}
-        className="flex min-h-[54px] w-full cursor-pointer items-center gap-3 bg-gold-tint py-1.5 pr-2.5 pl-3 text-left transition-colors active:bg-soft"
-      >
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-surf text-gold">
-          {first.name ? <Sparkles aria-hidden="true" className="size-4" /> : <Cake aria-hidden="true" className="size-4" />}
-        </span>
-        <span className="flex min-w-0 flex-1 items-baseline gap-1.5 text-body leading-tight text-gold-ink">
-          <b className="min-w-0 truncate font-semibold text-ink">{first.b.name}</b>
-          <span className="shrink-0 whitespace-nowrap">· {first.name ? 'ანგელოზის დღე, ' : ''}{inDaysText(first.days)}{coming.length > 1 ? ` · +${coming.length - 1}` : ''}</span>
-        </span>
-        <ChevronRight aria-hidden="true" className="size-4 shrink-0 text-mut/70" strokeWidth={2} />
-      </button>
+      <>
+        {shown.map((x, k) => {
+          const pick = !!onPick && !x.name;
+          const more = k === shown.length - 1 && coming.length > shown.length ? ` · +${coming.length - shown.length}` : '';
+          return (
+            <button
+              key={x.id}
+              type="button"
+              onClick={() => { triggerHaptic(8); if (pick) onPick!({ uid: x.b.uid, name: x.b.name }); else navigateTo('birthdays'); }}
+              aria-label={pick ? `${x.b.name}-ის ჩათი (მის გარეშე)` : 'დაბადების დღეები'}
+              className="flex min-h-[54px] w-full cursor-pointer items-center gap-3 bg-gold-tint py-1.5 pr-2.5 pl-3 text-left transition-colors active:bg-soft"
+            >
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-surf text-gold">
+                {x.name ? <Sparkles aria-hidden="true" className="size-4" /> : <Cake aria-hidden="true" className="size-4" />}
+              </span>
+              <span className="flex min-w-0 flex-1 items-baseline gap-1.5 text-body leading-tight text-gold-ink">
+                <b className="min-w-0 truncate font-semibold text-ink">{x.b.name}</b>
+                <span className="shrink-0 whitespace-nowrap">· {x.name ? 'ანგელოზის დღე, ' : ''}{inDaysText(x.days)}{more}</span>
+              </span>
+              <ChevronRight aria-hidden="true" className="size-4 shrink-0 text-mut/70" strokeWidth={2} />
+            </button>
+          );
+        })}
+      </>
     );
   }
   // the new home: one small gold pill (2026-11-22, the user: „პატარა და კომპაქტურად“)
