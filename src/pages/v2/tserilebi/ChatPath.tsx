@@ -129,13 +129,13 @@ const HeadSign: React.FC<{ icon: React.ReactNode; word: string; label: string; o
     aria-expanded={expanded}
     title={label}
     className={cx(
-      'flex h-tap min-w-[52px] shrink-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-field px-1.5 transition active:scale-95',
+      'flex h-tap min-w-tap shrink-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-field px-1.5 transition active:scale-95',
       active ? 'bg-tint text-wine' : 'bg-surf text-wine',
       FOCUS,
     )}
   >
     <span className="flex size-[18px] items-center justify-center [&_svg]:size-[18px]">{icon}</span>
-    <span className="text-cap leading-none font-semibold whitespace-nowrap">{word}</span>
+    {word && <span className="text-cap leading-none font-semibold whitespace-nowrap">{word}</span>}
   </Press>
 );
 
@@ -147,7 +147,7 @@ export const PathSigns: React.FC<{ open: boolean; onToggle: () => void }> = ({ o
   const autoLesson = !viewing && access.on('aiTeacher');
   return (
     <>
-      <HeadSign icon={<PearlIcon state="shining" size={18} />} word="გზა" label={open ? 'გზის დაკეცვა' : 'გზა — ისწავლა · სწავლობს'}
+      <HeadSign icon={<PearlIcon state="shining" size={18} />} word="" label={open ? 'გზის დაკეცვა' : 'გზა — ისწავლა · სწავლობს'}
         onClick={onToggle} active={open} expanded={open} />
       {/* the automatic teaching program: only its sign, a teacher at the board (2026-11-22, the user: „ავტ.პროგ. ტექსტი წაშალე და
           მარტო ლოგო დატოვე … ეს ლოგო სმაილებიდან“ — 👩‍🏫) */}
