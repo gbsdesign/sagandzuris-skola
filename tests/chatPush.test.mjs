@@ -2,7 +2,7 @@
 // Run: node --test tests/chatPush.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { chatTargets, chatBody, ringTicket } from '../worker/reminders/reminders.js';
+import { chatTargets, chatBody, ringTicket, ringReport } from '../worker/reminders/reminders.js';
 
 const cls = { name: 'კლასი ა', memberIds: ['m1', 'm2'], teacherIds: ['t1'] };
 
@@ -48,4 +48,18 @@ test('a ring signature belongs to one call and one person', async () => {
   assert.notEqual(await ringTicket(env, 'dms/a_b', 'm2', 1000), t);
   assert.notEqual(await ringTicket(env, 'dms/a_b', 'm1', 1001), t);
   assert.match(t, /^[A-Za-z0-9_-]{43}$/);
+});
+
+test('the ring\'s report: phones bound, how many took it, of what kind, the quiet hours, the refusal', () => {
+  const all = [{ uid: 'a', endpoint: 'https://android.sagandzureli.ge/fcm/x' }, { uid: 'a', endpoint: 'https://fcm.googleapis.com/y' }, { uid: 'b' }];
+  const sent = [
+    { uid: 'a', kind: 'android', ok: false, why: 'SENDER_ID_MISMATCH' },
+    { uid: 'a', kind: 'web', ok: true, why: '' },
+  ];
+  const r = ringReport(['a', 'b', 'c'], all, sent, (u) => u === 'b');
+  assert.deepEqual(r[0], { uid: 'a', phones: 2, ok: 1, kinds: ['web'], quiet: false, why: ['android:SENDER_ID_MISMATCH'] });
+  // b: a phone, held by the quiet hours (nothing was sent to it)
+  assert.deepEqual(r[1], { uid: 'b', phones: 1, ok: 0, kinds: [], quiet: true, why: [] });
+  // c: no phone bound for calls at all
+  assert.deepEqual(r[2], { uid: 'c', phones: 0, ok: 0, kinds: [], quiet: false, why: [] });
 });

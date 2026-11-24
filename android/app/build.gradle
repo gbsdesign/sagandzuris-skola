@@ -16,8 +16,8 @@ android {
         applicationId 'ge.sagandzureli.skola'
         minSdk 26
         targetSdk 36
-        versionCode 8
-        versionName '1.2.1'
+        versionCode 9
+        versionName '1.2.2'
 
         manifestPlaceholders = [host: host, launchUrl: "https://${host}/"]
         resValue 'string', 'app_name', 'საგანძურის სკოლა'

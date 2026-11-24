@@ -413,7 +413,8 @@ function AppContent() {
           calls and shows messages with the app closed (asked once, components/calls/PhoneRingSetup) */}
       <ErrorBoundary>
         <Suspense fallback={null}>
-          {membership.can('messages') && <CallLayer logoUrl={currentLogo} />}
+          {/* a class's call reaches a member who has the class but no private letters too (2026-11-24) */}
+          {(membership.can('messages') || membership.can('classes')) && <CallLayer logoUrl={currentLogo} />}
           {(membership.can('messages') || membership.can('classes')) && <PhoneRingSetup />}
         </Suspense>
       </ErrorBoundary>

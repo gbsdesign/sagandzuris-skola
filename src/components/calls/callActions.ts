@@ -5,6 +5,7 @@ import { ADMIN_SHOWN, DirectThread, dmBase, isStaffSide, notePrivateCall, otherO
 import { sendCallEndMessage } from '../../hooks/useClassChat';
 import { CallInfo, CallKind, endChatCall, endClassCall, giveUpAfter, joinCall, ringClass, watchEnd, whenCallLeft } from '../../utils/callSession';
 import { notifyRing } from '../../utils/groupPush';
+import { setRingReport } from '../../utils/ringReport';
 import { kaName } from '../../utils/georgianName';
 
 // Starting, answering and leaving the school's calls (utils/callSession.ts), the same from every button.
@@ -59,8 +60,8 @@ export const startChatCall = async (t: DirectThread, user: User, kind: CallKind)
   const author = { uid: user.uid, name: info.me.name, photoURL: info.me.photoURL, teacher };
   const rang = await notePrivateCall(t, author, kind)
     .then(() => true, e => { console.warn('call ring: ', e?.code || e); return false; });
-  // the other side's phone rings even with the app closed (worker/reminders /ring)
-  if (rang) void notifyRing(info.base);
+  // the other side's phone rings even with the app closed (worker/reminders /ring); the answer says whether it did
+  if (rang) void notifyRing(info.base).then(people => { if (people) setRingReport(info.base, people, t.names || {}); });
   if (!(await joinCall(info, kind))) { endChatCall(t.id).catch(() => {}); if (rang) void notifyRing(info.base, true); return; }
   // what the call leaves in the chat (board x-zari-chatshi): the caller, as they leave, notes how long it was talked — or
   // that nobody answered (the other side then sees „გამოტოვებული ზარი · დაურეკე“)
@@ -87,7 +88,10 @@ export const startClassCall = async (c: SchoolClass, user: User, kind: CallKind)
   const info = classCallInfo(c, user);
   const rang = await ringClass(c.id, { uid: user.uid, name: info.me.name }, kind)
     .then(() => true, e => { console.warn('call ring: ', e?.code || e); return false; });
-  if (rang) void notifyRing(info.base);
+  if (rang) {
+    const names = Object.fromEntries([...c.members, ...c.teachers].map(m => [m.uid, m.name]));
+    void notifyRing(info.base).then(people => { if (people) setRingReport(info.base, people, names); });
+  }
   if (!(await joinCall(info, kind))) { endClassCall(c.id).catch(() => {}); if (rang) void notifyRing(info.base, true); }
 };
 

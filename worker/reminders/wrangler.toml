@@ -7,6 +7,11 @@ compatibility_date = "2026-09-01"
 [triggers]
 crons = ["* * * * *"]
 
+# the Worker's own lines (a push service's refusal — „fcm: 403 …“ — and the like) are kept a few days in Cloudflare's
+# Workers Logs, so a ring that reached nobody can be looked into afterwards (2026-11-24)
+[observability]
+enabled = true
+
 # subscriptions (schema.sql); create it with: npx wrangler d1 create sagandzuri-reminders
 [[d1_databases]]
 binding = "DB"

@@ -15,6 +15,7 @@ import {
 import { afterLeave, answerChatCall, declineChatCall, joinClassCall, takeAnswer, useAnswerWanted } from './callActions';
 import { clock, useSeconds, Face, MediaVideo, MediaAudio, ScreenTile, Tile, RoundBtn } from './CallParts';
 import { useBackToClose } from '../../utils/backToClose';
+import { RingLine } from './RingLine';
 
 // The call on top of the app (new look): the full call screen (or a small bar while one reads the chat), and the incoming
 // call — a private one rings, a class's shows „ზარი მიმდინარეობს“. Nothing sounds while the notes, the liturgy
@@ -171,6 +172,8 @@ const CallScreen: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
         {call.hint && (
           <p className="relative shrink-0 mx-auto mb-3 max-w-md px-4 py-2.5 rounded-field bg-night-surf text-center text-body" role="status">{call.hint}</p>
         )}
+        {/* whom the ring reached on their phones (the Worker's report): a private call while it rings, a class's call throughout */}
+        <RingLine base={info.base} oneToOne={one} ringing={call.status === 'connecting' || call.status === 'waiting'} />
         {call.screen && (
           <div className="relative shrink-0 mx-4 mb-3 flex items-center gap-3 rounded-tile bg-night-surf px-4 py-2.5">
             <ScreenShare className="w-5 h-5 shrink-0" />

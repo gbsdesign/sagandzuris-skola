@@ -158,22 +158,46 @@ export const notifyGroup = async (groupId: string, kind: 'taken' | 'help', kathi
 
 // ---- calls and messages (2026-11-05) ---------------------------------------------------------------------
 
+const send = async (path: string, body: Record<string, unknown>) => {
+  const user = auth.currentUser;
+  if (!user) return null;
+  return fetch(`${SERVER}${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token: await user.getIdToken(), ...body }),
+  });
+};
+
 const post = async (path: string, body: Record<string, unknown>) => {
   try {
-    const user = auth.currentUser;
-    if (!user) return;
-    await fetch(`${SERVER}${path}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: await user.getIdToken(), ...body }),
-    });
+    await send(path, body);
   } catch {
     /* offline or the Worker isn't updated yet: the open app shows it anyway */
   }
 };
 
-/** A call just started in `base` (dms/{id} or classes/{id}): the others' phones ring. `end`: nobody answered. */
-export const notifyRing = (base: string, end = false) => post('/ring', end ? { base, end: true } : { base });
+/** the Worker's JSON answer, or null (offline, refused, or an older Worker that answers in words) */
+const postJson = async <T>(path: string, body: Record<string, unknown>): Promise<T | null> => {
+  try {
+    const res = await send(path, body);
+    if (!res?.ok || !(res.headers.get('Content-Type') || '').includes('json')) return null;
+    return (await res.json()) as T;
+  } catch {
+    return null;
+  }
+};
+
+/** One person a ring was sent for (worker/reminders `ringReport`): their phones bound for calls, how many took the ring
+ *  and of what kind ('android' the Play app · 'ios' the iPhone app · 'web' a browser), whether their quiet hours held
+ *  it, and the push service's word for a phone that refused. */
+export interface RingPerson { uid: string; phones: number; ok: number; kinds: string[]; quiet: boolean; why: string[] }
+
+/** A call just started in `base` (dms/{id} or classes/{id}): the others' phones ring, and the answer says whose did.
+ *  `end`: nobody answered (the phones still ringing say „გამოტოვებული ზარი“). */
+export const notifyRing = async (base: string, end = false): Promise<RingPerson[] | null> => {
+  const answer = await postJson<{ people?: RingPerson[] }>('/ring', end ? { base, end: true } : { base });
+  return Array.isArray(answer?.people) ? answer.people : null;
+};
 
 /** A message `id` was just written in `base`: the chat's other people see it on their phones. `pin`: a teacher's card
  *  in a class (classes/{id}/pins) — only its member hears it. */
@@ -221,14 +245,54 @@ export const bindChatDevice = async (ask: boolean): Promise<string> => {
     });
     if (!res.ok) return 'შეხსენებების სერვერმა ვერ მიიღო. სცადე მოგვიანებით.';
     localStorage.setItem(CHAT_BOUND, `${user.uid}|${sub.endpoint.slice(-24)}|${new Date().toISOString().slice(0, 10)}`);
+    boundNow = user.uid;
     return '';
-  } catch {
+  } catch (e) {
+    // the phone's own word (the store apps: Firebase's „SERVICE_NOT_AVAILABLE“, „not-ready“…) says where it stopped
+    const word = e instanceof Error ? e.message : '';
+    if (word && !/fetch|network|load failed/i.test(word)) return `ტელეფონმა ზარები ვერ ჩართო (${word.slice(0, 60)}). გადატვირთე აპი და სცადე თავიდან.`;
     return 'შეხსენებების სერვერთან კავშირი ვერ მოხერხდა.';
   }
 };
+
+// bound in this opening of the page (the store apps bind again at every opening: their phone's token can change while
+// the app is closed, and a token the server dropped is otherwise not bound again until the next day)
+let boundNow = '';
 
 /** this browser was bound for this person today (a quiet re-bind once a day keeps a renewed subscription in place) */
 export const chatBoundToday = (uid: string) => {
   const v = localStorage.getItem(CHAT_BOUND) || '';
   return v.startsWith(`${uid}|`) && v.endsWith(`|${new Date().toISOString().slice(0, 10)}`);
+};
+
+/** bound recently enough: in the store apps since this opening, in a browser today */
+export const chatBoundFresh = (uid: string) => {
+  const w = window as unknown as { sgApp?: unknown; sgIOS?: unknown };
+  return w.sgApp || w.sgIOS ? boundNow === uid : chatBoundToday(uid);
+};
+
+// ---- this phone's own check (settings → „შეტყობინებები“ → „ზარები ამ ტელეფონზე“, 2026-11-24) --------------------------
+
+/** a test ring's outcome as the server saw it: whether the push service took it, its word when not, the phone's kind */
+export interface PhoneTest { at: string; ok: boolean; why: string; kind: string }
+export interface PhoneState { bound: boolean; kind: string; last?: PhoneTest | null; test?: PhoneTest }
+
+/** this browser's push subscription, never asking anything (null: none, or notifications not allowed) */
+const currentSubscription = async () => {
+  if (!pushSupported() || Notification.permission !== 'granted') return null;
+  const reg = await navigator.serviceWorker.getRegistration();
+  return (await reg?.pushManager?.getSubscription()) ?? null;
+};
+
+/** Whether this phone rings for the signed-in person's calls (null: the server could not be asked). `test`: the server
+ *  rings it 10 s later — time to lock the screen — and answers whether the push service took the ring. */
+export const myPhone = async (test = false): Promise<PhoneState | null> => {
+  let sub: PushSubscription | null = null;
+  try {
+    sub = await currentSubscription();
+  } catch {
+    sub = null;
+  }
+  if (!sub) return { bound: false, kind: '' };
+  return postJson<PhoneState>('/my-phone', { endpoint: sub.endpoint, test });
 };

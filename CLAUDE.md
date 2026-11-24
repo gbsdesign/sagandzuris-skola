@@ -828,6 +828,20 @@
   „პასუხი“ `/?open=call&b=<base>` (App.tsx: the chat + `wantAnswer`, and the incoming
   screen answers or joins once it sees the call — `takeAnswer`/`useAnswerWanted`). The Worker needs only its publish (the
   workflow does it on main).
+- **Whom a ring reached; a phone's own check (2026-11-24**, the user: „რატომ არ ირეკება მოსწავლეებთან … უნდა რეკავდეს დაბლოკილ
+  ეკრანზეც“): the Worker's `/ring` answers JSON `{people: [{uid, phones, ok, kinds, quiet, why}]}` (`ringReport`; `deliver` now gives
+  each phone's outcome, `sendFcm` FCM's own error word — `fcmWord`); `notifyRing` returns it, `callActions` keeps it with the names
+  (`utils/ringReport.ts` + test) and the call screen's `calls/RingLine.tsx` shows it — a class's call: „ტელეფონზე დაირეკა N / M ▾“, the
+  not-reached first (ტელეფონზე ზარები არ აქვს ჩართული · ჩუმი საათები · ტელეფონამდე ვერ მივიდა + the word); a private call: a line
+  while it rings. Settings → „შეტყობინებები“ starts with `v2/shetkobinebebi/CallsHere.tsx`: the server's own answer whether this
+  phone rings (`/my-phone {endpoint}` → bound, kind, the last test), „ჩართვა“ (`bindChatDevice(true)` — before, the one-time card was
+  the only way), „სატესტო ზარი“ (`/my-phone {test}`: rings this phone 10 s later as a class's call, tag `call-c-test`; the outcome
+  is kept in D1 meta `phonetest:<uid>` for a test the locked screen cut). The Play app from 1.2.2 (code 9) adds `ringCheck`
+  (Android 14+ full-screen permission, background restriction, the calls channel's sound, the maker) and `ringFix {what}` (opens
+  those settings; Xiaomi's autostart); `pushToken` gives Firebase's error word; `sgApp.can` lists them. The store apps bind again at
+  every opening (`chatBoundFresh`). `CallLayer` mounts for `classes` too (a member without private letters missed class calls).
+  The Worker keeps its lines in Workers Logs (`[observability]` in wrangler.toml). The iPhone app has NO notifications until
+  `ios/Sagandzuri/GoogleService-Info.plist` is added (and the APNs key uploaded in Firebase) — found 2026-11-24, not done yet.
 - **Class page** (`pages/ClassPage.tsx`, rebuilt 2026-10-24, simplified 2026-10-28 „ერთი რამ, ერთ ადგილას“ from an approved
   sketch): title bar (🎵 + one ✎ for teachers — its list opens name/logo/mode, the timetable `ScheduleSheet`, the program
   `ProgramEditor`, adding a member `AddMemberSheet`; 💬 to the teacher for a member), the timetable chips; the members are a
