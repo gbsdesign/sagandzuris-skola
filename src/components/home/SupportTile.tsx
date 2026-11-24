@@ -82,8 +82,8 @@ export const SupportTile: React.FC = () => {
   return (
     <li className="relative">
       <button type="button" onClick={() => { triggerHaptic(10); setOpen(true); }} aria-label="მხარდაჭერა"
-        className={`${tileClass('paper', false)} hover:ring-[#7a2028]/35 active:scale-[0.97]`}>
-        <TileIcon><HandHeart /></TileIcon>
+        className={`${tileClass('rose', false)} hover:brightness-105 active:scale-[0.97]`}>
+        <TileIcon light><HandHeart /></TileIcon>
         <span className="min-w-0 flex-1 truncate text-[12px] leading-[1.15] font-semibold">მხარდაჭერა</span>
       </button>
       <SupportSheet open={open} onClose={() => setOpen(false)} />
