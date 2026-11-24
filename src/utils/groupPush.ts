@@ -41,6 +41,15 @@ const keyBytes = (b64url: string) => {
   return Uint8Array.from(atob(b64 + '='.repeat((4 - (b64.length % 4)) % 4)), c => c.charCodeAt(0));
 };
 
+/** whether a subscription was made with this site's server key (none given: an app's, it goes through Firebase) */
+const sameServerKey = (sub: PushSubscription) => {
+  const k = sub.options?.applicationServerKey;
+  if (!k) return true;
+  const a = new Uint8Array(k);
+  const b = keyBytes(VAPID_PUBLIC_KEY);
+  return a.length === b.length && a.every((x, i) => x === b[i]);
+};
+
 export const pushSupported = () =>
   typeof window !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
 
@@ -235,7 +244,14 @@ export const bindChatDevice = async (ask: boolean): Promise<string> => {
   try {
     const reg = await navigator.serviceWorker.getRegistration();
     if (!reg?.pushManager) return 'შეტყობინებები მხოლოდ გამოქვეყნებულ საიტზე მუშაობს.';
-    const sub = (await reg.pushManager.getSubscription())
+    let old = await reg.pushManager.getSubscription();
+    // a browser's subscription made with another server key is refused by its push service (403): it is made anew
+    // (the store apps' subscriptions carry no key — theirs go through Firebase)
+    if (old && !sameServerKey(old)) {
+      await old.unsubscribe().catch(() => false);
+      old = null;
+    }
+    const sub = old
       ?? await within(reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(VAPID_PUBLIC_KEY) }), 30_000);
     if (sub === LATE) return 'ტელეფონმა შეტყობინებები ვერ ჩართო — გადატვირთე აპი და სცადე თავიდან.';
     const res = await fetch(`${SERVER}/account`, {
@@ -270,6 +286,11 @@ export const chatBoundFresh = (uid: string) => {
   const w = window as unknown as { sgApp?: unknown; sgIOS?: unknown };
   return w.sgApp || w.sgIOS ? boundNow === uid : chatBoundToday(uid);
 };
+
+/** how many phones of each person ring for calls with the app closed, and of what kind (a teacher's or an admin's look —
+ *  worker/reminders `/phones`; null: not staff, offline, or an older Worker) */
+export interface PhonesOf { phones: number; kinds: string[] }
+export const phonesOf = (uids: string[]) => postJson<Record<string, PhonesOf>>('/phones', { uids });
 
 // ---- this phone's own check (settings → „შეტყობინებები“ → „ზარები ამ ტელეფონზე“, 2026-11-24) --------------------------
 

@@ -842,6 +842,11 @@
   every opening (`chatBoundFresh`). `CallLayer` mounts for `classes` too (a member without private letters missed class calls).
   The Worker keeps its lines in Workers Logs (`[observability]` in wrangler.toml). The iPhone app has NO notifications until
   `ios/Sagandzuri/GoogleService-Info.plist` is added (and the APNs key uploaded in Firebase) — found 2026-11-24, not done yet.
+  The same day, later (the user: „ზარი არ შედის არავისთან … გააკეთე ყველაფერი“): `/phones {uids}` (staff only) → each person's phones
+  bound for calls; the class's „წევრები“ tab (`usePhonesOn`) marks „ზარები ტელეფონზე გამორთული აქვს“ and counts „ზარი ტელეფონზე
+  დაურეკავს N / M“. `PhoneRingSetup` asks a student again the next day (the staff a week) until the phone is bound, says why a
+  quiet bind failed, and tells a blocked phone the way to the settings (`RingAsk blocked`, the Play app's `ringFix notices`); the
+  iPhone app without its push parts gets no card (`info.firebase`).
 - **Class page** (`pages/ClassPage.tsx`, rebuilt 2026-10-24, simplified 2026-10-28 „ერთი რამ, ერთ ადგილას“ from an approved
   sketch): title bar (🎵 + one ✎ for teachers — its list opens name/logo/mode, the timetable `ScheduleSheet`, the program
   `ProgramEditor`, adding a member `AddMemberSheet`; 💬 to the teacher for a member), the timetable chips; the members are a

@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { BatteryCharging, BellRing, Check, Lock, PhoneCall, RefreshCw, Rocket, Volume2 } from 'lucide-react';
 import { Button, Card, Dot, Rows, Row, SectionLabel, Two } from '../../../components/ui2';
 import { bindChatDevice, myPhone, PhoneTest, pushSupported } from '../../../utils/groupPush';
-import { iosCall } from '../../../utils/iosApp';
+import { iosCall, isIphoneApp } from '../../../utils/iosApp';
 
 // „ზარები ამ ტელეფონზე“ (2026-11-24, the user: „რატომ არ ირეკება მოსწავლეებთან … უნდა რეკავდეს დაბლოკილ ეკრანზეც“): the
 // first part of „შეტყობინებები“. Whether this phone rings for the person's calls with the app closed — asked of the
@@ -12,7 +12,7 @@ import { iosCall } from '../../../utils/iosApp';
 // also tells what of its own stops a ring (`ringCheck`) and opens the right settings (`ringFix`): the call's screen on a
 // locked phone (Android 14+ asks for it), the battery saver, Xiaomi's autostart, the calls' sound.
 
-type Look = 'checking' | 'unsupported' | 'blocked' | 'off' | 'on' | 'error';
+type Look = 'checking' | 'unsupported' | 'iphone' | 'blocked' | 'off' | 'on' | 'error';
 type Fix = 'fullScreen' | 'battery' | 'autostart' | 'channel' | 'notices';
 interface RingCheck { fullScreen?: boolean | null; battery?: boolean; channel?: boolean; maker?: string }
 
@@ -35,6 +35,11 @@ export const CallsHere: React.FC = () => {
 
   const check = useCallback(async () => {
     if (!pushSupported()) { setLook('unsupported'); return; }
+    // the iPhone app rings only once its push parts are in (GoogleService-Info.plist and the APNs key)
+    if (isIphoneApp()) {
+      const info = await iosCall<{ firebase?: boolean }>('info').catch(() => null);
+      if (!info?.firebase) { setLook('iphone'); return; }
+    }
     if (Notification.permission === 'denied') { setLook('blocked'); return; }
     if (appCan('ringCheck')) iosCall<RingCheck>('ringCheck').then(setApp, () => setApp(null));
     if (Notification.permission !== 'granted') { setLook('off'); return; }
@@ -107,6 +112,7 @@ export const CallsHere: React.FC = () => {
     : look === 'off' ? { icon: <BellRing />, color: 'gold' as const, title: 'ზარები ამ ტელეფონზე გამორთულია', sub: 'როცა აპი დახურულია, არ დაგირეკავს' }
     : look === 'blocked' ? { icon: <BellRing />, color: 'gold' as const, title: 'შეტყობინებები დაბლოკილია', sub: 'ჩართე ტელეფონის პარამეტრებში: აპები → საგანძური → შეტყობინებები' }
     : look === 'unsupported' ? { icon: <BellRing />, color: 'soft' as const, title: 'აქ ზარი დახურულზე ვერ მოვა', sub: 'გახსენი საგანძურის აპში ან Chrome-ში' }
+    : look === 'iphone' ? { icon: <BellRing />, color: 'soft' as const, title: 'iPhone-ის აპში ზარი ჯერ არ ირთვება', sub: 'ზარი მხოლოდ გახსნილ აპში მოვა — მალე ჩაირთვება' }
     : look === 'error' ? { icon: <RefreshCw />, color: 'soft' as const, title: 'ვერ შევამოწმე', sub: 'ინტერნეტი შეამოწმე და სცადე თავიდან' }
     : { icon: <BellRing />, color: 'soft' as const, title: 'ვამოწმებ…', sub: '' };
 

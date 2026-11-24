@@ -910,6 +910,32 @@ export function ringReport(to, all, sent, hushed = () => false) {
   });
 }
 
+// ---- who has calls on (2026-11-24): a teacher's or an admin's look at a class -----------------------------------------
+// POST /phones { token, uids } → { [uid]: { phones, kinds } }: how many phones of each person ring for calls with the app
+// closed, and of what kind. Staff only (a teacher, an admin, a superadmin or the owner); at most 300 people a call.
+const STAFF_ROLES = ['teacher', 'admin', 'superadmin', 'owner'];
+async function phones(request, env) {
+  const body = await readJson(request);
+  if (!body || !Array.isArray(body.uids)) return [400, 'bad json'];
+  let claims;
+  try {
+    claims = await verifyIdClaims(env, body.token);
+  } catch {
+    return [401, 'bad token'];
+  }
+  const email = claims.email_verified ? String(claims.email || '').toLowerCase() : '';
+  const role = email && email !== OWNER_EMAIL ? (await fsGet(env, `admins/${email}`, ['role']))?.role : null;
+  if (email !== OWNER_EMAIL && !STAFF_ROLES.includes(role)) return [403, 'staff only'];
+  const uids = [...new Set(body.uids.map(String).filter((u) => DOC_ID.test(u)))].slice(0, 300);
+  const rows = await rowsFor(env, uids, 'chat');
+  const out = {};
+  for (const u of uids) {
+    const mine = rows.filter((r) => r.uid === u);
+    out[u] = { phones: mine.length, kinds: [...new Set(mine.map(kindOf))] };
+  }
+  return [200, JSON.stringify(out), 'application/json'];
+}
+
 // ---- a phone's own check (2026-11-24, „შეტყობინებები“ → „ზარები ამ ტელეფონზე“) -----------------------------------
 // POST /my-phone { token, endpoint, test? }: whether this phone (its push subscription) is bound to the signed-in person for
 // calls, and the last test's outcome; `test` rings it 10 s later — time to lock the screen — the same way a class's call
@@ -1933,7 +1959,7 @@ export default {
     const routes = {
       '/subscribe': subscribe, '/account': account, '/group-event': groupEvent, '/access-request': accessRequest, '/game-invite': gameInvite,
       '/ring': ring, '/chat-notify': chatNotify, '/announce': announce, '/decline': decline, '/delete-account': deleteAccount, '/delete-member': deleteMember, '/lado': lado,
-      '/widget/link': widgetLink, '/widget/summary': widgetSummary, '/notify-prefs': notifyPrefs, '/my-phone': myPhone,
+      '/widget/link': widgetLink, '/widget/summary': widgetSummary, '/notify-prefs': notifyPrefs, '/my-phone': myPhone, '/phones': phones,
     };
     // the app's widgets send no Origin: their secret is the proof
     const widgetRoutes = { 'GET /widget/data': widgetData, 'POST /widget/tick': widgetTick, 'POST /widget/count': widgetCount, 'POST /widget/unlink': widgetUnlink };
