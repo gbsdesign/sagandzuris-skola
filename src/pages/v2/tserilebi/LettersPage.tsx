@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, BookOpen, ChevronDown, EyeOff, ListChecks, Loader2, MessageCircle, Search, X } from 'lucide-react';
+import { ArrowLeft, BookOpen, ChevronDown, EyeOff, ListChecks, Loader2, MessageCircle, Search, Users, X } from 'lucide-react';
 import { Waiting } from '../../../components/shell/PageSkeleton';
 import { useAuth, useNavigation } from '../../../context';
 import { useMyClasses, useTeachingClasses, useAllClasses } from '../../../hooks/useClasses';
@@ -36,7 +36,8 @@ import { useLongPress } from '../../../hooks/useLongPress';
 import { TimetableSheet } from '../klasi/teacher/Timetable';
 import { usePearlTotals } from './usePearlTotals';
 import { kaName } from '../../../utils/georgianName';
-import { openJubileeChat } from '../../../utils/jubileeChat';
+import { openJubileeChat, type ChatPerson } from '../../../utils/jubileeChat';
+const JubileeMembers = React.lazy(() => import('./JubileeMembers'));
 import { inDaysText, nextBirthday } from '../../../utils/birthdays';
 import { errorText } from '../../../utils/errorText';
 import { askConfirm } from '../../../components/ui/kit';
@@ -332,7 +333,8 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
             extra={times ? <ClassTimes slots={c.schedule} onEdit={editTimes} /> : undefined}
             {...rowProps(id, lastMs, pinned, hidden, unread, true)}
             onMenu={leads ? () => setMoreOf(c.id) : undefined}
-            fold={{ open: chip === c.id, onToggle: () => setChip(chip === c.id ? 'all' : c.id) }}
+            // a birthday chat has no ▾ (2026-11-24, the user: „გარეთ ჩამოსაშლელი მოხსენი იუბილის ჩათებს“)
+            fold={c.jubilee ? undefined : { open: chip === c.id, onToggle: () => setChip(chip === c.id ? 'all' : c.id) }}
           />
         ),
       });
@@ -539,6 +541,22 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
   const brandNew = empty && !needle && !overview && chip === 'all';
 
   // ---- the open chat -------------------------------------------------------------------------------------------
+  // a birthday chat's „+ დამატება“: everyone in the classes I see (and the whole directory for admins)
+  const addable: ChatPerson[] = (() => {
+    const out = new Map<string, ChatPerson>();
+    for (const c of known) {
+      if (c.jubilee) continue;
+      for (const p of [...c.teachers, ...c.members]) if (!out.has(p.uid)) out.set(p.uid, { uid: p.uid, name: p.name, photoURL: p.photoURL });
+    }
+    if (isAdmin) for (const p of everyone) if (!out.has(p.uid) && !removed.has(p.uid)) out.set(p.uid, { uid: p.uid, name: shownName(p), photoURL: p.photoURL || '' });
+    return [...out.values()].sort((a, b) => a.name.localeCompare(b.name, 'ka'));
+  })();
+  // its 💬: an admin writes from the administration's chat, a teacher from a teacher's chat linked to this chat
+  const writeTo = async (p: ChatPerson) => {
+    const who = { uid: p.uid, name: p.name, photoURL: p.photoURL || '' };
+    const id = isAdmin ? await openAdminThread(who) : await openThread(me(openClassId || undefined), who, openClassId || '');
+    go(id);
+  };
   const openCls = openClassId ? known.find(c => c.id === openClassId) : null;
   const pane = !open ? (
     <div className="flex h-full flex-col items-center justify-center gap-3 rounded-card bg-surf px-8 text-center">
@@ -557,7 +575,22 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
             {/* „წევრები“ left (the user: „ეს მოხსენი“), „პროგრამა“ is a round sign before the phone (`headTools`; „ლოგო დატოვე და
                 აიტანე ყურმილის წინ“) and the cog went down after the field's microphone (`extraTool`; „კბილანა მიკროფონის შემდეგ“) */}
             {/* the program unfolds here, under the head, and scrolls inside (the chat stays below it) */}
-            {programIn === openCls.id && (
+            {/* a birthday chat unfolds its people instead of a program (2026-11-24) */}
+            {openCls.jubilee && programIn === openCls.id && (
+              <div className="mt-1.5 flex max-h-[60dvh] flex-col overflow-x-hidden overflow-y-auto overscroll-contain pb-1">
+                <React.Suspense fallback={<Waiting field={false} rows={3} quiet />}>
+                  <JubileeMembers
+                    cls={openCls}
+                    me={uid}
+                    canEdit={!!moreFor}
+                    candidates={addable}
+                    onWrite={moreFor ? writeTo : undefined}
+                    writable={(_p, teacher) => isAdmin || !teacher}
+                  />
+                </React.Suspense>
+              </div>
+            )}
+            {!openCls.jubilee && programIn === openCls.id && (
               <div className="mt-1.5 flex max-h-[60dvh] flex-col gap-2.5 overflow-x-hidden overflow-y-auto overscroll-contain pb-1">
                 <React.Suspense fallback={<Waiting field={false} rows={3} quiet />}>
                   <ClassProgramFold cls={openCls} canEdit={!!moreFor} compact />
@@ -570,11 +603,13 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
           ? { label: 'ავტომატური პროგრამა', icon: <GearSpark />, onClick: () => openAssistant({ classId: openCls.id, page: 'class' }) }
           : undefined}
         headTools={(
-          <RoundButton label={programIn === openCls.id ? 'სასწავლო პროგრამის დაკეცვა' : 'სასწავლო პროგრამა'}
+          <RoundButton label={openCls.jubilee
+              ? (programIn === openCls.id ? 'ჩათის წევრების დაკეცვა' : 'ჩათის წევრები')
+              : (programIn === openCls.id ? 'სასწავლო პროგრამის დაკეცვა' : 'სასწავლო პროგრამა')}
             tone={programIn === openCls.id ? 'wine' : 'surf'} aria-expanded={programIn === openCls.id}
             className={programIn === openCls.id ? undefined : '[&_svg]:text-wine'}
             onClick={() => setProgramIn(programIn === openCls.id ? '' : openCls.id)}>
-            <ListChecks aria-hidden="true" strokeWidth={2} />
+            {openCls.jubilee ? <Users aria-hidden="true" strokeWidth={2} /> : <ListChecks aria-hidden="true" strokeWidth={2} />}
           </RoundButton>
         )}
         title={
