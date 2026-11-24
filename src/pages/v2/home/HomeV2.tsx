@@ -1,5 +1,7 @@
 import React, { Suspense, useState } from 'react';
 import { ShortcutShelf } from '../../../components/home/ShortcutShelf';
+import { SupportTile } from '../../../components/home/SupportTile';
+import { SHELF_GRID } from '../../../components/home/ShelfTile';
 import { SAYINGS_ABOVE } from '../../../data/sayings';
 import { HomeV2View, type HomeTile } from './HomeV2View';
 import { HOME_MAIN_SECTIONS, useSections } from '../../../components/shell/SectionsMenu';
@@ -24,7 +26,7 @@ export const HomeV2: React.FC = () => {
   // „მიმდინარე გაკვეთილი“ = the vine's old „გაკვეთილი“ bunch: the same tap as the old bottom menu's „წერილები“ (a student with one
   // teacher — the teacher's chat, everyone else the list)
   const places = useNavPlaces();
-  const { isTeacher } = useAuth();
+  const { isTeacher, user } = useAuth();
   const { openProgram } = useNotes();
   const lettersItem = places.shown.find(it => it.id === 'messages');
   const [soon, setSoon] = useState<string | null>(null);
@@ -46,6 +48,8 @@ export const HomeV2: React.FC = () => {
             chat stands first in „წერილები“, its members' coming birthdays over it */}
         {/* the kanon of a psalter-group member, „ჩვევები“ (a window) and the member's own buttons — no heading */}
         <ShortcutShelf habits />
+        {/* a guest has no shelf: „მხარდაჭერა“ alone */}
+        {!user && <ul className={`relative mt-6 w-[calc(100%+2.5rem)] max-w-md text-left sm:w-full ${SHELF_GRID}`}><SupportTile /></ul>}
       </HomeV2View>
       <Toast message={soon || ''} type="info" isVisible={!!soon} onClose={() => setSoon(null)} />
       {next.learnPiece && (

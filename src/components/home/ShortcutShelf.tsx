@@ -31,6 +31,7 @@ import { Sheet as Sheet2 } from '../ui2';
 
 const HabitsSheet = lazy(() => import('../../pages/v2/home/HabitsSheet'));
 import { SHELF_GRID, TileCheck, TileIcon, TileName, tileClass } from './ShelfTile';
+import { SupportTile } from './SupportTile';
 
 const SECTION_ICON: Record<SectionId, React.ReactNode> = {
   galoba: <Music2 />, simghera: <Music />, mtkmeli: <Feather />, sakravebi: <Guitar />, medavitneoba: <BookOpen />, medavitneobaTopic: <BookOpen />,
@@ -225,7 +226,7 @@ export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile'; habits?: bo
   });
 
   if (!user || !loaded) return null;
-  if (variant === 'home' && ids.length === 0 && readingIn.length === 0 && !habitsTile) return null;
+  if (variant === 'home' && ids.length === 0 && readingIn.length === 0 && !habitsTile && !withHabits) return null;
 
   const save = (next: string[]) => saveShortcuts(user.uid, keptKathisma ? [...next, 'special:kathisma'] : next).catch(() => {});
   const remove = (id: string) => { triggerHaptic(12); save(ids.filter(x => x !== id)); };
@@ -320,6 +321,8 @@ export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile'; habits?: bo
             </button>
           </li>
         )}
+        {/* „მხარდაჭერა“ beside „ჩვევები“ (2026-11-24) */}
+        {withHabits && variant === 'home' && !editing && <SupportTile />}
         {shown.map((id, i) => {
           const l = shortcutLabel(id)!;
           const dragging = drag && order[drag.to] === id;
