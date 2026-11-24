@@ -25,7 +25,7 @@ import {
   Avatar, cx, Dot, FOCUS, Helper, PageHead, Press, RoundButton, Row, Rows, SectionLabel, Sheet,
 } from '../../../components/ui2';
 import { DmChat } from './DmChat';
-import { BirthdaysSoon } from '../../../components/home/BirthdaysSoon';
+import { BirthdaysSoon, STAFF_DAYS, type DayChat } from '../../../components/home/BirthdaysSoon';
 import { ChatMenu, ChatRow, ClassTimes, hideSide, LastLine, NameMark, readSide, Tick } from './parts';
 import { ClassMoreSheet } from '../klasi/teacher/More';
 import { keepClassTab, studentItem, type ClassTab } from '../klasi/nav';
@@ -298,8 +298,9 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
     pinned: boolean; hidden: boolean; unread: boolean; teacher: boolean; node: React.ReactNode;
     /** a class's chat: its members (for the birthdays row over it) */
     cls?: string[];
-    /** a birthday chat: whose (it stands right under that person's birthday row) */
+    /** a birthday chat: whose, and in how many days (none = its day not kept) */
     jubilee?: string;
+    jubDays?: number;
     /** a member's chat on the staff side: who (the superadmin's menu part) */
     student?: { uid: string; name: string; photoURL?: string };
   };
@@ -334,7 +335,7 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
       items.push({
         key: id, name: c.name, at: lastMs, lastMs, empty: !last, pinned, hidden, unread, teacher: false,
         cls: [...c.memberIds, ...c.teacherIds],
-        ...(c.jubilee ? { jubilee: c.jubilee.uid } : {}),
+        ...(c.jubilee ? { jubilee: c.jubilee.uid, ...(c.jubilee.month ? { jubDays: nextBirthday(c.jubilee, new Date()).days } : {}) } : {}),
         node: (
           <ChatRow
             key={id}
@@ -742,20 +743,22 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
             <>
               {/* one list (the user: „ესეთი დაყოფა არ მინდა“): the class chats first, each in its thin dark-blue frame, with its own
                   members' coming birthdays over it (the teachers' look; none → nothing) */}
-              {/* a birthday chat stands right under its person's birthday row (2026-11-24, the user: „განცხადება ზემოთ იყოს ჩათი
-                  ქვემოთ“): it leaves its own place for the first class row that holds that person; a birthday chat has no row of its own */}
+              {/* a birthday chat no longer has a row of its own while its person's birthday line shows (2026-11-24, the user: „ბარათზე
+                  ღილაკი“): the line gets a „ჩათი“ button that opens it; once the day is past (or unknown) it is an ordinary row again */}
               <Rows>{(() => {
                 const homeOf = (j: string) => shownItems.find(x => x.cls && !x.jubilee && x.cls.includes(j))?.key;
-                const under = new Map<string, Item[]>();
+                const chatsOf = new Map<string, Record<string, DayChat>>();
+                const folded = new Set<string>();
                 for (const i of shownItems) {
-                  const home = i.jubilee ? homeOf(i.jubilee) : undefined;
-                  if (home) under.set(home, [...(under.get(home) || []), i]);
+                  if (!i.jubilee || i.jubDays === undefined || i.jubDays > STAFF_DAYS) continue;
+                  const home = homeOf(i.jubilee);
+                  if (!home) continue;
+                  chatsOf.set(home, { ...(chatsOf.get(home) || {}), [i.jubilee]: { open: () => go(i.key), unread: i.unread } });
+                  folded.add(i.key);
                 }
-                const moved = new Set([...under.values()].flat().map(i => i.key));
-                return shownItems.filter(i => !moved.has(i.key)).map(i => (i.cls && !i.jubilee
-                  ? <React.Fragment key={i.key}><BirthdaysSoon row only={i.cls}
-                      onPick={isAdmin ? who => { void jubilee(i.key.slice(CLASS_PREFIX.length), who); } : undefined} />
-                      {(under.get(i.key) || []).map(j => <React.Fragment key={j.key}>{j.node}</React.Fragment>)}{i.node}</React.Fragment>
+                return shownItems.filter(i => !folded.has(i.key)).map(i => (i.cls && !i.jubilee
+                  ? <React.Fragment key={i.key}><BirthdaysSoon row only={i.cls} chats={chatsOf.get(i.key)}
+                      onPick={isAdmin ? who => { void jubilee(i.key.slice(CLASS_PREFIX.length), who); } : undefined} />{i.node}</React.Fragment>
                   : <React.Fragment key={i.key}>{i.node}</React.Fragment>));
               })()}</Rows>
               {chip !== 'all' && !shownItems.some(i => !i.cls) && (
