@@ -840,8 +840,9 @@
   (Android 14+ full-screen permission, background restriction, the calls channel's sound, the maker) and `ringFix {what}` (opens
   those settings; Xiaomi's autostart); `pushToken` gives Firebase's error word; `sgApp.can` lists them. The store apps bind again at
   every opening (`chatBoundFresh`). `CallLayer` mounts for `classes` too (a member without private letters missed class calls).
-  The Worker keeps its lines in Workers Logs (`[observability]` in wrangler.toml). The iPhone app has NO notifications until
-  `ios/Sagandzuri/GoogleService-Info.plist` is added (and the APNs key uploaded in Firebase) — found 2026-11-24, not done yet.
+  The Worker keeps its lines in Workers Logs (`[observability]` in wrangler.toml). The iPhone app's Firebase app „Sagandzuri iPhone“
+  (`1:781443193404:ios:542d2b663723163c738139`) and its `ios/Sagandzuri/GoogleService-Info.plist` were added 2026-11-24; pushes reach
+  iPhones only once an APNs key is uploaded in Firebase → Cloud Messaging → the iOS app (needs the user's Apple sign-in).
   The same day, later (the user: „ზარი არ შედის არავისთან … გააკეთე ყველაფერი“): `/phones {uids}` (staff only) → each person's phones
   bound for calls; the class's „წევრები“ tab (`usePhonesOn`) marks „ზარები ტელეფონზე გამორთული აქვს“ and counts „ზარი ტელეფონზე
   დაურეკავს N / M“. `PhoneRingSetup` asks a student again the next day (the staff a week) until the phone is bound, says why a
