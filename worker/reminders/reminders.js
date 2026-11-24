@@ -748,7 +748,8 @@ async function gameInvite(request, env) {
 // ---- calls and messages (2026-11-05) ---------------------------------------------------------------------
 
 const DOC_ID = /^[A-Za-z0-9_-]{1,128}$/;
-const ADMIN_NAME = 'ადმინისტრაცია';
+// a member sees the administration's chat under the school founder's name (2026-11-24, as the site's ADMIN_SHOWN)
+const ADMIN_NAME = 'მურთაზი გაბუნია';
 const msOf = (t) => (t ? new Date(t).getTime() || 0 : 0);
 /** `classes/{id}` or `dms/{id}` → [kind, id] (anything else: null) */
 const chatBase = (base) => {
@@ -765,7 +766,7 @@ async function staffUids(env) {
 /**
  * Whom a chat's message or call reaches, and how the writer is named there; null when `uid` is not in it.
  * A class: its members and teachers (an archived class: nobody). A private chat: its other member; the administration's
- * chat (`kind: 'admin'`, members[0] = the member): the member hears „ადმინისტრაცია“, the staff hear the member.
+ * chat (`kind: 'admin'`, members[0] = the member): the member hears the founder's name, the staff hear the member.
  */
 function chatTargets(kind, doc, uid, staff = []) {
   if (!doc) return null;

@@ -9,7 +9,7 @@ import type { SchoolClass } from '../../../hooks/useClasses';
 import { useKidsMode } from '../../../hooks/useAccess';
 import {
   useInbox, useAllThreads, useTeacherCards, useKidsFlags, syncKidsFlag, contactGroups, bestContacts, threadIdFor,
-  openThread, openPeerThread, openAdminThread, otherOf, isUnread, isStaffSide, adminId, ADMIN_NAME,
+  openThread, openPeerThread, openAdminThread, otherOf, isUnread, isStaffSide, adminId, ADMIN_NAME, ADMIN_SHOWN,
   readSince, lastIsMine, seenByOther, markRead, dmBase,
   type Contact, type DirectThread, type Person,
 } from '../../../hooks/useDirectChat';
@@ -36,6 +36,21 @@ import { useLongPress } from '../../../hooks/useLongPress';
 import { TimetableSheet } from '../klasi/teacher/Timetable';
 import { usePearlTotals } from './usePearlTotals';
 import { kaName } from '../../../utils/georgianName';
+import { shownName, useDirectory } from '../../../utils/directory';
+import { collection, onSnapshot } from 'firebase/firestore';
+import { db } from '../../../firebase';
+
+/** the staff's uids (admins/{email}.userId) — an admin's list leaves them out of „every member“ */
+const useStaffUids = (on: boolean) => {
+  const [uids, setUids] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    if (!on) return;
+    return onSnapshot(collection(db, 'admins'),
+      s => setUids(new Set(s.docs.map(d => d.data().userId).filter((x): x is string => typeof x === 'string'))),
+      () => {});
+  }, [on]);
+  return uids;
+};
 
 const MemberActions = React.lazy(() => import('./MemberActions').then(m => ({ default: m.MemberActions })));
 const StudentOutfitSheet = React.lazy(() => import('./StudentOutfit').then(m => ({ default: m.StudentOutfitSheet })));
@@ -143,6 +158,10 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
   const assistantOn = useAssistantAllowed();
   // members a superadmin deleted from the school: out of every list
   const removed = useRemovedMembers();
+  // an admin's list holds every member of the school, those not written to yet at its end (2026-11-24, the user: „ყველა
+  // მოსწავლე არ მიჩანს“) — a member outside every class was nowhere before
+  const { people: everyone } = useDirectory(isAdmin);
+  const staffUids = useStaffUids(isAdmin);
   const classUnread = (c: SchoolClass) => isClassUnread(lasts[c.id], seen[c.id], uid) && open !== CLASS_PREFIX + c.id;
   const dmUnread = (t: DirectThread) => isUnread(t, uid) && open !== t.id;
   const asks: CountAsk[] = overview ? [] : [
@@ -360,6 +379,28 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
         }
       }
     }
+    if (isAdmin && chip === 'all') {
+      const inChats = new Set(threads.flatMap(t => [...t.members, t.teacherUid, t.studentUid]).filter(Boolean));
+      for (const e of everyone) {
+        if (e.uid === uid || staffUids.has(e.uid) || removed.has(e.uid) || inChats.has(e.uid)) continue;
+        const name = shownName(e);
+        if (!matches(name)) continue;
+        const p: Person = { uid: e.uid, name, photoURL: e.photoURL || '' };
+        items.push({
+          key: `m:${e.uid}`, name, at: 0, lastMs: 0, empty: true, pinned: false, hidden: false, unread: false, teacher: false,
+          node: (
+            <ChatRow
+              key={`m:${e.uid}`}
+              face={<Avatar name={name} photo={p.photoURL} size={48} />}
+              name={name}
+              last="ჯერ არ მიგიწერია"
+              busy={opening === e.uid}
+              onClick={() => { void start(e.uid, () => openAdminThread(p)); }}
+            />
+          ),
+        });
+      }
+    }
     // the classes' chats first, always, whoever wrote last (2026-11-22, the user: „თითოეული კლასის ჩათი … სიის თავში“, again: „სულ
     // თავში იყოს ყოველთვის მიუხედავად იმისა ვინ მომწერა“) — they stand in their own pale card; then pinned (the newest pin on top),
     // then a student's teachers, then the chats with messages, the newest message first („ვინც მომწერა, ზემოთ“), then the empty ones
@@ -380,7 +421,7 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
       const pair = t.members.map(m => t.names[m] || 'უსახელო').join(' — ');
       const name = t.kind === 'admin' ? `${ADMIN_NAME} — ${pair}` : pair;
       if (!matches(name)) return [];
-      const kindName = t.kind === 'admin' ? 'ადმინისტრაცია' : t.kind === 'peer' ? 'კლასელები' : 'მასწავლებელი და მოსწავლე';
+      const kindName = t.kind === 'admin' ? ADMIN_NAME : t.kind === 'peer' ? 'კლასელები' : 'მასწავლებელი და მოსწავლე';
       return [(
         <ChatRow
           key={t.id}
@@ -416,7 +457,7 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
     const f = norm(filter.trim());
     const ok = (...t: string[]) => !f || t.some(x => norm(x).includes(f));
     const people = contactRows.map(g => ({ ...g, list: g.list.filter(c => ok(fresh(c).name)) })).filter(g => g.list.length > 0);
-    const admin = showAdminRow && ok(ADMIN_NAME, 'ადმინი');
+    const admin = showAdminRow && ok(ADMIN_SHOWN, ADMIN_NAME, 'ადმინი');
     if (!admin && people.length === 0) return <p className="px-1.5 py-4 text-center text-body text-mut">ვერავინ მოიძებნა.</p>;
     return (
       <div className="flex flex-col gap-3">
@@ -424,7 +465,7 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
           <Rows>
             <Row
               lead={<AdminAvatar logoUrl={logoUrl} className="size-12" />}
-              title={<NameMark name={ADMIN_NAME} mark="admin" />}
+              title={<NameMark name={ADMIN_SHOWN} mark="admin" />}
               sub="კითხვა ან თხოვნა სკოლას"
               disabled={opening === 'admin'}
               onClick={() => start('admin', () => openAdminThread(me()))}

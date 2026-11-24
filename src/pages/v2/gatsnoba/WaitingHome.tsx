@@ -47,7 +47,7 @@ export const WaitingHome: React.FC<{ home: React.ReactNode }> = ({ home }) => {
       <p className="max-w-[340px] text-body leading-normal text-mut">ადმინი ნახავს და კლასში დაგამატებს. დადასტურებისთანავე ყველაფერი თავისით გაიხსნება.</p>
       <Rows className="mt-5 w-full max-w-[360px] text-left">
         <Row lead={<Dot icon={<House />} />} title="დაათვალიერე აპი" sub="რაც ღიაა, უკვე შეგიძლია ნახო" onClick={browse} />
-        <Row lead={<Dot icon={<MessageCircle />} />} title="მიწერე ადმინისტრაციას" sub={busy ? 'იხსნება…' : 'თუ კითხვა გაქვს'} onClick={() => void write()} disabled={busy} />
+        <Row lead={<Dot icon={<MessageCircle />} />} title="მიწერე მურთაზ გაბუნიას" sub={busy ? 'იხსნება…' : 'თუ კითხვა გაქვს'} onClick={() => void write()} disabled={busy} />
       </Rows>
       {error && <p role="alert" className="text-meta font-semibold text-danger">{error}</p>}
     </div>
