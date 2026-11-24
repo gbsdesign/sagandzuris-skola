@@ -7,12 +7,14 @@ import { Fits, LINE_LETTERS, LabelRoom, lettersFit, shortLabel } from '../../uti
 // number), the name shortened into two lines at most (`shortLabel`), and the ✓ on the right as it was. The home page's
 // paper and wine stay; the tile only gets a soft light from above and a deeper shadow.
 
-export type TileTone = 'paper' | 'done' | 'wine';
+export type TileTone = 'paper' | 'done' | 'wine' | 'rose';
 
 const TONE: Record<TileTone, string> = {
   paper: 'text-[#4a3426] bg-[linear-gradient(180deg,#ffffff_0%,#fbf6ee_100%)] ring-1 ring-[#e9ddc8] shadow-[inset_0_1px_0_#fff,0_1px_2px_rgba(74,52,38,0.07),0_6px_14px_-10px_rgba(74,52,38,0.45)]',
   done: 'text-[#2f4a3a] bg-[linear-gradient(180deg,#f6fcf8_0%,#e7f5ed_100%)] ring-1 ring-emerald-200 shadow-[inset_0_1px_0_#fff,0_1px_2px_rgba(6,95,70,0.08),0_6px_14px_-10px_rgba(6,95,70,0.4)]',
   wine: 'text-[#fbf6ec] bg-[linear-gradient(135deg,#8a2630_0%,#5c1a22_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_6px_14px_-8px_rgba(122,32,40,0.85)]',
+  // the kanon's wine, a few shades lighter („მხარდაჭერა“, 2026-11-24 — the user: „როგორც კანონი … ოღონდ მთლად მასე მუქად არა“)
+  rose: 'text-[#fffaf3] bg-[linear-gradient(135deg,#b4525c_0%,#93404a_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_6px_14px_-8px_rgba(147,64,74,0.75)]',
 };
 
 /** The shelf's grid: three tiles a row, two on a phone under 380px — there three would leave a name 4 letters
