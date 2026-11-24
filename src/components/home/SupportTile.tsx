@@ -9,9 +9,12 @@ import { TileIcon, tileClass } from './ShelfTile';
 // beside „ჩვევები“, its window says what the gift is for and lets one copy the number. The receiver and the banks: the user, the same
 // minute („გიორგი ჩუგოშვილი მიმღები საქართველოსა და თიბისზე“) — a transfer by the receiver's personal number.
 
-const NUMBER = '13801073031';
-const SHOWN = NUMBER;
-const RECEIVER = 'გიორგი ჩუგოშვილი';
+// Two receivers since the same night (the user: „გიორგი ჩუგოშვილი მერე მურთაზი გაბუნია 13001062491 საქ ბანკი, ხოლო ჩუგოს თბს
+// დაუტოვე“): each with his own bank and personal number, each number copied by its own tap.
+const RECEIVERS = [
+  { name: 'გიორგი ჩუგოშვილი', bank: 'თიბისი', number: '13801073031' },
+  { name: 'მურთაზი გაბუნია', bank: 'საქართველოს ბანკი', number: '13001062491' },
+];
 
 const copy = async (text: string) => {
   try {
@@ -32,49 +35,54 @@ const copy = async (text: string) => {
   }
 };
 
-export const SupportSheet: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
+const ReceiverCard: React.FC<{ name: string; bank: string; number: string }> = ({ name, bank, number }) => {
   const [copied, setCopied] = useState(false);
   const take = async () => {
-    if (await copy(NUMBER)) {
+    if (await copy(number)) {
       triggerHaptic(10);
       setCopied(true);
       window.setTimeout(() => setCopied(false), 2200);
     }
   };
   return (
-    <Sheet open={open} title="მხარდაჭერა" onClose={onClose}>
-      <div className="flex flex-col items-center gap-4 px-1 pt-1 pb-2 text-center">
-        <span aria-hidden="true" className="flex size-14 items-center justify-center rounded-full bg-tint text-wine [&_svg]:size-7">
-          <HandHeart strokeWidth={1.75} />
+    <div className="flex w-full flex-col gap-2 rounded-tile bg-page px-4 py-3 text-left">
+      <span className="flex flex-col">
+        <span className="text-lead font-bold text-ink">{name}</span>
+        <span className="text-meta text-mut">{bank} · გადარიცხვა პირადი ნომრით</span>
+      </span>
+      <button
+        type="button"
+        onClick={() => { void take(); }}
+        aria-label={`${name}, ${number} — დაკოპირება`}
+        className="flex w-full cursor-pointer items-center gap-3 rounded-field bg-surf py-2 pr-2 pl-3 text-left transition active:scale-[0.99]"
+      >
+        <span className="flex min-w-0 flex-1 flex-col">
+          <span className="text-cap font-semibold text-mut">პირადი ნომერი</span>
+          <span className="text-title font-bold tracking-wide text-ink tabular-nums">{number}</span>
         </span>
-        <p className="text-lead leading-snug text-ink">
-          აპლიკაციის ფუნქციონირებისა და განვითარებისთვის შეგიძლიათ, სურვილისამებრ, გაიღოთ შესაწირი.
-        </p>
-        <div className="flex w-full flex-col gap-1 rounded-tile bg-page px-4 py-3 text-left">
-          <span className="text-cap font-semibold text-mut">მიმღები</span>
-          <span className="text-lead font-bold text-ink">{RECEIVER}</span>
-          <span className="text-meta text-mut">საქართველოს ბანკი · თიბისი — გადარიცხვა პირადი ნომრით</span>
-        </div>
-        <button
-          type="button"
-          onClick={() => { void take(); }}
-          aria-label={`${SHOWN} — დაკოპირება`}
-          className="flex w-full cursor-pointer items-center gap-3 rounded-tile bg-page py-3 pr-3 pl-4 text-left transition active:scale-[0.99] active:bg-soft"
-        >
-          <span className="flex min-w-0 flex-1 flex-col">
-            <span className="text-cap font-semibold text-mut">პირადი ნომერი</span>
-            <span className="text-title font-bold tracking-wide text-ink tabular-nums">{SHOWN}</span>
-          </span>
-          <span className={`flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3 text-meta font-bold ${copied ? 'bg-leaf text-white' : 'bg-wine text-white'}`}>
-            {copied ? <Check aria-hidden="true" className="size-4" /> : <Copy aria-hidden="true" className="size-4" />}
-            {copied ? 'დაკოპირდა' : 'კოპირება'}
-          </span>
-        </button>
-        <p className="text-meta text-mut">გმადლობთ, ღმერთმა დაგლოცოთ!</p>
-      </div>
-    </Sheet>
+        <span className={`flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3 text-meta font-bold ${copied ? 'bg-leaf text-white' : 'bg-wine text-white'}`}>
+          {copied ? <Check aria-hidden="true" className="size-4" /> : <Copy aria-hidden="true" className="size-4" />}
+          {copied ? 'დაკოპირდა' : 'კოპირება'}
+        </span>
+      </button>
+    </div>
   );
 };
+
+export const SupportSheet: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => (
+  <Sheet open={open} title="მხარდაჭერა" onClose={onClose}>
+    <div className="flex flex-col items-center gap-4 px-1 pt-1 pb-2 text-center">
+      <span aria-hidden="true" className="flex size-14 items-center justify-center rounded-full bg-tint text-wine [&_svg]:size-7">
+        <HandHeart strokeWidth={1.75} />
+      </span>
+      <p className="text-lead leading-snug text-ink">
+        აპლიკაციის ფუნქციონირებისა და განვითარებისთვის შეგიძლიათ, სურვილისამებრ, გაიღოთ შესაწირი.
+      </p>
+      {RECEIVERS.map(r => <ReceiverCard key={r.number} {...r} />)}
+      <p className="text-meta text-mut">გმადლობთ, ღმერთმა დაგლოცოთ!</p>
+    </div>
+  </Sheet>
+);
 
 /** The shelf's tile (a list item of the home's grid). */
 export const SupportTile: React.FC = () => {
