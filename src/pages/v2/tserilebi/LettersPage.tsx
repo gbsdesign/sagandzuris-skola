@@ -96,7 +96,7 @@ const SearchLine: React.FC<{ value: string; onChange: (v: string) => void }> = (
  *  chat takes the page, on a computer it stands beside the list. */
 export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
   const { user, isAdmin, isSuperAdmin, isTeacher } = useAuth();
-  const { currentPage, selectedDmId, openDm, handleGoBack, openClass, openMapItem, openStudent } = useNavigation();
+  const { currentPage, selectedDmId, openDm, handleGoBack, openClass, openMapItem, openStudent, navigateTo } = useNavigation();
   const wide = useWide();
   const uid = user?.uid || '';
   const open = currentPage === 'dm' ? selectedDmId : null;
@@ -177,7 +177,12 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
   const studentOf = (t: DirectThread): string | null =>
     t.kind === 'teach' ? (t.teacherUid === uid ? t.studentUid || null : null)
       : t.kind === 'admin' && isAdmin && !t.members.includes(uid) ? t.members[0] ?? null : null;
-  const { pearls, outfits } = usePearlTotals(isTeacher || isAdmin ? threads.map(studentOf).filter((x): x is string => !!x) : []);
+  // a student's own pearls and outfit on their teacher's row (2026-11-24, the user: „სასწავლო ჩათში … მოსწავლეს საკუთარი მარგალიტი
+  // უნდა უჩანდეს სამოსთან ერთად“)
+  const mineOn = (t: DirectThread) => !isTeacher && !isAdmin && t.kind === 'teach' && t.teacherUid !== uid;
+  const { pearls, outfits } = usePearlTotals(isTeacher || isAdmin
+    ? threads.map(studentOf).filter((x): x is string => !!x)
+    : threads.some(mineOn) && uid ? [uid] : []);
 
   if (!user) return null;
   // the class page on one of its tabs (the chat's „პროგრამა“ · „წევრები“)
@@ -252,6 +257,10 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
   const best = bestContacts(groups);
   // a student's teachers stand first (2026-11-21, the user: „მოსწავლეს უჩანდეს მასწავლებელი“) — a teacher not written to yet too
   const plainMember = !isTeacher && !isAdmin;
+  // one chat is enough: a student who has a teacher gets no separate administration's chat (2026-11-24, the user: „2 ჩათი რატომაა?
+  // 1-ც საკმარისია მასწავლებლის სახელით … ცალკე ადმინი ნუ იქნება“) — unless the administration already wrote there
+  const hasTeacher = plainMember && (known.some(c => c.memberIds.includes(uid) && c.teacherIds.some(t => t !== uid))
+    || threads.some(t => t.kind === 'teach' && t.teacherUid !== uid));
 
   type Item = {
     key: string; name: string; at: number; lastMs: number; empty: boolean;
@@ -312,6 +321,7 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
     }
     for (const t of threads) {
       if (!threadInChip(t)) continue;
+      if (hasTeacher && t.kind === 'admin' && !t.lastText) continue;
       const staff = isStaffSide(t, uid);
       const o = t.kind === 'teach' ? fresh(otherOf(t, uid)) : otherOf(t, uid);
       const name = o.name || 'უსახელო';
@@ -339,16 +349,20 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
             last={t.lastText ? <LastLine who={who} text={t.lastText} /> : 'ჯერ შეტყობინება არ არის'}
             time={when(t.lastAt)}
             tick={t.lastText && lastIsMine(t, uid) ? <Tick seen={!!seenAt && !!t.lastAt && seenAt >= t.lastAt} /> : null}
-            pearls={(() => { const s = studentOf(t); return s ? pearls[s] : undefined; })()}
+            pearls={(() => { const s = studentOf(t) || (mineOn(t) ? uid : null); return s ? pearls[s] : undefined; })()}
             onPearls={(() => {
+              if (mineOn(t)) return () => { navigateTo('gz'); openMapItem('sagandzuri'); };
               const s = studentOf(t);
               if (!s) return undefined;
               // the student's own path page — in their class (a teacher's chat names it, else the first class they are in)
               const cid = t.classId || known.find(c => c.memberIds.includes(s))?.id || '';
               return () => { openStudent(s, cid); openMapItem(studentItem(s, cid, 'gza')); };
             })()}
-            outfit={(() => { const s = studentOf(t); return s ? outfits[s] : undefined; })()}
-            onOutfit={(() => { const s = studentOf(t); return s ? () => setOutfitOf({ uid: s, name }) : undefined; })()}
+            outfit={(() => { const s = studentOf(t) || (mineOn(t) ? uid : null); return s ? outfits[s] : undefined; })()}
+            onOutfit={(() => {
+              if (mineOn(t)) return () => { navigateTo('gz'); openMapItem('samosi'); };
+              const s = studentOf(t); return s ? () => setOutfitOf({ uid: s, name }) : undefined;
+            })()}
             {...rowProps(t.id, lastMs, pinned, hidden, unread)}
           />
         ),
@@ -447,7 +461,7 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
     });
     return { cls: g.cls, list };
   }).filter(g => g.list.length > 0);
-  const showAdminRow = !isAdmin && !have.has(adminId(uid));
+  const showAdminRow = !isAdmin && !hasTeacher && !have.has(adminId(uid));
 
   const relLabel = (c: Contact, cls: SchoolClass) =>
     c.rel === 'peer' ? 'კლასელი' : c.rel === 'teacher' || cls.teacherIds.includes(c.uid) ? 'მასწავლებელი' : 'მოსწავლე';

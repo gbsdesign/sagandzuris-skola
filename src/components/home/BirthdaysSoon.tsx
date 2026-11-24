@@ -19,6 +19,8 @@ export const BirthdaysSoon: React.FC<{ className?: string; compact?: boolean; ro
   const { isMember } = useMembership();
   const { navigateTo } = useNavigation();
   const list = useBirthdays(!!user && isMember, isTeacher);
+  const classRow = !!row && !!only;
+  const soonToo = isTeacher || classRow;
   const names = useNameDays(!!user && isMember);
   const now = new Date();
   type Day = { id: string; b: Pick<Birthday, 'uid' | 'name' | 'month' | 'day'> & Partial<Birthday>; name: boolean };
@@ -27,7 +29,9 @@ export const BirthdaysSoon: React.FC<{ className?: string; compact?: boolean; ro
     ...(names || []).map((n): Day => ({ id: `n-${n.uid}`, b: n, name: true })),
   ]
     .map(x => ({ ...x, days: nextBirthday(x.b, now).days }))
-    .filter(x => (isTeacher ? x.days <= STAFF_DAYS : x.days === 0))
+    // a class chat's row: its classmates see their class's coming days too (2026-11-24, the user: „კლასელები ერთმანეთის მოახლოებულ
+    // დაბადებებს უნდა ხედავდნენ, მასწავლებელი კი ყველა კლასისას“) — without the age
+    .filter(x => (soonToo ? x.days <= STAFF_DAYS : x.days === 0))
     // one class's members only (the letters' class chat row, 2026-11-22)
     .filter(x => !only || only.includes(x.b.uid))
     .sort((a, z) => a.days - z.days);
@@ -53,7 +57,7 @@ export const BirthdaysSoon: React.FC<{ className?: string; compact?: boolean; ro
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isTeacher, key]);
 
-  if (!isTeacher || !coming.length) return null;
+  if (!(isTeacher || classRow) || !coming.length) return null;
   // the classes card's first row (2026-11-22, the user: „დაბადების დღეები კლასებს თავში გამოჩნდეს“): a pale gold line
   // with the classes' look — a round cake, the name and when, „+N“ when more are coming
   if (row) {

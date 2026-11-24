@@ -55,13 +55,18 @@ export const CallButton: React.FC<{
 /** The head of an open chat: the round „უკან“ (only where the chat takes the whole page), the name, a grey line, the call. */
 export const ChatHead: React.FC<{
   title: string; sub: string; onBack: () => void; wide: boolean; right?: React.ReactNode; onOpen?: () => void;
-}> = ({ title, sub, onBack, wide, right, onOpen }) => (
+  /** a small word over the name („მასწავლებელი“) */
+  kicker?: string;
+}> = ({ title, sub, onBack, wide, right, onOpen, kicker }) => (
   <div className="px-3.5">
     <TopBar
       // the name and the small line each on one line (2026-11-22, the user: „სახელი მინდა სიგრძეზე ეწეროს“)
-      title={onOpen
-        ? <Press onClick={onOpen} className={cx('block max-w-full cursor-pointer truncate text-left text-lead font-bold')}>{title}</Press>
-        : <span className="block truncate text-lead">{title}</span>}
+      title={<>
+        {kicker && <span className="block truncate text-cap font-semibold text-wine">{kicker}</span>}
+        {onOpen
+          ? <Press onClick={onOpen} className={cx('block max-w-full cursor-pointer truncate text-left text-lead font-bold')}>{title}</Press>
+          : <span className="block truncate text-lead">{title}</span>}
+      </>}
       sub={<span className="block truncate">{sub}</span>}
       onBack={wide ? undefined : onBack}
       right={right}
@@ -120,13 +125,17 @@ export const DmChat: React.FC<{ id: string; classes: SchoolClass[]; wide: boolea
   const title = canWrite
     ? (thread.kind === 'admin' && !staff ? ADMIN_SHOWN : other.name || 'უსახელო')
     : thread.kind === 'admin' ? `${ADMIN_NAME} — ${pair}` : pair;
-  // the board's grey line is the class; without one, how the person is linked to me
+  // the student's side of a teacher's chat: „მასწავლებელი“ over the name, „სასწავლო ჩათი“ under it; an admin's name has „ადმინი“
+  // under it (2026-11-24, the user: „მაღლა მასწავლებელი დააწერე დაბლა კი სასწავლო ჩათი … ყველას ადმინი ეწეროს დაბლა სახელის ქვეშ“)
+  const toTeacher = canWrite && thread.kind === 'teach' && !iTeach;
+  const kicker = toTeacher ? 'მასწავლებელი' : undefined;
   const sub = !canWrite ? 'მხოლოდ სანახავად'
     : staff ? 'სკოლის ჩათი'
+    : thread.kind === 'admin' ? 'ადმინი'
+    : toTeacher ? 'სასწავლო ჩათი'
     : cls ? cls.name
-    : thread.kind === 'admin' ? 'სკოლის დამფუძნებელი'
     : thread.kind === 'peer' ? 'კლასელი'
-    : iTeach ? 'მოსწავლე' : 'მასწავლებელი';
+    : 'მოსწავლე';
 
   const canStart = mayStartChatCall(thread, uid);
   const joinCall = () => answerChatCall(thread, user);
@@ -169,6 +178,7 @@ export const DmChat: React.FC<{ id: string; classes: SchoolClass[]; wide: boolea
           <ChatHead
             title={title}
             sub={sub}
+            kicker={kicker}
             onBack={onBack}
             wide={wide}
             onOpen={canPin ? () => openStudent(student, thread.classId || '') : undefined}
