@@ -1838,6 +1838,46 @@ async function runJubileeGreetings(env, when) {
   }
 }
 
+// a birthday person's chat goes into the archive 24 hours after their day ends, and is deleted a month later (2026-11-24, the
+// user: „როცა გავა დაბადების დღე … 24 საათში გადავიდეს იუბილარების ჩათების არქივში 1 თვით და მერე წაიშალოს“). Their day = the first
+// `bday` on or after the chat was made (Tbilisi). Runs once an hour.
+export function jubileeDayStart(createdAt, bday) {
+  const made = georgia(new Date(Date.parse(createdAt) || 0));
+  const madeDay = Date.UTC(made.getUTCFullYear(), made.getUTCMonth(), made.getUTCDate());
+  let at = Date.UTC(made.getUTCFullYear(), bday.month - 1, bday.day);
+  if (at < madeDay) at = Date.UTC(made.getUTCFullYear() + 1, bday.month - 1, bday.day);
+  return at - TBILISI_MS; // that day's Tbilisi midnight, as a real moment
+}
+const JUBILEE_SUBS = ['messages', 'voice', 'pins', 'call', 'peers'];
+
+async function runJubileeCleanup(env, when) {
+  const now = when.getTime();
+  const chats = await fsList(env, 'classes', ['jubilee', 'archived', 'archivedAt', 'bday', 'createdAt']);
+  for (const j of chats) {
+    if (!j.jubilee || !j.bday || typeof j.bday.month !== 'number') continue;
+    try {
+      if (!j.archived) {
+        // the day itself (24 h) and 24 h more
+        if (now < jubileeDayStart(j.createdAt, j.bday) + 2 * DAY_MS) continue;
+        const at = new Date(now).toISOString();
+        await fsCommit(env, [{
+          update: { name: docName(env, `classes/${j.id}`), fields: { archived: { booleanValue: true }, archivedAt: { stringValue: at }, updatedAt: { stringValue: at } } },
+          updateMask: { fieldPaths: ['archived', 'archivedAt', 'updatedAt'] },
+        }]);
+      } else if (now - (Date.parse(j.archivedAt || '') || now) >= 30 * DAY_MS) {
+        const writes = [];
+        for (const sub of JUBILEE_SUBS) {
+          for (const d of await fsList(env, `classes/${j.id}/${sub}`, ['__none__']).catch(() => [])) writes.push({ delete: docName(env, `classes/${j.id}/${sub}/${d.id}`) });
+        }
+        writes.push({ delete: docName(env, `classes/${j.id}`) });
+        await fsCommit(env, writes);
+      }
+    } catch (e) {
+      console.warn('jubilee cleanup:', e?.message);
+    }
+  }
+}
+
 async function deleteAccount(request, env) {
   const body = await readJson(request);
   let uid;
@@ -2039,6 +2079,7 @@ export default {
       // Monday 10:00 (Georgian time) the admins' week
       const minute = when.getUTCMinutes();
       if (minute === 0) await runGroupHour(env, when).catch((e) => console.warn("group hour:", e?.message));
+      if (minute === 30) await runJubileeCleanup(env, when).catch((e) => console.warn('jubilee cleanup:', e?.message));
       const g = georgia(when);
       if (minute === 0 && g.getUTCDay() === 1 && g.getUTCHours() === 10) await runAdminWeek(env, when).catch((e) => console.warn('admin week:', e?.message));
       else if (minute === 50 || minute === 55 || minute === 59) await runPrayerReminders(env, when);
