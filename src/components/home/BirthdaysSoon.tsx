@@ -14,7 +14,10 @@ import { triggerHaptic } from '../../utils/haptics';
 const STAFF_DAYS = 5;
 const NOTIFY_AT = [5, 3, 1];
 
-export const BirthdaysSoon: React.FC<{ className?: string; compact?: boolean; row?: boolean; only?: string[] }> = ({ className, compact, row, only }) => {
+export const BirthdaysSoon: React.FC<{ className?: string; compact?: boolean; row?: boolean; only?: string[];
+  /** an admin's tap on a class's row: the birthday person's chat (`openJubileeChat`) */
+  onPick?: (who: { uid: string; name: string }) => void;
+}> = ({ className, compact, row, only, onPick }) => {
   const { user, isTeacher } = useAuth();
   const { isMember } = useMembership();
   const { navigateTo } = useNavigation();
@@ -34,6 +37,8 @@ export const BirthdaysSoon: React.FC<{ className?: string; compact?: boolean; ro
     .filter(x => (soonToo ? x.days <= STAFF_DAYS : x.days === 0))
     // one class's members only (the letters' class chat row, 2026-11-22)
     .filter(x => !only || only.includes(x.b.uid))
+    // never one's own (2026-11-24, the user: „ვისი დაბადების დღეც არის იმას არ უჩვენოს“)
+    .filter(x => x.b.uid !== user?.uid)
     .sort((a, z) => a.days - z.days);
 
   // staff: a notification 5, 3 and 1 days before, once per person and day on this device
@@ -65,8 +70,8 @@ export const BirthdaysSoon: React.FC<{ className?: string; compact?: boolean; ro
     return (
       <button
         type="button"
-        onClick={() => { triggerHaptic(8); navigateTo('birthdays'); }}
-        aria-label="დაბადების დღეები"
+        onClick={() => { triggerHaptic(8); if (onPick && !first.name) onPick({ uid: first.b.uid, name: first.b.name }); else navigateTo('birthdays'); }}
+        aria-label={onPick && !first.name ? `${first.b.name}-ის ჩათი (მის გარეშე)` : 'დაბადების დღეები'}
         className="flex min-h-[54px] w-full cursor-pointer items-center gap-3 bg-gold-tint py-1.5 pr-2.5 pl-3 text-left transition-colors active:bg-soft"
       >
         <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-surf text-gold">
