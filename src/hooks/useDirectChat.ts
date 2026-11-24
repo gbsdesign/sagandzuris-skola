@@ -48,7 +48,10 @@ export const adminId = (uid: string) => `a_${uid}`;
 export const dmBase = (id: string) => `dms/${id}`;
 
 /** the administration's name as members see it */
-export const ADMIN_NAME = 'ადმინისტრაცია';
+/** the administration's chat is named by the school's founder everywhere (2026-11-24, the user: „ყველგან ჩემი სახელი ეწეროს,
+ *  ადმინისტრაცია არ გინდა“) */
+export const ADMIN_NAME = 'მურთაზი გაბუნია';
+export const ADMIN_SHOWN = ADMIN_NAME;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const toDate = (v: any): Date | null => (v?.toDate ? v.toDate() : null);
@@ -85,7 +88,7 @@ export const isStaffSide = (t: DirectThread, uid: string) => t.kind === 'admin' 
 export const otherOf = (t: DirectThread, uid: string): Person => {
   if (t.kind === 'admin') {
     const m = t.members[0] || '';
-    return m === uid ? { uid: 'admin', name: ADMIN_NAME, photoURL: '' } : { uid: m, name: t.names[m] || '', photoURL: t.photos[m] || '' };
+    return m === uid ? { uid: 'admin', name: ADMIN_SHOWN, photoURL: '' } : { uid: m, name: t.names[m] || '', photoURL: t.photos[m] || '' };
   }
   const o = t.members.find(m => m !== uid) || (t.teacherUid === uid ? t.studentUid : t.teacherUid);
   return { uid: o, name: t.names[o] || '', photoURL: t.photos[o] || '' };

@@ -21,7 +21,7 @@ export const Tick: React.FC<{ seen: boolean }> = ({ seen }) => seen
 /** a name with its small mark: 🛡 the administration, 🎓 a teacher */
 export const NameMark: React.FC<{ name: string; mark?: 'admin' | 'teacher' }> = ({ name, mark }) => (
   <span className="flex min-w-0 items-center gap-1.5">
-    {mark === 'admin' && <ShieldCheck aria-label="ადმინისტრაცია" className="size-4 shrink-0 text-wine" />}
+    {mark === 'admin' && <ShieldCheck aria-label="სკოლის დამფუძნებელი" className="size-4 shrink-0 text-wine" />}
     {mark === 'teacher' && <GraduationCap aria-label="მასწავლებელი" className="size-4 shrink-0 text-wine" />}
     <span className="min-w-0 truncate">{name}</span>
   </span>

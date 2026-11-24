@@ -7,7 +7,7 @@ import { useNotes } from '../../context/NotesContext';
 import { useNavigation } from '../../context/NavigationContext';
 import { useMyClasses, useTeachingClasses } from '../../hooks/useClasses';
 import type { SchoolClass } from '../../hooks/useClasses';
-import { useInbox, isRinging, ADMIN_NAME, otherOf, DirectThread } from '../../hooks/useDirectChat';
+import { useInbox, isRinging, ADMIN_SHOWN, otherOf, DirectThread } from '../../hooks/useDirectChat';
 import {
   useCall, useLivePeers, leaveCall, dismissCall, toggleMic, toggleCam, toggleScreen, toggleSpeaker, flipCamera, setCallSmall, canShareScreen,
   RemotePeer, RING_MS,
@@ -41,7 +41,7 @@ const CallScreen: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
   const info = call.info;
   if (!info || call.status === 'idle') return null;
 
-  const label = (p: RemotePeer) => (info.anonStaff && p.staff ? { name: ADMIN_NAME, photoURL: logoUrl } : { name: p.name || 'უსახელო', photoURL: p.photoURL });
+  const label = (p: RemotePeer) => (info.anonStaff && p.staff ? { name: ADMIN_SHOWN, photoURL: logoUrl } : { name: p.name || 'უსახელო', photoURL: p.photoURL });
   const hang = async () => {
     const others = call.peers.length;
     // still „ირეკება…“ / alone: nobody came (the Worker only tells the phones of a call this one started)
@@ -327,7 +327,7 @@ const Incoming: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
   if (ringing) {
     const fromAdmin = ringing.kind === 'admin';
     const o = otherOf(ringing, uid);
-    const name = fromAdmin ? ADMIN_NAME : ringing.names[ringing.callBy] || o.name || 'ზარი';
+    const name = fromAdmin ? ADMIN_SHOWN : ringing.names[ringing.callBy] || o.name || 'ზარი';
     const k = `${ringing.id}:${ringing.callAt?.getTime()}`;
     const decline = () => { hide(k); declineChatCall(ringing); };
     const answer = () => { hide(k); answerChatCall(ringing, user); };

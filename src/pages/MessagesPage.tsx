@@ -6,7 +6,7 @@ import type { SchoolClass } from '../hooks/useClasses';
 import { useKidsMode } from '../hooks/useAccess';
 import {
   useInbox, useAllThreads, useTeacherCards, useKidsFlags, syncKidsFlag, contactGroups, bestContacts, threadIdFor,
-  openThread, openPeerThread, openAdminThread, otherOf, isUnread, isStaffSide, adminId, ADMIN_NAME,
+  openThread, openPeerThread, openAdminThread, otherOf, isUnread, isStaffSide, adminId, ADMIN_NAME, ADMIN_SHOWN,
   readSince, lastIsMine, seenByOther, markRead, dmBase,
   Contact, DirectThread, Person,
 } from '../hooks/useDirectChat';
@@ -324,7 +324,7 @@ export const MessagesPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
       const pair = t.members.map(m => t.names[m] || 'უსახელო').join(' — ');
       const name = t.kind === 'admin' ? `${ADMIN_NAME} — ${pair}` : pair;
       if (!matches(name)) return [];
-      const kindName = t.kind === 'admin' ? 'ადმინისტრაცია' : t.kind === 'peer' ? 'კლასელები' : 'მასწავლებელი და მოსწავლე';
+      const kindName = t.kind === 'admin' ? ADMIN_NAME : t.kind === 'peer' ? 'კლასელები' : 'მასწავლებელი და მოსწავლე';
       return [(
         <Row
           key={t.id}
@@ -343,7 +343,7 @@ export const MessagesPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
   const have = new Set([...threads.map(t => t.id)]);
   const groups = contactGroups(known, uid, { isAdmin, kidsMe: kidsOn && !isTeacher, kids });
   const best = bestContacts(groups);
-  const showAdminRow = !isAdmin && !have.has(adminId(uid)) && matches(ADMIN_NAME, 'ადმინი');
+  const showAdminRow = !isAdmin && !have.has(adminId(uid)) && matches(ADMIN_SHOWN, ADMIN_NAME, 'ადმინი');
   const contactRows = overview ? [] : groups.filter(g => inChip(g.cls.id)).map(g => {
     const list = g.contacts.filter(c => {
       if (have.has(threadIdFor(c, uid))) return false;
@@ -467,7 +467,7 @@ export const MessagesPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
                   <ul>
                     <Row
                       face={<AdminAvatar logoUrl={logoUrl} className="w-11 h-11" />}
-                      name={ADMIN_NAME}
+                      name={ADMIN_SHOWN}
                       sub="კითხვა ან თხოვნა სკოლას"
                       busy={opening === 'admin'}
                       onClick={() => start('admin', () => openAdminThread(me()))}
