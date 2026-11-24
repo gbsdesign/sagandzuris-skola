@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookOpen, GraduationCap, Play } from 'lucide-react';
+import { BookOpen, FlaskConical, GraduationCap, Play } from 'lucide-react';
 import { OfflineButton } from '../../../components/offline/OfflineButton';
 import { Dot, Hero, Row, Rows, SectionLabel, TopBar } from '../../../components/ui2';
 import { useNavigation } from '../../../context';
@@ -33,6 +33,13 @@ const Front: React.FC<{ done: string[] }> = ({ done }) => {
     <Page>
       <TopBar title="ღვთისმსახურება" onBack={handleGoBack} right={<><PinRound id="section:medavitneobaTopic" /><OfflineButton kind="wignebi" /></>} />
       <WorshipSwitch value="medavitne" />
+      {/* the user's ask (2026-11-24): the day's services aren't fully set up yet — a calm beta notice above the big card */}
+      <div role="note" className="flex shrink-0 items-start gap-3 rounded-tile bg-gold-tint px-4 py-3">
+        <FlaskConical aria-hidden="true" className="mt-0.5 size-[18px] shrink-0 text-gold-ink" />
+        <p className="min-w-0 text-meta leading-normal text-ink wrap-break-word">
+          <b className="font-semibold text-gold-ink">ბეტა ვერსია.</b> დღის მსახურებები ჯერ ბოლომდე გამართული არ არის — ტაძარში, მსახურების დროს, ჯერ ნუ გამოიყენებთ.
+        </p>
+      </div>
       {brief ? (
         <Hero
           kicker={brief.now ? `დღის მსახურება · ${brief.now.word}` : 'დღის მსახურება'}
