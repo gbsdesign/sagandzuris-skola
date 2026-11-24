@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import type { User } from 'firebase/auth';
 import type { SchoolClass } from '../../hooks/useClasses';
-import { ADMIN_NAME, DirectThread, dmBase, isStaffSide, notePrivateCall, otherOf } from '../../hooks/useDirectChat';
+import { ADMIN_SHOWN, DirectThread, dmBase, isStaffSide, notePrivateCall, otherOf } from '../../hooks/useDirectChat';
 import { sendCallEndMessage } from '../../hooks/useClassChat';
 import { CallInfo, CallKind, endChatCall, endClassCall, giveUpAfter, joinCall, ringClass, watchEnd, whenCallLeft } from '../../utils/callSession';
 import { notifyRing } from '../../utils/groupPush';
@@ -24,7 +24,7 @@ export const chatCallInfo = (t: DirectThread, user: User): CallInfo => {
   const staff = isStaffSide(t, user.uid);
   return {
     base: `dms/${t.id}`,
-    title: t.kind === 'admin' && !staff ? ADMIN_NAME : otherOf(t, user.uid).name || 'ზარი',
+    title: t.kind === 'admin' && !staff ? ADMIN_SHOWN : otherOf(t, user.uid).name || 'ზარი',
     oneToOne: true,
     // every private call may be by video (the administration's since 2026-11-06 — the member sees the admin's face)
     canVideo: true,

@@ -5,11 +5,11 @@ import { useAuth, useNavigation } from '../../../context';
 import { useChat, type ChatAuthor } from '../../../hooks/useClassChat';
 import type { SchoolClass } from '../../../hooks/useClasses';
 import {
-  useThread, dmBase, otherOf, isUnread, isStaffSide, seenByOther, markRead, noteSent, ADMIN_NAME,
+  useThread, dmBase, otherOf, isUnread, isStaffSide, seenByOther, markRead, noteSent, ADMIN_NAME, ADMIN_SHOWN,
 } from '../../../hooks/useDirectChat';
 import { useCall, useLivePeers, setCallSmall } from '../../../utils/callSession';
 import { startChatCall, answerChatCall, mayStartChatCall } from '../../../components/calls/callActions';
-import { ChatPanel, firstName } from '../../../components/classes/ChatPanel';
+import { ChatPanel } from '../../../components/classes/ChatPanel';
 import type { CatalogEntry } from '../../../utils/pathItems';
 import { ChatPath, PathSigns } from './ChatPath';
 import { GearSpark } from '../damkhmare/GearSpark';
@@ -115,10 +115,10 @@ export const DmChat: React.FC<{ id: string; classes: SchoolClass[]; wide: boolea
   const author: ChatAuthor = { uid, name: myName, photoURL: thread.photos[uid] || user.photoURL || '', teacher: iTeach || staff };
 
   const pair = thread.members.map(m => thread.names[m] || '').filter(Boolean).join(' — ');
-  // the member's side of the administration's chat names who answers („ადმინისტრაცია · გიორგი“, 2026-11-21)
-  const lastStaff = thread.kind === 'admin' && !staff ? [...messages].reverse().find(m => m.teacher && m.uid !== uid && m.name) : undefined;
+  // the member's side of the administration's chat: the founder's name (`ADMIN_SHOWN`, 2026-11-24); each staff message still
+  // names its writer
   const title = canWrite
-    ? (lastStaff ? `${ADMIN_NAME} · ${firstName(lastStaff.name)}` : other.name || 'უსახელო')
+    ? (thread.kind === 'admin' && !staff ? ADMIN_SHOWN : other.name || 'უსახელო')
     : thread.kind === 'admin' ? `${ADMIN_NAME} — ${pair}` : pair;
   // the board's grey line is the class; without one, how the person is linked to me
   const sub = !canWrite ? 'მხოლოდ სანახავად'
