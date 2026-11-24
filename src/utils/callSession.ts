@@ -88,10 +88,12 @@ export interface CallState {
   small: boolean;
   /** a short notice over the controls (e.g. the camera could not start) */
   hint: string;
+  /** the other side is heard through the loudspeaker (true) or the earpiece (false); null = this phone cannot choose */
+  speaker: boolean | null;
 }
 
 const IDLE: CallState = {
-  info: null, status: 'idle', note: '', mic: true, cam: false, screen: false, facing: 'user', local: null, peers: [], speaking: [], since: 0, small: false, hint: '',
+  info: null, status: 'idle', note: '', mic: true, cam: false, screen: false, facing: 'user', local: null, peers: [], speaking: [], since: 0, small: false, hint: '', speaker: null,
 };
 
 // why a camera did not start, in words
@@ -461,6 +463,7 @@ class Call {
     this.screenTrack?.stop();
     try { this.pc?.close(); } catch { /* closed */ }
     this.audioCtx?.close().catch(() => {});
+    speakerReset();
     return deleteDoc(doc(db, this.info.base, 'peers', this.info.me.uid)).catch(() => {});
   }
 }
@@ -541,6 +544,8 @@ export const joinCall = async (info: CallInfo, kind: CallKind): Promise<boolean>
     await call.start();
     if (current !== call) return false;
     set({ status: state.peers.length ? 'live' : 'waiting' });
+    // a video or a class's call starts on the loudspeaker, a private voice call at the ear (as a phone call does)
+    void initSpeaker(call, video || !info.oneToOne);
     return true;
   } catch (e) {
     console.warn('call: ', e);
@@ -632,6 +637,7 @@ export const toggleCam = async () => {
       call.local.addTrack(v);
       await call.push(v);
       set({ cam: true, local: new MediaStream(call.local.getTracks()) });
+      if (state.speaker === false) void setSpeaker(true);
     } catch (e) {
       console.warn('call camera: ', e);
       showHint(cameraTrouble(e));
@@ -704,6 +710,89 @@ export const flipCamera = async () => {
     console.warn('call flip: ', e);
     showHint(cameraTrouble(e));
   }
+};
+
+// ---- loudspeaker or earpiece (2026-11-24, the user: „ხმამაღლა ჩამრთველი ღილაკი არ აქვს“) ----------------------------
+// The store apps choose it themselves (sgApp / sgIOS `speaker`, announced in their `can`). Chrome — and the Android app's
+// own web view — route the call's sound by the microphone picked: Android lists the built-in microphone twice, as
+// „Speakerphone“ and „Headset earpiece“, and opening one sends the sound there; so the mic is opened again on the other.
+
+interface SpeakerBridge { call: (fn: string, args?: Record<string, unknown>) => Promise<unknown>; can?: string[] }
+const speakerBridge = (): SpeakerBridge | null => {
+  if (typeof window === 'undefined') return null;
+  const w = window as unknown as { sgIOS?: SpeakerBridge; sgApp?: SpeakerBridge };
+  const b = w.sgIOS || w.sgApp;
+  return b && typeof b.call === 'function' && Array.isArray(b.can) && b.can.includes('speaker') ? b : null;
+};
+
+/** Android's two names of the built-in microphone: one routes the sound to the loudspeaker, the other to the ear */
+const androidRoutes = async (): Promise<{ speaker: string; ear: string } | null> => {
+  if (!/Android/i.test(navigator.userAgent) || !navigator.mediaDevices?.enumerateDevices) return null;
+  try {
+    const ins = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'audioinput' && d.deviceId);
+    const speaker = ins.find(d => /speaker/i.test(d.label));
+    const ear = ins.find(d => /earpiece/i.test(d.label));
+    return speaker && ear ? { speaker: speaker.deviceId, ear: ear.deviceId } : null;
+  } catch {
+    return null;
+  }
+};
+
+let routes: { speaker: string; ear: string } | null = null;
+let speakerBusy = false;
+
+const route = async (call: Call, on: boolean): Promise<boolean> => {
+  const b = speakerBridge();
+  if (b) {
+    try { await b.call('speaker', { on }); return true; } catch { return false; }
+  }
+  if (!routes) return false;
+  const old = call.local.getAudioTracks()[0];
+  try {
+    const fresh = (await navigator.mediaDevices.getUserMedia({
+      audio: { deviceId: { exact: on ? routes.speaker : routes.ear }, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+    })).getAudioTracks()[0];
+    if (current !== call) { fresh.stop(); return false; }
+    fresh.enabled = state.mic;
+    if (old) {
+      await call.pc.getSenders().find(s => s.track === old)?.replaceTrack(fresh);
+      call.local.removeTrack(old);
+      old.stop();
+    }
+    call.local.addTrack(fresh);
+    set({ local: new MediaStream(call.local.getTracks()) });
+    return true;
+  } catch (e) {
+    console.warn('call speaker: ', e);
+    return false;
+  }
+};
+
+const initSpeaker = async (call: Call, on: boolean) => {
+  if (!speakerBridge()) routes = await androidRoutes();
+  if (current !== call || (!speakerBridge() && !routes)) return;
+  if (await route(call, on)) { if (current === call) set({ speaker: on }); }
+  // the route could not be set: the button still shows, on the loudspeaker's side (Android's default)
+  else if (current === call) set({ speaker: true });
+};
+
+/** turns the loudspeaker on or off for the call (the call screen's 🔊) */
+export const setSpeaker = async (on: boolean) => {
+  const call = current;
+  if (!call || state.speaker === null || speakerBusy) return;
+  speakerBusy = true;
+  const was = state.speaker;
+  set({ speaker: on });
+  const ok = await route(call, on);
+  speakerBusy = false;
+  if (!ok && current === call) { set({ speaker: was }); showHint('ხმის გადართვა ვერ მოხერხდა.'); }
+};
+export const toggleSpeaker = () => setSpeaker(!state.speaker);
+
+/** the call is over: the store app gives the phone's sound back as it was */
+const speakerReset = () => {
+  const b = speakerBridge();
+  if (b) b.call('speaker', { reset: true }).catch(() => {});
 };
 
 // ---- ringing ------------------------------------------------------------------------------------------------

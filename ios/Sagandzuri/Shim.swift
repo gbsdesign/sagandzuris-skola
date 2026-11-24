@@ -20,7 +20,7 @@ enum Shim {
       if (!handler) return;
       var perm = '%PERM%';
       var call = function (fn, args) { return handler.postMessage({ fn: fn, args: args || {} }); };
-      var ios = { call: call, version: '%VERSION%', setPermission: function (p) { perm = p; } };
+      var ios = { call: call, can: ['speaker'], version: '%VERSION%', setPermission: function (p) { perm = p; } };
       Object.defineProperty(window, 'sgIOS', { value: ios });
       call('notifyState').then(function (p) { perm = p; }, function () {});
 

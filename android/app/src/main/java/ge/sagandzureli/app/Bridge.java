@@ -3,6 +3,8 @@ package ge.sagandzureli.app;
 import android.Manifest;
 import android.app.NotificationManager;
 import android.content.pm.PackageManager;
+import android.media.AudioDeviceInfo;
+import android.media.AudioManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Handler;
@@ -25,6 +27,7 @@ import java.util.List;
  *   pushToken { wait }   → this phone's Firebase Cloud Messaging token, or null (the Worker sends through it — PushService)
  *   notify { title, body, tag, url } → a notice of the phone (the site's own `new Notification(…)`)
  *   external { url }     → opens a page outside the app
+ *   speaker { on | reset } → a call's sound on the loudspeaker or at the ear; `reset` when the call is over (2026-11-24)
  * An error comes back as its short word: 'cancelled' (the person closed the window), 'not-ready', or the reason.
  */
 final class Bridge {
@@ -58,7 +61,7 @@ final class Bridge {
         + "var call=function(fn,args){return new Promise(function(res,rej){var id=String(++n);wait[id]=[res,rej];"
         + "try{window.%NAME%.post(id,fn,JSON.stringify(args||{}));}catch(e){delete wait[id];rej(e);}});};\n"
         + "var perm='default';\n"
-        + "Object.defineProperty(window,'sgApp',{value:{call:call,platform:'android',version:'%VERSION%',pkg:'%PKG%',setPermission:function(p){perm=p;}}});\n"
+        + "Object.defineProperty(window,'sgApp',{value:{call:call,can:['speaker'],platform:'android',version:'%VERSION%',pkg:'%PKG%',setPermission:function(p){perm=p;}}});\n"
         + "call('notifyState').then(function(p){perm=p;},function(){});\n"
         + "var urlOf=function(d){if(!d)return '';if(typeof d.url==='string')return d.url;"
         + "if(typeof d.prayerId==='string')return '/?prayer='+encodeURIComponent(d.prayerId);return '';};\n"
@@ -162,12 +165,38 @@ final class Bridge {
                     reply(id, true, "true");
                     return;
                 }
+                case "speaker":
+                    reply(id, true, String.valueOf(speaker(args.optBoolean("on", true), args.optBoolean("reset", false))));
+                    return;
                 default:
                     reply(id, false, "unknown " + fn);
             }
         } catch (Exception e) {
             reply(id, false, "failed");
         }
+    }
+
+    /** a call's sound: the loudspeaker or the earpiece (the call screen's 🔊); `reset` gives the phone back its usual sound */
+    private boolean speaker(boolean on, boolean reset) {
+        AudioManager am = activity.getSystemService(AudioManager.class);
+        if (am == null) return false;
+        if (reset) {
+            if (Build.VERSION.SDK_INT >= 31) am.clearCommunicationDevice();
+            else am.setSpeakerphoneOn(false);
+            am.setMode(AudioManager.MODE_NORMAL);
+            return true;
+        }
+        am.setMode(AudioManager.MODE_IN_COMMUNICATION);
+        if (Build.VERSION.SDK_INT >= 31) {
+            int want = on ? AudioDeviceInfo.TYPE_BUILTIN_SPEAKER : AudioDeviceInfo.TYPE_BUILTIN_EARPIECE;
+            for (AudioDeviceInfo d : am.getAvailableCommunicationDevices()) {
+                if (d.getType() == want) return am.setCommunicationDevice(d);
+            }
+            if (!on) { am.clearCommunicationDevice(); return true; }
+            return false;
+        }
+        am.setSpeakerphoneOn(on);
+        return true;
     }
 
     /** after the phone's question about notifications (MainActivity.onRequestPermissionsResult) */

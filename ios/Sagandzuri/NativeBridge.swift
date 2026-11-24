@@ -1,3 +1,4 @@
+import AVFoundation
 import UIKit
 import WebKit
 
@@ -9,6 +10,7 @@ import WebKit
 //   notify { title, body, tag, url } — a notice now (the site's own new Notification(…) while it is open)
 //   google, apple        → a sign-in's tokens for Firebase (src/context/AuthContext.tsx signs in with them)
 //   external { url }     → opens a page outside the app
+//   speaker { on | reset } → a call's sound on the loudspeaker or at the ear (2026-11-24)
 // An error comes back as its short word: 'cancelled' (the person closed the window), 'not-ready', or the reason.
 
 final class NativeBridge: NSObject, WKScriptMessageHandlerWithReply {
@@ -54,6 +56,12 @@ final class NativeBridge: NSObject, WKScriptMessageHandlerWithReply {
             return try await SignIn.apple()
         case "external":
             if let s = args["url"] as? String, let url = URL(string: s) { WebViewController.shared.openOutside(url) }
+            return true
+        case "speaker":
+            // the web view's call holds the play-and-record session; only its output is turned here
+            let session = AVAudioSession.sharedInstance()
+            let on = (args["on"] as? Bool ?? true) && !(args["reset"] as? Bool ?? false)
+            try session.overrideOutputAudioPort(on ? .speaker : .none)
             return true
         default:
             throw AppError.failed("unknown \(fn)")
