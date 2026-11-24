@@ -344,9 +344,13 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
             key={t.id}
             face={t.kind === 'admin' && !staff
               ? <AdminAvatar logoUrl={logoUrl} className="size-12" />
+              : mineOn(t) ? <Avatar name={t.names[uid] || name} photo={t.photos[uid] || user.photoURL || ''} size={48} />
               : <Avatar name={name} photo={o.photoURL} size={48} />}
-            name={<NameMark name={name} mark={mark} />}
-            last={t.lastText ? <LastLine who={who} text={t.lastText} /> : 'ჯერ შეტყობინება არ არის'}
+            // the student's own teacher row: their own name, the teacher under it (2026-11-24, the user: „მოსწავლის სახელი გვარი ჩანდეს
+            // დაბლა კი მიუწერე მასწავლებელი გიორგი გაბუნია“)
+            name={mineOn(t) ? (t.names[uid] || kaName(user.displayName) || name) : <NameMark name={name} mark={mark} />}
+            last={mineOn(t) ? `მასწავლებელი ${name}`
+              : t.lastText ? <LastLine who={who} text={t.lastText} /> : 'ჯერ შეტყობინება არ არის'}
             time={when(t.lastAt)}
             tick={t.lastText && lastIsMine(t, uid) ? <Tick seen={!!seenAt && !!t.lastAt && seenAt >= t.lastAt} /> : null}
             pearls={(() => { const s = studentOf(t) || (mineOn(t) ? uid : null); return s ? pearls[s] : undefined; })()}
