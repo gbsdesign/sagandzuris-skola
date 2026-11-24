@@ -36,6 +36,9 @@ import { useLongPress } from '../../../hooks/useLongPress';
 import { TimetableSheet } from '../klasi/teacher/Timetable';
 import { usePearlTotals } from './usePearlTotals';
 import { kaName } from '../../../utils/georgianName';
+import { openJubileeChat } from '../../../utils/jubileeChat';
+import { errorText } from '../../../utils/errorText';
+import { askConfirm } from '../../../components/ui/kit';
 import { shownName, useDirectory } from '../../../utils/directory';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../../../firebase';
@@ -201,6 +204,20 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
   };
 
   const go = (id: string) => openDm(id, currentPage === 'dm');
+  // an admin's tap on a class's birthday row: the birthday person's own chat, without them
+  const jubilee = async (classId: string, who: { uid: string; name: string }) => {
+    const c = known.find(x => x.id === classId);
+    if (!c) return;
+    if (!(await askConfirm({ title: `${who.name}-ის დაბადების დღის ჩათი`, text: 'კლასის ყველა წევრი დაემატება, მის გარდა.', ok: 'შექმნა' }))) return;
+    setErr('');
+    try {
+      const id = await openJubileeChat(c, who, me(classId));
+      go(CLASS_PREFIX + id);
+    } catch (e) {
+      console.warn('jubilee: ', e);
+      setErr('ჩათი ვერ შეიქმნა: ' + errorText(e));
+    }
+  };
 
   const start = async (key: string, run: () => Promise<string>) => {
     setErr('');
@@ -669,7 +686,8 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
               {/* one list (the user: „ესეთი დაყოფა არ მინდა“): the class chats first, each in its thin dark-blue frame, with its own
                   members' coming birthdays over it (the teachers' look; none → nothing) */}
               <Rows>{shownItems.map(i => (i.cls
-                ? <React.Fragment key={i.key}><BirthdaysSoon row only={i.cls} />{i.node}</React.Fragment>
+                ? <React.Fragment key={i.key}><BirthdaysSoon row only={i.cls}
+                    onPick={isAdmin ? who => { void jubilee(i.key.slice(CLASS_PREFIX.length), who); } : undefined} />{i.node}</React.Fragment>
                 : i.node))}</Rows>
               {chip !== 'all' && !shownItems.some(i => !i.cls) && (
                 <p className="px-4 py-3 text-center text-meta text-mut">ამ კლასის წევრებთან ჩათი ჯერ არ არის.</p>
