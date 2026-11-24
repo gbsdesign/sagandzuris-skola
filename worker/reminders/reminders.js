@@ -769,7 +769,7 @@ async function gameInvite(request, env) {
 
 const DOC_ID = /^[A-Za-z0-9_-]{1,128}$/;
 // a member sees the administration's chat under the school founder's name (2026-11-24, as the site's ADMIN_SHOWN)
-const ADMIN_NAME = 'მურთაზი გაბუნია';
+const ADMIN_NAME = 'გიორგი გაბუნია';
 const msOf = (t) => (t ? new Date(t).getTime() || 0 : 0);
 /** `classes/{id}` or `dms/{id}` → [kind, id] (anything else: null) */
 const chatBase = (base) => {

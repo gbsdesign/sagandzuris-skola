@@ -696,20 +696,43 @@ export const flipCamera = async () => {
   const call = current;
   const old = call?.local.getVideoTracks()[0];
   if (!call || !old) return;
-  const facing = state.facing === 'user' ? 'environment' : 'user';
+  const facing: 'user' | 'environment' = state.facing === 'user' ? 'environment' : 'user';
+  const sender = call.pc.getSenders().find(s => s.track === old);
+  // most phones cannot hold both cameras at once: the old one is let go first, else the new one is „busy“
+  // (2026-11-24, the user's screenshot: „კამერის შეტრიალება არ მუშაობს“)
+  call.local.removeTrack(old);
+  old.stop();
+  const open = async (f: 'user' | 'environment') => {
+    const base = videoConstraints(!!call.info.oneToOne, f);
+    try {
+      return (await navigator.mediaDevices.getUserMedia({ video: { ...base, facingMode: { exact: f } } })).getVideoTracks()[0];
+    } catch (e) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if ((e as any)?.name !== 'OverconstrainedError') throw e;
+      return (await camera(f)).getVideoTracks()[0];
+    }
+  };
+  let v: MediaStreamTrack | undefined;
+  let got: 'user' | 'environment' = facing;
   try {
-    const v = (await camera(facing)).getVideoTracks()[0];
-    const sender = call.pc.getSenders().find(s => s.track === old);
-    await sender?.replaceTrack(v);
-    call.local.removeTrack(old);
-    old.stop();
-    v.enabled = state.cam;
-    call.local.addTrack(v);
-    set({ facing, local: new MediaStream(call.local.getTracks()) });
+    v = await open(facing);
   } catch (e) {
     console.warn('call flip: ', e);
     showHint(cameraTrouble(e));
+    got = state.facing;
+    try { v = await open(got); } catch { /* the camera stays off */ }
   }
+  if (current !== call) { v?.stop(); return; }
+  if (!v) {
+    await sender?.replaceTrack(null).catch(() => {});
+    set({ cam: false, local: new MediaStream(call.local.getTracks()) });
+    call.writeMe().catch(() => {});
+    return;
+  }
+  await sender?.replaceTrack(v).catch(() => {});
+  v.enabled = state.cam;
+  call.local.addTrack(v);
+  set({ facing: got, local: new MediaStream(call.local.getTracks()) });
 };
 
 // ---- loudspeaker or earpiece (2026-11-24, the user: „ხმამაღლა ჩამრთველი ღილაკი არ აქვს“) ----------------------------

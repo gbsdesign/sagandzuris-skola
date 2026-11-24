@@ -50,7 +50,7 @@ export const dmBase = (id: string) => `dms/${id}`;
 /** the administration's name as members see it */
 /** the administration's chat is named by the school's founder everywhere (2026-11-24, the user: „ყველგან ჩემი სახელი ეწეროს,
  *  ადმინისტრაცია არ გინდა“) */
-export const ADMIN_NAME = 'მურთაზი გაბუნია';
+export const ADMIN_NAME = 'გიორგი გაბუნია';
 export const ADMIN_SHOWN = ADMIN_NAME;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
