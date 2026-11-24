@@ -12,6 +12,8 @@ import { shownName, useDirectory } from '../../utils/directory';
 import { kaName } from '../../utils/georgianName';
 import { triggerHaptic } from '../../utils/haptics';
 import { errorText } from '../../utils/errorText';
+import { classChatBase, sendTextMessage } from '../../hooks/useClassChat';
+import { dmBase, noteSent, openAdminThread, openThread, type DirectThread } from '../../hooks/useDirectChat';
 
 // „კლასს ან მოსწავლეს მიმაგრება“ for anything that can stand on the path (2026-11-23, the user: „ეს ღილაკი მინდა დაამატო
 // სიმღერებსაც ვიდეოთეკასაც. წიგნებსაც მთქმელსაც აბიტურსაც“, answer „გზაზეც ჩაჯდეს“). Moved out of the chant version's menu
@@ -25,7 +27,9 @@ type Person = { uid: string; name: string; photo?: string; cls?: string };
 /** The steps themselves; `onExit` = „უკან“ from the class list (none = no back row there). */
 export const AttachFlow: React.FC<{ entry: AttachEntry; onExit?: () => void }> = ({ entry, onExit }) => {
   const { user, isAdmin } = useAuth();
-  const { classes } = useManagedClasses();
+  const { classes: managed } = useManagedClasses();
+  // a birthday person's chat is no class to give work to
+  const classes = useMemo(() => managed.filter(c => !c.jubilee), [managed]);
   const [step, setStep] = useState<Step>({ at: 'classes' });
   const [note, setNote] = useState('');
   const [err, setErr] = useState('');
@@ -38,6 +42,26 @@ export const AttachFlow: React.FC<{ entry: AttachEntry; onExit?: () => void }> =
 
   const said = (t: string) => { triggerHaptic(10); setErr(''); setNote(t); };
   const failed = (e: unknown) => { setNote(''); setErr('ვერ შეინახა: ' + errorText(e)); };
+
+  // what is put on a program or a path is also said in the chat, as an assignment (2026-11-24, the user: „პროგრამაში მიმაგრებასთან
+  // ერთად ჩათში მოხდეს მიწერა როგორც დავალება“) — the class's chat, or the private chat with the student
+  const me = () => ({ uid: user?.uid || '', name: kaName(user?.displayName) || '', photoURL: user?.photoURL || '' });
+  const workLine = `📌 ახალი დავალება: „${entry.title}“ — ისწავლე და მონიშნე გზაზე.`;
+  const tellClass = (cls: SchoolClass) =>
+    sendTextMessage(classChatBase(cls.id), { ...me(), teacher: true }, workLine).catch(e => console.warn('attach chat: ', e));
+  const tellPerson = async (p: Person) => {
+    const m = me();
+    if (!m.uid) return;
+    try {
+      const via = classes.find(c => c.memberIds.includes(p.uid) && c.teacherIds.includes(m.uid));
+      const person = { uid: p.uid, name: p.name, photoURL: p.photo || '' };
+      const id = via ? await openThread(m, person, via.id) : isAdmin ? await openAdminThread(person) : '';
+      if (!id) return;
+      await sendTextMessage(dmBase(id), { ...m, teacher: true }, workLine);
+      const thread = { id, kind: via ? 'teach' : 'admin', members: via ? [m.uid, p.uid] : [p.uid] } as DirectThread;
+      await noteSent(thread, m.uid, workLine).catch(() => undefined);
+    } catch (e) { console.warn('attach chat: ', e); }
+  };
 
   const loose = useMemo<Person[]>(() => {
     if (step.at !== 'loose') return [];
@@ -87,7 +111,10 @@ export const AttachFlow: React.FC<{ entry: AttachEntry; onExit?: () => void }> =
     try {
       const next = swap ? cls.program.map(p => (p.id === id ? { ...p, ...made } : p)) : old ? cls.program.filter(p => p.id !== id) : [...cls.program, made];
       const why = await saveClassProgram(cls, next);
-      if (why) { setNote(''); setErr(String(why)); } else said(swap ? 'ჩანაწერი შეიცვალა' : old ? 'კლასის პროგრამიდან ამოვიდა' : 'კლასის პროგრამაში ჩაჯდა');
+      if (why) { setNote(''); setErr(String(why)); } else {
+        said(swap ? 'ჩანაწერი შეიცვალა' : old ? 'კლასის პროგრამიდან ამოვიდა' : 'კლასის პროგრამაში ჩაჯდა · ჩათში მიეწერა');
+        if (!old) void tellClass(cls);
+      }
     } catch (e) { failed(e); }
     setBusy('');
   };
@@ -111,7 +138,8 @@ export const AttachFlow: React.FC<{ entry: AttachEntry; onExit?: () => void }> =
       } else {
         await setDoc(ref, { selectedChantVariants: { [id]: entry.item() } }, { merge: true });
         setHas(h => ({ ...h, [p.uid]: 'yes' }));
-        said(`${p.name} — გზაზე ჩაჯდა`);
+        said(`${p.name} — გზაზე ჩაჯდა · ჩათში მიეწერა`);
+        void tellPerson(p);
       }
     } catch (e) { failed(e); }
     setBusy('');
