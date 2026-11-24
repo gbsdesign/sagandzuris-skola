@@ -15,7 +15,8 @@ import { SwitchLine } from '../shetkobinebebi/parts';
 
 type Win = null | 'hours' | 'habits' | 'learn';
 
-export const RemindersPart: React.FC = () => {
+/** `hideAsk`: the page has its own „ჩართვა“ for this phone (shetkobinebebi/CallsHere), so the permission card stays out */
+export const RemindersPart: React.FC<{ hideAsk?: boolean }> = ({ hideAsk }) => {
   const r = useRemindersState();
   const [win, setWin] = useState<Win>(null);
   const close = () => setWin(null);
@@ -28,7 +29,7 @@ export const RemindersPart: React.FC = () => {
 
   return (
     <>
-      {r.perm !== 'granted' && (
+      {r.perm !== 'granted' && !hideAsk && (
         <Card pad="none" className="flex items-center gap-3 bg-tint py-3 pr-3 pl-3.5">
           <Dot icon={<Bell />} />
           <Two wrap title="შეტყობინებები გამორთულია" sub={r.note || (r.perm === 'denied'

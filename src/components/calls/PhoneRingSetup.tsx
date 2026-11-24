@@ -3,7 +3,7 @@ import { BellRing, Check } from 'lucide-react';
 import { useAuth } from '../../context';
 import { useNotes } from '../../context/NotesContext';
 import { useCall } from '../../utils/callSession';
-import { bindChatDevice, chatBoundToday, pushSupported } from '../../utils/groupPush';
+import { bindChatDevice, chatBoundFresh, pushSupported } from '../../utils/groupPush';
 import { Btn } from '../ui/kit';
 import { useNewLook } from '../../design/newLook';
 import { RingAsk } from '../../pages/v2/shetkobinebebi/RingAsk';
@@ -37,7 +37,7 @@ export const PhoneRingSetup: React.FC = () => {
   useEffect(() => {
     if (!uid || !pushSupported()) return;
     const again = () => {
-      if (document.visibilityState === 'visible' && Notification.permission === 'granted' && !chatBoundToday(uid)) void bindChatDevice(false);
+      if (document.visibilityState === 'visible' && Notification.permission === 'granted' && !chatBoundFresh(uid)) void bindChatDevice(false);
     };
     const t = window.setTimeout(again, 3000);
     document.addEventListener('visibilitychange', again);
@@ -47,7 +47,7 @@ export const PhoneRingSetup: React.FC = () => {
   useEffect(() => {
     if (!uid || !pushSupported()) return;
     if (Notification.permission === 'granted') {
-      if (!chatBoundToday(uid)) void bindChatDevice(false);
+      if (!chatBoundFresh(uid)) void bindChatDevice(false);
       return;
     }
     if (Notification.permission !== 'default' || askedLately()) return;

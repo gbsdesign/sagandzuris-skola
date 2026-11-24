@@ -424,23 +424,43 @@ async function sendFcm(env, row, message) {
   if (res.ok) return res;
   const text = await res.text();
   // a token the phone no longer has: forgotten like a browser's ended subscription (deliver)
-  if (res.status === 404 || /UNREGISTERED|registration token is not a valid/i.test(text)) return { status: 410 };
+  if (res.status === 404 || /UNREGISTERED|registration token is not a valid/i.test(text)) return { status: 410, why: 'UNREGISTERED' };
   console.warn('fcm:', res.status, text.slice(0, 200));
-  return { status: res.status };
+  return { status: res.status, why: fcmWord(text) || String(res.status) };
 }
 
-/** Sends and forgets subscriptions the push service says are gone. */
+/** FCM's own word for a refusal (SENDER_ID_MISMATCH, THIRD_PARTY_AUTH_ERROR, PERMISSION_DENIED…), for the ring's report */
+function fcmWord(text) {
+  try {
+    const e = JSON.parse(text).error || {};
+    const code = (e.details || []).map((d) => d && d.errorCode).find(Boolean);
+    return String(code || e.status || '').slice(0, 40);
+  } catch {
+    return '';
+  }
+}
+
+/** what kind of phone a subscription is: the Play app, the iPhone app, or a browser */
+const kindOf = (row) => (isAndroidRow(row) ? 'android' : isIosRow(row) ? 'ios' : 'web');
+
+/** Sends and forgets subscriptions the push service says are gone. Gives back each phone's outcome
+ *  ({ uid, kind, ok, why }) — the ring's report to the caller and a phone's own test use it. */
 async function deliver(env, sends) {
   const gone = [];
-  await Promise.all(sends.map(async ([row, message]) => {
+  const out = await Promise.all(sends.map(async ([row, message]) => {
+    const one = { uid: row.uid || '', kind: kindOf(row), ok: false, why: '' };
     try {
       const res = await sendPush(env, row, message);
+      one.ok = res.status >= 200 && res.status < 300;
+      if (!one.ok) one.why = res.why || String(res.status);
       if (res.status === 404 || res.status === 410) gone.push(row.key);
-    } catch {
-      /* try again next time */
+    } catch (e) {
+      one.why = String(e?.message || 'error').slice(0, 40);
     }
+    return one;
   }));
   if (gone.length) await env.DB.batch(gone.map((k) => env.DB.prepare('DELETE FROM subs WHERE key = ?').bind(k)));
+  return out;
 }
 
 // ---- Firebase: ID tokens and Firestore reads ---------------------------------------------------------
@@ -850,7 +870,9 @@ async function ring(request, env) {
   const tag = `call-${kind === 'dms' ? 'd' : 'c'}-${id}`;
   // in the quiet hours a call rings only for those who let calls through (x-ultra-shejameba)
   const quiet = await quietPeople(env, to);
-  const rows = (await rowsFor(env, to, 'chat')).filter((r) => !quiet.has(r.uid) || quiet.get(r.uid).calls);
+  const hushed = (u) => quiet.has(u) && !quiet.get(u).calls;
+  const all = await rowsFor(env, to, 'chat');
+  const rows = all.filter((r) => !hushed(r.uid));
   if (end) {
     const message = { kind: 'call-end', title, body: kind === 'classes' ? `${caller} — გამოტოვებული ზარი` : 'გამოტოვებული ზარი', tag, url, ttl: 3600 };
     await deliver(env, rows.map((r) => [r, message]));
@@ -866,8 +888,64 @@ async function ring(request, env) {
     // „უარი“ ends a private call for both; a class's call only stops ringing here
     decline: kind === 'dms' ? { base: `dms/${id}`, uid: r.uid, at: call.at, t: await ringTicket(env, `dms/${id}`, r.uid, call.at) } : null,
   }]));
-  await deliver(env, sends);
-  return [200, 'ok'];
+  const sent = await deliver(env, sends);
+  // the caller's call screen shows whom the ring reached (2026-11-24: „ვის არ დაურეკა და რატომ“)
+  return [200, JSON.stringify({ people: ringReport(to, all, sent, hushed) }), 'application/json'];
+}
+
+/** Whom a ring reached: for each person the phones bound for calls, how many took the ring and of what kind (the Play
+ *  app, the iPhone app, a browser), whether their quiet hours held it, and the push service's word when it refused. */
+export function ringReport(to, all, sent, hushed = () => false) {
+  return to.map((uid) => {
+    const mine = sent.filter((x) => x.uid === uid);
+    const took = mine.filter((x) => x.ok);
+    return {
+      uid,
+      phones: all.filter((r) => r.uid === uid).length,
+      ok: took.length,
+      kinds: [...new Set(took.map((x) => x.kind))],
+      quiet: hushed(uid),
+      why: [...new Set(mine.filter((x) => !x.ok).map((x) => `${x.kind}:${x.why}`))].slice(0, 3),
+    };
+  });
+}
+
+// ---- a phone's own check (2026-11-24, „შეტყობინებები“ → „ზარები ამ ტელეფონზე“) -----------------------------------
+// POST /my-phone { token, endpoint, test? }: whether this phone (its push subscription) is bound to the signed-in person for
+// calls, and the last test's outcome; `test` rings it 10 s later — time to lock the screen — the same way a class's call
+// rings (tag call-c-…, so the apps make a real ring of it), and answers whether the push service took it.
+const TEST_WAIT_MS = 10_000;
+async function myPhone(request, env, ctx) {
+  const body = await readJson(request);
+  if (!body || typeof body.endpoint !== 'string') return [400, 'bad json'];
+  let uid;
+  try {
+    uid = await verifyIdToken(env, body.token);
+  } catch {
+    return [401, 'bad token'];
+  }
+  const row = await env.DB.prepare('SELECT key, endpoint, p256dh, auth, uid, chat FROM subs WHERE key = ?').bind(await sha256(body.endpoint)).first();
+  const bound = !!row && row.uid === uid && row.chat === 1;
+  const lastKey = `phonetest:${uid}`;
+  const json = (o) => [200, JSON.stringify(o), 'application/json'];
+  if (!body.test || !bound) {
+    const last = await env.DB.prepare('SELECT value FROM meta WHERE key = ?').bind(lastKey).first();
+    let lastTest = null;
+    try { lastTest = last ? JSON.parse(last.value) : null; } catch { /* an old line */ }
+    return json({ bound, kind: row ? kindOf(row) : '', last: lastTest });
+  }
+  const work = (async () => {
+    await new Promise((r) => setTimeout(r, TEST_WAIT_MS));
+    const [one] = await deliver(env, [[row, {
+      kind: 'call', title: 'სატესტო ზარი', body: 'ასე დაგირეკავს, როცა გირეკავენ', tag: 'call-c-test', url: '/', answer: '/', ttl: 60, urgency: 'high', decline: null,
+    }]]);
+    const result = { at: new Date().toISOString(), ok: !!one?.ok, why: one?.why || '', kind: kindOf(row) };
+    await env.DB.prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)').bind(lastKey, JSON.stringify(result)).run();
+    return result;
+  })();
+  // a locked screen may cut the page's request: the test goes on and its outcome waits for the next look
+  ctx?.waitUntil?.(work.catch(() => {}));
+  return json({ bound, kind: kindOf(row), test: await work });
 }
 
 async function decline(request, env) {
@@ -1855,7 +1933,7 @@ export default {
     const routes = {
       '/subscribe': subscribe, '/account': account, '/group-event': groupEvent, '/access-request': accessRequest, '/game-invite': gameInvite,
       '/ring': ring, '/chat-notify': chatNotify, '/announce': announce, '/decline': decline, '/delete-account': deleteAccount, '/delete-member': deleteMember, '/lado': lado,
-      '/widget/link': widgetLink, '/widget/summary': widgetSummary, '/notify-prefs': notifyPrefs,
+      '/widget/link': widgetLink, '/widget/summary': widgetSummary, '/notify-prefs': notifyPrefs, '/my-phone': myPhone,
     };
     // the app's widgets send no Origin: their secret is the proof
     const widgetRoutes = { 'GET /widget/data': widgetData, 'POST /widget/tick': widgetTick, 'POST /widget/count': widgetCount, 'POST /widget/unlink': widgetUnlink };

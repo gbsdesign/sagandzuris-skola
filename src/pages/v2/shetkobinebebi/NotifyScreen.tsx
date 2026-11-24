@@ -5,6 +5,7 @@ import { Button, Note, Rows, SectionLabel, Sheet, TopBar } from '../../../compon
 import { NotifyPrefs, useNotifyPrefs } from '../../../utils/notifyPrefs';
 import { RemindersPart } from '../propili/Reminders';
 import { SwitchLine, TimeInput } from './parts';
+import { CallsHere } from './CallsHere';
 
 // „შეტყობინებები“ — the ONE page of everything the phone tells (settings mapItem `notify`; the old `reminders` opens it
 // too; the user's pick of 2026-11-20: the rows „შეხსენებები“ and „შეტყობინებები“ were two pages with two switches
@@ -22,21 +23,25 @@ export const NotifyScreen: React.FC = () => {
       onChange={p => void save({ ...prefs, ...p })}
       onBack={handleGoBack}
       onSummary={() => openMapItem('notify~summary')}
-      reminders={<RemindersPart />}
+      calls={<CallsHere />}
+      reminders={<RemindersPart hideAsk />}
     />
   );
 };
 
 export const NotifyView: React.FC<{
   prefs: NotifyPrefs; loaded: boolean; onChange: (p: Partial<NotifyPrefs>) => void; onBack: () => void; onSummary: () => void;
+  /** „ზარები ამ ტელეფონზე“ first (CallsHere) */
+  calls?: React.ReactNode;
   /** the reminders' part on top (its own card while the phone may not show notices, then its rows) */
   reminders?: React.ReactNode;
-}> = ({ prefs, loaded, onChange: change, onBack, onSummary, reminders }) => {
+}> = ({ prefs, loaded, onChange: change, onBack, onSummary, calls, reminders }) => {
   const [hours, setHours] = useState(false);
   return (
     <div className="flex flex-col">
       <TopBar title="შეტყობინებები" onBack={onBack} />
       <main className="flex flex-col gap-2 pt-0.5 pb-5">
+        {calls}
         {reminders}
         <SectionLabel label="როგორ მოვიდეს" className="mt-2" />
         <Rows aria-busy={!loaded}>

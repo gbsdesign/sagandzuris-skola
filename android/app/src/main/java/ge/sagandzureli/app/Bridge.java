@@ -1,7 +1,11 @@
 package ge.sagandzureli.app;
 
 import android.Manifest;
+import android.app.ActivityManager;
+import android.app.NotificationChannel;
 import android.app.NotificationManager;
+import android.content.ComponentName;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.media.AudioDeviceInfo;
 import android.media.AudioManager;
@@ -9,6 +13,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
+import android.provider.Settings;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebView;
 
@@ -16,6 +21,7 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * The site calls the app through window.sgApp.call(fn, args) — the same calls as the iPhone's window.sgIOS
@@ -28,6 +34,8 @@ import java.util.List;
  *   notify { title, body, tag, url } → a notice of the phone (the site's own `new Notification(…)`)
  *   external { url }     → opens a page outside the app
  *   speaker { on | reset } → a call's sound on the loudspeaker or at the ear; `reset` when the call is over (2026-11-24)
+ *   ringCheck            → { fullScreen, battery, channel, maker }: what of the phone's own stops a ring (1.2.2)
+ *   ringFix { what }     → opens the settings that turn it on: fullScreen · battery · autostart · channel · notices
  * An error comes back as its short word: 'cancelled' (the person closed the window), 'not-ready', or the reason.
  */
 final class Bridge {
@@ -61,7 +69,7 @@ final class Bridge {
         + "var call=function(fn,args){return new Promise(function(res,rej){var id=String(++n);wait[id]=[res,rej];"
         + "try{window.%NAME%.post(id,fn,JSON.stringify(args||{}));}catch(e){delete wait[id];rej(e);}});};\n"
         + "var perm='default';\n"
-        + "Object.defineProperty(window,'sgApp',{value:{call:call,can:['speaker'],platform:'android',version:'%VERSION%',pkg:'%PKG%',setPermission:function(p){perm=p;}}});\n"
+        + "Object.defineProperty(window,'sgApp',{value:{call:call,can:['speaker','ringCheck','ringFix'],platform:'android',version:'%VERSION%',pkg:'%PKG%',setPermission:function(p){perm=p;}}});\n"
         + "call('notifyState').then(function(p){perm=p;},function(){});\n"
         + "var urlOf=function(d){if(!d)return '';if(typeof d.url==='string')return d.url;"
         + "if(typeof d.prayerId==='string')return '/?prayer='+encodeURIComponent(d.prayerId);return '';};\n"
@@ -143,12 +151,28 @@ final class Bridge {
                     return;
                 case "pushToken": {
                     if (!"granted".equals(noticeState())) { reply(id, true, "null"); return; }
+                    boolean wait = args.optBoolean("wait", true);
                     com.google.firebase.messaging.FirebaseMessaging.getInstance().getToken().addOnCompleteListener(task -> {
+                        if (!task.isSuccessful() && wait) {
+                            // Firebase's own word (SERVICE_NOT_AVAILABLE, AUTHENTICATION_FAILED…) reaches the page: it tells
+                            // why this phone cannot be rung (2026-11-24); the quiet ask (`wait` false) only wants a token or none
+                            Exception e = task.getException();
+                            String w = e == null || e.getMessage() == null ? (e == null ? "failed" : e.getClass().getSimpleName()) : e.getMessage();
+                            reply(id, false, w.length() > 80 ? w.substring(0, 80) : w);
+                            return;
+                        }
                         String t = task.isSuccessful() ? task.getResult() : null;
                         reply(id, true, t == null || t.isEmpty() ? "null" : JSONObject.quote(t));
                     });
                     return;
                 }
+                case "ringCheck":
+                    reply(id, true, ringCheck().toString());
+                    return;
+                case "ringFix":
+                    ringFix(args.optString("what", ""));
+                    reply(id, true, "true");
+                    return;
                 case "notify": {
                     Notices.Note n = new Notices.Note();
                     n.title = args.optString("title", "საგანძური");
@@ -197,6 +221,53 @@ final class Bridge {
         }
         am.setSpeakerphoneOn(on);
         return true;
+    }
+
+    /** What of the phone's own stops a ring (the site's „ზარები ამ ტელეფონზე“, 2026-11-24): Android 14+ lets a call's
+     *  screen open on a locked phone only with a permission of its own; the person (or the maker's battery saver) may
+     *  have restricted the app in the background; the calls' channel may have lost its sound; Xiaomi stops apps without
+     *  „autostart“ — that one cannot be read, so the maker is told and the site shows the way. */
+    private JSONObject ringCheck() {
+        JSONObject o = new JSONObject();
+        try {
+            NotificationManager nm = activity.getSystemService(NotificationManager.class);
+            boolean fullScreen = true;
+            if (Build.VERSION.SDK_INT >= 34) fullScreen = nm.canUseFullScreenIntent();
+            o.put("fullScreen", fullScreen);
+            boolean battery = true;
+            ActivityManager am = activity.getSystemService(ActivityManager.class);
+            if (Build.VERSION.SDK_INT >= 28 && am != null) battery = !am.isBackgroundRestricted();
+            o.put("battery", battery);
+            Notices.channels(activity, nm);
+            NotificationChannel ch = nm.getNotificationChannel(Notices.CALLS);
+            o.put("channel", ch == null || (ch.getImportance() >= NotificationManager.IMPORTANCE_HIGH && ch.getSound() != null));
+            String maker = Build.MANUFACTURER == null ? "" : Build.MANUFACTURER.toLowerCase(Locale.ROOT);
+            o.put("maker", maker.contains("xiaomi") || maker.contains("redmi") || maker.contains("poco") ? "xiaomi" : maker);
+        } catch (Exception e) {
+            /* an answer with what was read */
+        }
+        return o;
+    }
+
+    /** opens the phone's settings that let a ring through; the app's own page when the exact one is missing */
+    private void ringFix(String what) {
+        String pkg = activity.getPackageName();
+        Intent page = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + pkg));
+        Intent i = page;
+        if ("fullScreen".equals(what) && Build.VERSION.SDK_INT >= 34) {
+            i = new Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, Uri.parse("package:" + pkg));
+        } else if ("channel".equals(what)) {
+            i = new Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, pkg).putExtra(Settings.EXTRA_CHANNEL_ID, Notices.CALLS);
+        } else if ("notices".equals(what)) {
+            i = new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, pkg);
+        } else if ("autostart".equals(what)) {
+            i = new Intent().setComponent(new ComponentName("com.miui.securitycenter", "com.miui.permcenter.autostart.AutoStartManagementActivity"));
+        }
+        try {
+            activity.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        } catch (Exception e) {
+            try { activity.startActivity(page.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); } catch (Exception ignored) { /* no settings app */ }
+        }
     }
 
     /** after the phone's question about notifications (MainActivity.onRequestPermissionsResult) */
