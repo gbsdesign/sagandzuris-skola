@@ -71,3 +71,10 @@ export const removeJubileeMember = async (cls: SchoolClass, uid: string) => {
     updatedAt: new Date().toISOString(),
   });
 };
+
+/** A chat made before its day was kept: an admin's opening writes the day (and who greets) onto it, as a new chat has it. */
+export const keepJubileeDay = (chatId: string, who: Jubilar, fromClass: string, me: Me) =>
+  updateDoc(doc(db, 'classes', chatId), {
+    bday: { month: who.month, day: who.day }, fromClass, jubileeName: who.name,
+    greeter: { uid: me.uid, name: me.name, photoURL: me.photoURL || '' },
+  });

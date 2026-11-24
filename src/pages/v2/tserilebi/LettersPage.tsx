@@ -36,9 +36,9 @@ import { useLongPress } from '../../../hooks/useLongPress';
 import { TimetableSheet } from '../klasi/teacher/Timetable';
 import { usePearlTotals } from './usePearlTotals';
 import { kaName } from '../../../utils/georgianName';
-import { openJubileeChat, type ChatPerson } from '../../../utils/jubileeChat';
+import { keepJubileeDay, openJubileeChat, type ChatPerson } from '../../../utils/jubileeChat';
 const JubileeMembers = React.lazy(() => import('./JubileeMembers'));
-import { inDaysText, nextBirthday } from '../../../utils/birthdays';
+import { inDaysText, nextBirthday, useBirthdays } from '../../../utils/birthdays';
 import { errorText } from '../../../utils/errorText';
 import { askConfirm } from '../../../components/ui/kit';
 import { shownName, useDirectory } from '../../../utils/directory';
@@ -189,6 +189,18 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
     ? threads.map(studentOf).filter((x): x is string => !!x)
     : threads.some(mineOn) && uid ? [uid] : []);
 
+  // an open birthday chat's day: kept on the chat, else read from the birthdays (a chat made before its day was kept)
+  const jubOpen = openKnown?.jubilee;
+  const bdays = useBirthdays(!!jubOpen && !jubOpen.month, false);
+  const jubDay = jubOpen && (jubOpen.month ? jubOpen : bdays?.find(b => b.uid === jubOpen.uid));
+  // …and an admin writes it onto the chat once, so the midnight greeting knows the day too
+  useEffect(() => {
+    if (!isAdmin || !openKnown || !jubOpen || jubOpen.month || !jubDay || !user) return;
+    const from = known.find(c => !c.jubilee && c.memberIds.includes(jubOpen.uid));
+    void keepJubileeDay(openKnown.id, { uid: jubOpen.uid, name: (jubDay as { name?: string }).name || openKnown.name.replace(/^🎂\s*/, ''), month: jubDay.month, day: jubDay.day },
+      from?.id || '', { uid: user.uid, name: kaName(user.displayName) || '', photoURL: user.photoURL || '' }).catch(() => undefined);
+  }, [isAdmin, openKnown?.id, jubOpen?.uid, jubOpen?.month, jubDay?.month, jubDay?.day]); // eslint-disable-line react-hooks/exhaustive-deps
+
   if (!user) return null;
   // the class page on one of its tabs (the chat's „პროგრამა“ · „წევრები“)
   const classOn = (id: string, tab: ClassTab) => { keepClassTab(id, tab); openClass(id); };
@@ -286,6 +298,8 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
     pinned: boolean; hidden: boolean; unread: boolean; teacher: boolean; node: React.ReactNode;
     /** a class's chat: its members (for the birthdays row over it) */
     cls?: string[];
+    /** a birthday chat: whose (it stands right under that person's birthday row) */
+    jubilee?: string;
     /** a member's chat on the staff side: who (the superadmin's menu part) */
     student?: { uid: string; name: string; photoURL?: string };
   };
@@ -320,6 +334,7 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
       items.push({
         key: id, name: c.name, at: lastMs, lastMs, empty: !last, pinned, hidden, unread, teacher: false,
         cls: [...c.memberIds, ...c.teacherIds],
+        ...(c.jubilee ? { jubilee: c.jubilee.uid } : {}),
         node: (
           <ChatRow
             key={id}
@@ -624,8 +639,14 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
                   <ClassLogo name={openCls.name} logo={openCls.logo} className="size-8 shrink-0 text-meta" />
                   <span className="flex min-w-0 flex-col">
                     <span className="line-clamp-2 text-body leading-tight font-bold break-words">{openCls.name}</span>
-                    <span className="truncate text-cap leading-tight text-mut">{`${openCls.jubilee?.month ? `${inDaysText(nextBirthday(openCls.jubilee, new Date()).days)} · ` : ''}${openCls.members.length} წევრი`}</span>
+                    <span className="truncate text-cap leading-tight text-mut">{`${openCls.members.length} წევრი`}</span>
                   </span>
+                  {/* a birthday chat: how many days are left, beside the name (2026-11-24, the user: „დღეების რაოდენობა შიგნითაც ეწეროს“) */}
+                  {openCls.jubilee && jubDay && (
+                    <span className="shrink-0 rounded-full bg-gold-tint px-2.5 py-1 text-meta leading-none font-bold whitespace-nowrap text-gold-ink">
+                      {inDaysText(nextBirthday(jubDay, new Date()).days)}
+                    </span>
+                  )}
                 </>
               );
               const box = 'flex min-w-0 flex-1 items-center gap-2.5 rounded-field text-left select-none [-webkit-touch-callout:none]';
@@ -721,10 +742,22 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
             <>
               {/* one list (the user: „ესეთი დაყოფა არ მინდა“): the class chats first, each in its thin dark-blue frame, with its own
                   members' coming birthdays over it (the teachers' look; none → nothing) */}
-              <Rows>{shownItems.map(i => (i.cls
-                ? <React.Fragment key={i.key}><BirthdaysSoon row only={i.cls}
-                    onPick={isAdmin ? who => { void jubilee(i.key.slice(CLASS_PREFIX.length), who); } : undefined} />{i.node}</React.Fragment>
-                : i.node))}</Rows>
+              {/* a birthday chat stands right under its person's birthday row (2026-11-24, the user: „განცხადება ზემოთ იყოს ჩათი
+                  ქვემოთ“): it leaves its own place for the first class row that holds that person; a birthday chat has no row of its own */}
+              <Rows>{(() => {
+                const homeOf = (j: string) => shownItems.find(x => x.cls && !x.jubilee && x.cls.includes(j))?.key;
+                const under = new Map<string, Item[]>();
+                for (const i of shownItems) {
+                  const home = i.jubilee ? homeOf(i.jubilee) : undefined;
+                  if (home) under.set(home, [...(under.get(home) || []), i]);
+                }
+                const moved = new Set([...under.values()].flat().map(i => i.key));
+                return shownItems.filter(i => !moved.has(i.key)).map(i => (i.cls && !i.jubilee
+                  ? <React.Fragment key={i.key}><BirthdaysSoon row only={i.cls}
+                      onPick={isAdmin ? who => { void jubilee(i.key.slice(CLASS_PREFIX.length), who); } : undefined} />
+                      {(under.get(i.key) || []).map(j => <React.Fragment key={j.key}>{j.node}</React.Fragment>)}{i.node}</React.Fragment>
+                  : <React.Fragment key={i.key}>{i.node}</React.Fragment>));
+              })()}</Rows>
               {chip !== 'all' && !shownItems.some(i => !i.cls) && (
                 <p className="px-4 py-3 text-center text-meta text-mut">ამ კლასის წევრებთან ჩათი ჯერ არ არის.</p>
               )}
