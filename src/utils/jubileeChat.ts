@@ -1,4 +1,4 @@
-import { collection, doc, getDocs, query, setDoc, where } from 'firebase/firestore';
+import { collection, doc, getDocs, query, setDoc, updateDoc, where } from 'firebase/firestore';
 import { db } from '../firebase';
 import { classChatBase, sendTextMessage } from '../hooks/useClassChat';
 import type { SchoolClass } from '../hooks/useClasses';
@@ -12,13 +12,24 @@ export interface Me { uid: string; name: string; photoURL: string; email?: strin
 
 const MONTH = 30 * 86_400_000;
 
-export const openJubileeChat = async (cls: SchoolClass, who: { uid: string; name: string }, me: Me): Promise<string> => {
+export interface Jubilar { uid: string; name: string; month: number; day: number }
+
+/** what the reminders Worker needs to greet them at midnight in their class's chat, in the admin's name (2026-11-24) */
+const greetFields = (cls: SchoolClass, who: Jubilar, me: Me) => ({
+  bday: { month: who.month, day: who.day }, fromClass: cls.id, jubileeName: who.name,
+  greeter: { uid: me.uid, name: me.name, photoURL: me.photoURL || '' },
+});
+
+export const openJubileeChat = async (cls: SchoolClass, who: Jubilar, me: Me): Promise<string> => {
   const made = await getDocs(query(collection(db, 'classes'), where('jubilee', '==', who.uid)));
   const fresh = made.docs.find(d => {
     const x = d.data();
     return !x.archived && Date.now() - Date.parse(x.createdAt || '') < MONTH;
   });
-  if (fresh) return fresh.id;
+  if (fresh) {
+    if (!fresh.data().bday) await updateDoc(fresh.ref, greetFields(cls, who, me)).catch(() => undefined);
+    return fresh.id;
+  }
 
   const not = (p: { uid: string }) => p.uid !== who.uid;
   const members = cls.members.filter(not);
@@ -28,7 +39,7 @@ export const openJubileeChat = async (cls: SchoolClass, who: { uid: string; name
   const now = new Date().toISOString();
   const name = `🎂 ${who.name}`;
   await setDoc(ref, {
-    name, logo: '', jubilee: who.uid,
+    name, logo: '', jubilee: who.uid, ...greetFields(cls, who, me),
     teacherIds: teachers.map(t => t.uid), teachers,
     memberIds: members.map(m => m.uid), members: members.map(m => ({ uid: m.uid, name: m.name, photoURL: m.photoURL || '' })),
     program: [], schedule: [], classMode: false, defaultShortcuts: [],

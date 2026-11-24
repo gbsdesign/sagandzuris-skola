@@ -37,6 +37,7 @@ import { TimetableSheet } from '../klasi/teacher/Timetable';
 import { usePearlTotals } from './usePearlTotals';
 import { kaName } from '../../../utils/georgianName';
 import { openJubileeChat } from '../../../utils/jubileeChat';
+import { inDaysText, nextBirthday } from '../../../utils/birthdays';
 import { errorText } from '../../../utils/errorText';
 import { askConfirm } from '../../../components/ui/kit';
 import { shownName, useDirectory } from '../../../utils/directory';
@@ -205,7 +206,7 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
 
   const go = (id: string) => openDm(id, currentPage === 'dm');
   // an admin's tap on a class's birthday row: the birthday person's own chat, without them
-  const jubilee = async (classId: string, who: { uid: string; name: string }) => {
+  const jubilee = async (classId: string, who: { uid: string; name: string; month: number; day: number }) => {
     const c = known.find(x => x.id === classId);
     if (!c) return;
     if (!(await askConfirm({ title: `${who.name}-ის დაბადების დღის ჩათი`, text: 'კლასის ყველა წევრი დაემატება, მის გარდა.', ok: 'შექმნა' }))) return;
@@ -588,7 +589,7 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
                   <ClassLogo name={openCls.name} logo={openCls.logo} className="size-8 shrink-0 text-meta" />
                   <span className="flex min-w-0 flex-col">
                     <span className="line-clamp-2 text-body leading-tight font-bold break-words">{openCls.name}</span>
-                    <span className="truncate text-cap leading-tight text-mut">{`${openCls.members.length} წევრი`}</span>
+                    <span className="truncate text-cap leading-tight text-mut">{`${openCls.jubilee ? `${inDaysText(nextBirthday(openCls.jubilee, new Date()).days)} · ` : ''}${openCls.members.length} წევრი`}</span>
                   </span>
                 </>
               );
