@@ -123,16 +123,17 @@ export const DmChat: React.FC<{ id: string; classes: SchoolClass[]; wide: boolea
   // the member's side of the administration's chat: the founder's name (`ADMIN_SHOWN`, 2026-11-24); each staff message still
   // names its writer
   const title = canWrite
-    ? (thread.kind === 'admin' && !staff ? ADMIN_SHOWN : other.name || 'უსახელო')
+    ? (thread.kind === 'admin' && !staff ? ADMIN_SHOWN : thread.kind === 'teach' && thread.teacherUid !== uid ? 'სასწავლო ჩათი' : other.name || 'უსახელო')
     : thread.kind === 'admin' ? `${ADMIN_NAME} — ${pair}` : pair;
   // the student's side of a teacher's chat: „მასწავლებელი“ over the name, „სასწავლო ჩათი“ under it; an admin's name has „ადმინი“
   // under it (2026-11-24, the user: „მაღლა მასწავლებელი დააწერე დაბლა კი სასწავლო ჩათი … ყველას ადმინი ეწეროს დაბლა სახელის ქვეშ“)
   const toTeacher = canWrite && thread.kind === 'teach' && !iTeach;
-  const kicker = toTeacher ? 'მასწავლებელი' : undefined;
+  // inside, only „სასწავლო ჩათი“ (the same evening: „შიგნით მხოლოდ სასწავლო ჩათი“)
+  const kicker = undefined;
   const sub = !canWrite ? 'მხოლოდ სანახავად'
     : staff ? 'სკოლის ჩათი'
     : thread.kind === 'admin' ? 'ადმინი'
-    : toTeacher ? 'სასწავლო ჩათი'
+    : toTeacher ? ''
     : cls ? cls.name
     : thread.kind === 'peer' ? 'კლასელი'
     : 'მოსწავლე';
