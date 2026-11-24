@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { CloudDownload, RotateCw, Wifi } from 'lucide-react';
 import { Button, cx } from '../ui2';
 import { useNavigation } from '../../context/NavigationContext';
+import { fullScreenShown, siteAnswers } from '../../utils/loadNotice';
 
 // One way to wait (redesign stage 2, boards x-ultra-chonchkhi 1–3): while a page is still loading, its shape stands where
 // the words will be — a list (a field, then a card of rows), a text (round tools, then a card of lines) or the notes (a
@@ -84,6 +85,26 @@ export const LoadFailed: React.FC<{
 }> = ({ title = 'ვერ ჩაიტვირთა', text = 'შეამოწმე ინტერნეტი და სცადე თავიდან.', onRetry, onSaved, className }) => {
   const nav = useNavigation();
   const saved = onSaved ?? (() => nav.navigateTo('galoba'));
+  // „ხელახლა ცდა“ shows that it works (the user, 2026-11-24: „ხელახლა ცდა არ მუშაობს“): it turns while it tries, asks the
+  // site first, and says so when there is still no internet instead of the same screen coming back silently. The moment
+  // the phone's internet comes back, it tries by itself.
+  const [state, setState] = useState<'idle' | 'trying' | 'none'>('idle');
+  const busy = useRef(false);
+  const retry = useCallback(async () => {
+    if (busy.current) return;
+    busy.current = true;
+    setState('trying');
+    if (!(await siteAnswers())) { busy.current = false; setState('none'); return; }
+    (onRetry ?? (() => window.location.reload()))();
+    // the page starts again; if it did not (a retry that only fetches again), the button is free after a while
+    window.setTimeout(() => { busy.current = false; setState('idle'); }, 15_000);
+  }, [onRetry]);
+  useEffect(() => {
+    fullScreenShown(true);
+    const back = () => { void retry(); };
+    window.addEventListener('online', back);
+    return () => { fullScreenShown(false); window.removeEventListener('online', back); };
+  }, [retry]);
   return (
     <div role="alert" className={cx('flex min-h-[60dvh] w-full flex-1 flex-col', className)}>
       <div className="flex flex-1 flex-col items-center justify-center gap-2.5 px-3.5 py-10 text-center">
@@ -94,7 +115,12 @@ export const LoadFailed: React.FC<{
         <p className="max-w-[300px] text-body leading-normal text-mut">{text}</p>
       </div>
       <div className="mx-auto flex w-full max-w-[420px] flex-col gap-2 pb-2">
-        <Button full icon={<RotateCw />} onClick={onRetry ?? (() => window.location.reload())}>ხელახლა ცდა</Button>
+        <Button full icon={<RotateCw className={state === 'trying' ? 'motion-safe:animate-spin' : undefined} />} disabled={state === 'trying'} onClick={() => void retry()}>
+          {state === 'trying' ? 'ვცდილობ…' : 'ხელახლა ცდა'}
+        </Button>
+        {state === 'none' && (
+          <p role="status" className="px-3 pb-1 text-center text-body leading-normal text-wine">ინტერნეტი ჯერ არ ჩანს. ჩაირთვება თუ არა, თავად ვცდი.</p>
+        )}
         <Button full kind="ghost" icon={<CloudDownload />} onClick={saved}>რაც ტელეფონშია ჩამოწერილი</Button>
       </div>
     </div>

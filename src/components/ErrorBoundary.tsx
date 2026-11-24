@@ -1,7 +1,28 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import React, { Component, ErrorInfo, ReactNode, useEffect, useState } from 'react';
 import { reportError } from '../utils/errorLog';
 import { isChunkError, restartFresh } from '../utils/appUpdate';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
+import { closeChunkLine, openChunkLine, useChunkLineShows } from '../utils/loadNotice';
+
+/** One quiet line, not a red box on every part of the page — and only one on the whole screen (utils/loadNotice.ts). */
+const ChunkLine: React.FC = () => {
+  const [id, setId] = useState<number | null>(null);
+  useEffect(() => { const i = openChunkLine(); setId(i); return () => closeChunkLine(i); }, []);
+  if (!useChunkLineShows(id)) return null;
+  return (
+    <div role="status" className="w-full max-w-lg mx-auto my-3 px-4 py-3 rounded-2xl bg-white/90 border border-[#e6e1d9] flex items-center gap-3 text-left">
+      <RefreshCw className="w-5 h-5 shrink-0 text-[#7a2028]" aria-hidden="true" />
+      <p className="flex-1 min-w-0 text-[13px] leading-snug text-[#6b625a]">აპის ახალი ვერსია იტვირთება…</p>
+      <button
+        type="button"
+        onClick={() => restartFresh(true)}
+        className="shrink-0 h-10 px-4 rounded-full bg-[#7a2028] text-white text-[13px] font-bold cursor-pointer active:scale-95 transition"
+      >
+        განახლება
+      </button>
+    </div>
+  );
+};
 
 interface Props {
   children: ReactNode;
@@ -42,20 +63,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
   public render() {
     if (this.state.hasError && isChunkError(this.state.error)) {
-      // one quiet line, not a red box on every part of the page
-      return (
-        <div role="status" className="w-full max-w-lg mx-auto my-3 px-4 py-3 rounded-2xl bg-white/90 border border-[#e6e1d9] flex items-center gap-3 text-left">
-          <RefreshCw className="w-5 h-5 shrink-0 text-[#7a2028]" aria-hidden="true" />
-          <p className="flex-1 min-w-0 text-[13px] leading-snug text-[#6b625a]">აპის ახალი ვერსია იტვირთება…</p>
-          <button
-            type="button"
-            onClick={() => restartFresh(true)}
-            className="shrink-0 h-10 px-4 rounded-full bg-[#7a2028] text-white text-[13px] font-bold cursor-pointer active:scale-95 transition"
-          >
-            განახლება
-          </button>
-        </div>
-      );
+      return <ChunkLine />;
     }
     if (this.state.hasError) {
       return (
