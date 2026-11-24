@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ChevronDown, MessageCircle, Mic, MicOff, Phone, PhoneOff, ScreenShare, ScreenShareOff, SwitchCamera, Video, VideoOff, X } from 'lucide-react';
+import { ChevronDown, MessageCircle, Mic, MicOff, Phone, PhoneOff, ScreenShare, ScreenShareOff, SwitchCamera, Video, VideoOff, Volume2, X } from 'lucide-react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAuth } from '../../context';
@@ -9,7 +9,7 @@ import { useMyClasses, useTeachingClasses } from '../../hooks/useClasses';
 import type { SchoolClass } from '../../hooks/useClasses';
 import { useInbox, isRinging, ADMIN_NAME, otherOf, DirectThread } from '../../hooks/useDirectChat';
 import {
-  useCall, useLivePeers, leaveCall, dismissCall, toggleMic, toggleCam, toggleScreen, flipCamera, setCallSmall, canShareScreen,
+  useCall, useLivePeers, leaveCall, dismissCall, toggleMic, toggleCam, toggleScreen, toggleSpeaker, flipCamera, setCallSmall, canShareScreen,
   RemotePeer, RING_MS,
 } from '../../utils/callSession';
 import { afterLeave, answerChatCall, declineChatCall, joinClassCall, takeAnswer, useAnswerWanted } from './callActions';
@@ -179,6 +179,11 @@ const CallScreen: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
           </div>
         )}
         <div className="relative shrink-0 pb-5 pt-1 flex items-center justify-center gap-3 sm:gap-4">
+          {call.speaker !== null && (
+            <RoundBtn label={call.speaker ? 'ხმამაღლა ჩართულია — გამორთვა' : 'ხმამაღლა ჩართვა'} onClick={() => void toggleSpeaker()} tone={call.speaker ? 'live' : 'plain'}>
+              <Volume2 className="w-6 h-6" />
+            </RoundBtn>
+          )}
           <RoundBtn label={call.mic ? 'მიკროფონის გამორთვა' : 'მიკროფონის ჩართვა'} onClick={toggleMic} tone={call.mic ? 'plain' : 'off'}>
             {call.mic ? <Mic className="w-6 h-6" /> : <MicOff className="w-6 h-6" />}
           </RoundBtn>

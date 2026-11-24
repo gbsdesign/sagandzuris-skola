@@ -31,6 +31,19 @@ export const PhoneRingSetup: React.FC = () => {
   const [done, setDone] = useState(false);
   const [err, setErr] = useState('');
 
+  // the store apps' Notification.permission comes from the app a moment after the page starts (and the phone's settings
+  // can change it while the app is away): a granted phone that is not bound yet is bound a little later and on every
+  // coming back too, so a call never misses an app phone that only answered late (2026-11-24, „აპში არ რეკავს“)
+  useEffect(() => {
+    if (!uid || !pushSupported()) return;
+    const again = () => {
+      if (document.visibilityState === 'visible' && Notification.permission === 'granted' && !chatBoundToday(uid)) void bindChatDevice(false);
+    };
+    const t = window.setTimeout(again, 3000);
+    document.addEventListener('visibilitychange', again);
+    return () => { window.clearTimeout(t); document.removeEventListener('visibilitychange', again); };
+  }, [uid]);
+
   useEffect(() => {
     if (!uid || !pushSupported()) return;
     if (Notification.permission === 'granted') {
