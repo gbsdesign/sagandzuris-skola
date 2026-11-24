@@ -624,7 +624,7 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
                   <ClassLogo name={openCls.name} logo={openCls.logo} className="size-8 shrink-0 text-meta" />
                   <span className="flex min-w-0 flex-col">
                     <span className="line-clamp-2 text-body leading-tight font-bold break-words">{openCls.name}</span>
-                    <span className="truncate text-cap leading-tight text-mut">{`${openCls.jubilee ? `${inDaysText(nextBirthday(openCls.jubilee, new Date()).days)} · ` : ''}${openCls.members.length} წევრი`}</span>
+                    <span className="truncate text-cap leading-tight text-mut">{`${openCls.jubilee?.month ? `${inDaysText(nextBirthday(openCls.jubilee, new Date()).days)} · ` : ''}${openCls.members.length} წევრი`}</span>
                   </span>
                 </>
               );
