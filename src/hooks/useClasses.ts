@@ -50,6 +50,8 @@ export interface SchoolClass {
   // put away by an admin („არქივი“): hidden everywhere, nothing deleted, an admin brings it back
   archived?: boolean;
   archivedAt?: string;
+  /** a birthday person's chat (utils/jubileeChat): their day, month 1–12 */
+  jubilee?: { uid: string; month: number; day: number };
   createdAt?: string;
   updatedAt?: string;
 }
@@ -72,6 +74,8 @@ export const toClass = (id: string, d: any): SchoolClass => ({
   defaultShortcuts: list(d.defaultShortcuts).filter((x: unknown) => typeof x === 'string'),
   psalterGroupId: typeof d.psalterGroupId === 'string' ? d.psalterGroupId : '',
   ...(d.archived ? { archived: true, archivedAt: d.archivedAt || '' } : {}),
+  ...(typeof d.jubilee === 'string' && d.bday && typeof d.bday.month === 'number'
+    ? { jubilee: { uid: d.jubilee, month: d.bday.month, day: d.bday.day } } : {}),
   createdAt: d.createdAt || '',
   updatedAt: d.updatedAt || '',
   ...(d.liturgy ? { liturgy: d.liturgy } : {}),

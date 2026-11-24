@@ -1788,6 +1788,56 @@ async function fsCommit(env, writes) {
   }
 }
 
+// ---- „იუბილარის ჩათი“'s greeting (2026-11-24, the user: „რომ გადაცდება 12 საათს ღამისას დააწეროს ჩათში ყველა გილოცავთ … ჩემი
+// სახელით“): in the first ten minutes of the birthday (Tbilisi), one line in the class's chat — where the birthday person is — in the
+// name of the admin who made the chat; once a year (`greeted`).
+export const jubileeGreeting = (name) => `🎂 ${name}, ყველა გილოცავთ დაბადების დღეს! ღმერთმა დალოცოს ჩვენი მეგობრობა.`;
+
+async function runJubileeGreetings(env, when) {
+  const g = georgia(when);
+  if (g.getUTCHours() !== 0 || g.getUTCMinutes() >= 10) return;
+  const month = g.getUTCMonth() + 1;
+  const day = g.getUTCDate();
+  const year = g.getUTCFullYear();
+  const chats = await fsList(env, 'classes', ['jubilee', 'archived', 'bday', 'fromClass', 'greeter', 'greeted', 'jubileeName']);
+  for (const j of chats) {
+    if (!j.jubilee || j.archived || !j.bday || j.bday.month !== month || j.bday.day !== day || j.greeted === year) continue;
+    const by = j.greeter;
+    if (!j.fromClass || !by?.uid) continue;
+    try {
+      const cls = await fsGet(env, `classes/${j.fromClass}`);
+      if (!cls || cls.archived) continue;
+      const msgId = crypto.randomUUID().replace(/-/g, '').slice(0, 20);
+      const text = jubileeGreeting(String(j.jubileeName || ''));
+      await fsCommit(env, [
+        {
+          update: {
+            name: docName(env, `classes/${j.fromClass}/messages/${msgId}`),
+            fields: {
+              uid: { stringValue: by.uid }, name: { stringValue: String(by.name || '') }, photoURL: { stringValue: String(by.photoURL || '') },
+              teacher: { booleanValue: true }, kind: { stringValue: 'text' }, text: { stringValue: text },
+              createdAt: { timestampValue: new Date().toISOString() },
+            },
+          },
+          currentDocument: { exists: false },
+        },
+        { update: { name: docName(env, `classes/${j.id}`), fields: { greeted: { integerValue: String(year) } } }, updateMask: { fieldPaths: ['greeted'] } },
+      ]);
+      // the class hears it on their phones as any class message
+      const who = await targetsFor(env, 'classes', cls, by.uid);
+      if (who?.to.length) {
+        const rows = await rowsFor(env, who.to, 'chat');
+        await deliver(env, rows.map((r) => [r, {
+          kind: 'chat', title: who.title, body: `${firstName(String(by.name || ''))}: ${text}`,
+          tag: `chat-c-${j.fromClass}`, url: `/?open=chat&id=class:${j.fromClass}`, renotify: false, ttl: 86400,
+        }]));
+      }
+    } catch (e) {
+      console.warn('jubilee:', e?.message);
+    }
+  }
+}
+
 async function deleteAccount(request, env) {
   const body = await readJson(request);
   let uid;
@@ -1994,6 +2044,7 @@ export default {
       else if (minute === 50 || minute === 55 || minute === 59) await runPrayerReminders(env, when);
       await runHabitReminders(env, when).catch((e) => console.warn('habits:', e?.message));
       await runSummaries(env, when).catch((e) => console.warn('summaries:', e?.message));
+      await runJubileeGreetings(env, when).catch((e) => console.warn('jubilee:', e?.message));
       // last, so its many reads never starve the habits' and summaries' minute — Monday from 09:00 the teachers' week (once); the ones held for quiet hours, each later minute that Monday
       if (isTeacherWeekTime(when)) {
         const sent = await runTeacherWeek(env, when).catch((e) => { console.warn('teacher week:', e?.message); return true; });

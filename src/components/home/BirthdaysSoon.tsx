@@ -43,7 +43,7 @@ const DayLine: React.FC<{
 
 export const BirthdaysSoon: React.FC<{ className?: string; compact?: boolean; row?: boolean; only?: string[];
   /** an admin's tap on a class's row: the birthday person's chat (`openJubileeChat`) */
-  onPick?: (who: { uid: string; name: string }) => void;
+  onPick?: (who: { uid: string; name: string; month: number; day: number }) => void;
 }> = ({ className, compact, row, only, onPick }) => {
   const { user, isTeacher } = useAuth();
   const { isMember } = useMembership();
@@ -103,7 +103,7 @@ export const BirthdaysSoon: React.FC<{ className?: string; compact?: boolean; ro
         {shown.map((x, k) => (
           <DayLine key={x.id} x={x} more={k === shown.length - 1 && coming.length > shown.length ? ` · +${coming.length - shown.length}` : ''}
             onTap={() => navigateTo('birthdays')}
-            onLong={onPick && !x.name ? () => onPick({ uid: x.b.uid, name: x.b.name }) : undefined} />
+            onLong={onPick && !x.name ? () => onPick({ uid: x.b.uid, name: x.b.name, month: x.b.month, day: x.b.day }) : undefined} />
         ))}
       </>
     );
