@@ -50,3 +50,24 @@ export const openJubileeChat = async (cls: SchoolClass, who: Jubilar, me: Me): P
     `🎂 ${who.name}-ის დაბადების დღე ახლოვდება. ეს ჩათი მას არ უჩანს — აქ მოვემზადოთ მისალოცად.`).catch(() => undefined);
   return ref.id;
 };
+
+// The chat's people (2026-11-24, the user: „პროგრამა კი არა ჩათის წევრების სია … დამატების და წაშლის ფუნქციით“): only its
+// own list changes — it is no real class, so nobody's teachers, path or psalter group follow it. The birthday person never goes in.
+export interface ChatPerson { uid: string; name: string; photoURL?: string }
+
+export const addJubileeMember = async (cls: SchoolClass, p: ChatPerson) => {
+  if (cls.memberIds.includes(p.uid) || cls.teacherIds.includes(p.uid) || cls.jubilee?.uid === p.uid) return;
+  await updateDoc(doc(db, 'classes', cls.id), {
+    memberIds: [...cls.memberIds, p.uid],
+    members: [...cls.members, { uid: p.uid, name: p.name, photoURL: p.photoURL || '' }],
+    updatedAt: new Date().toISOString(),
+  });
+};
+
+export const removeJubileeMember = async (cls: SchoolClass, uid: string) => {
+  await updateDoc(doc(db, 'classes', cls.id), {
+    memberIds: cls.memberIds.filter(x => x !== uid),
+    members: cls.members.filter(m => m.uid !== uid),
+    updatedAt: new Date().toISOString(),
+  });
+};
