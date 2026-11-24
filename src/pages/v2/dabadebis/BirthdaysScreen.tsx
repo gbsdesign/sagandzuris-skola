@@ -8,6 +8,7 @@ import { Card, Dot, Hero, Row, Rows, SectionLabel, Small, TopBar } from '../../.
 import { cx } from '../../../components/ui2/cx';
 import { useAllMyClasses } from '../../../components/classes/ClassPicker';
 import { Birthday, ageNow, inDaysText, nextBirthday, turning, useBirthdays } from '../../../utils/birthdays';
+import { useBirthdayCircle } from '../../../hooks/useBirthdayCircle';
 import { NameDay, clearNameDay, saveNameDay, useNameDays } from '../../../utils/nameDays';
 import { useMembership } from '../../../utils/memberAccess';
 import { MONTHS_GE, MONTHS_SHORT_GE } from '../../../utils/dateNames';
@@ -94,6 +95,7 @@ export const BirthdaysScreen: React.FC = () => {
   const births = useBirthdays(!!user && isMember, isTeacher);
   const names = useNameDays(!!user && isMember);
   const cong = useCongratulate();
+  const circle = useBirthdayCircle();
   const [naming, setNaming] = useState(false);
   const [profile, setProfile] = useState({ firstName: '', lastName: '', churchName: '' });
   useEffect(() => {
@@ -114,7 +116,7 @@ export const BirthdaysScreen: React.FC = () => {
   }
 
   const now = new Date();
-  const all = events(births, names);
+  const all = events(births, names).filter(e => !circle || circle.has(e.uid));
   const withNext = all.map(e => ({ e, ...nextBirthday(e, now) }));
   const nearest = [...withNext].sort((a, z) => a.days - z.days || a.e.name.localeCompare(z.e.name, 'ka'))[0];
   const thisMonth = now.getMonth() + 1;
